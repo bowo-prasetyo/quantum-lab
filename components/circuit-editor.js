@@ -26,7 +26,7 @@ export const CircuitEditor = {
     },
     paletteGates() {
       const gates = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T'];
-      return this.n >= 2 ? [...gates, 'CNOT'] : gates;
+      return this.n >= 2 ? [...gates, 'CNOT', 'CZ', 'M'] : [...gates, 'M'];
     }
   },
 
@@ -38,7 +38,10 @@ export const CircuitEditor = {
   },
 
   created() {
-    this.lastTouchDragEnd = 0;
+    // "Never" rather than 0: performance.now() counts from page load, so 0
+    // would make every tap in the page's first half-second look like the
+    // end of a drag, and be ignored.
+    this.lastTouchDragEnd = -Infinity;
   },
 
   beforeUnmount() {
@@ -67,7 +70,7 @@ export const CircuitEditor = {
       </div>
 
       <div class="card">
-        <h3>{{ n >= 2 ? 'Selected qubit (CNOT control)' : 'Selected qubit' }}</h3>
+        <h3>{{ n >= 2 ? 'Selected qubit (control for CNOT and CZ)' : 'Selected qubit' }}</h3>
         <button
           v-for="q in qubits"
           :key="q"
@@ -77,7 +80,7 @@ export const CircuitEditor = {
         >Q{{ q }}</button>
 
         <template v-if="n >= 2">
-          <h3>CNOT target</h3>
+          <h3>Target for CNOT and CZ</h3>
           <button
             v-for="q in qubits.filter(q => q !== selectedQubit)"
             :key="q"
@@ -89,7 +92,7 @@ export const CircuitEditor = {
       </div>
 
       <p class="caption">
-        Tap or drag a gate to add it to the selected qubit.
+        Tap or drag a gate to add it to the selected qubit (M measures that qubit).
         Tap a circuit step to remove it.
       </p>
 
@@ -123,15 +126,15 @@ export const CircuitEditor = {
   `,
 
   methods: {
-    // e.g. 'H q0' or 'CNOT q0→q1'
+    // e.g. 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure qubit 2)
     stepLabel(step) {
-      return step.gate === 'CNOT'
-        ? `CNOT q${step.control}→q${step.target}`
-        : `${step.gate} q${step.target}`;
+      if (step.gate === 'CNOT') return `CNOT q${step.control}→q${step.target}`;
+      if (step.gate === 'CZ') return `CZ q${step.control},q${step.target}`;
+      return `${step.gate} q${step.target}`;
     },
 
     addGate(gate) {
-      this.$emit('add', gate === 'CNOT'
+      this.$emit('add', gate === 'CNOT' || gate === 'CZ'
         ? { gate, control: this.selectedQubit, target: this.cnotTarget }
         : { gate, target: this.selectedQubit });
     },

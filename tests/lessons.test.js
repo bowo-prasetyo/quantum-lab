@@ -58,9 +58,10 @@ describe('lesson data', () => {
 describe('every lesson gives the result it promises', () => {
   for (const lesson of LESSONS) {
     test(`${lesson.id}: Set up, then the steps, meets every check`, () => {
-      // Lessons with measurements are run with several seeds, so a check
-      // that only holds for some random outcomes would fail.
-      const seeds = lesson.ops.some(op => op[0] === 'measure') ? [1, 2, 3, 4, 5, 6, 7, 8] : [1];
+      // Lessons with measurements are run with 16 seeds, so a check that
+      // only holds for some random outcomes would fail.
+      const measures = op => op[0] === 'measure' || op[0] === 'measureQubit';
+      const seeds = lesson.ops.some(measures) ? [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16] : [1];
       for (const seed of seeds) {
         const random = seeded(seed);
         const afterSetup = runOps(lesson.setup, lesson.n, null, random);

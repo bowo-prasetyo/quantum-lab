@@ -25,11 +25,12 @@ const isQubit = (q, n) => Number.isInteger(q) && q >= 0 && q < n;
 /** True if a circuit step is valid for an n-qubit lab. */
 export function isValidStep(step, n) {
   if (!step || typeof step !== 'object') return false;
-  if (step.gate === 'CNOT') {
+  if (step.gate === 'CNOT' || step.gate === 'CZ') {
     return n >= 2 && isQubit(step.control, n) && isQubit(step.target, n) &&
       step.control !== step.target;
   }
-  return GATE_NAMES.includes(step.gate) && isQubit(step.target, n);
+  // 'M' measures one qubit
+  return (GATE_NAMES.includes(step.gate) || step.gate === 'M') && isQubit(step.target, n);
 }
 
 /**
@@ -64,8 +65,8 @@ export function parseOldRecord(n, value) {
     im: Float64Array.from(im),
     circuit: circuit
       .filter(step => isValidStep(step, n))
-      .map(step => step.gate === 'CNOT'
-        ? { gate: 'CNOT', control: step.control, target: step.target }
+      .map(step => step.gate === 'CNOT' || step.gate === 'CZ'
+        ? { gate: step.gate, control: step.control, target: step.target }
         : { gate: step.gate, target: step.target })
   };
 }

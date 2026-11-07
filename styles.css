@@ -340,3 +340,7 @@ button:disabled {
   margin: 4px 0 0;
   color: #ccc;
 }
+
+.measure-button {
+  background: #6b4ad6;
+}
