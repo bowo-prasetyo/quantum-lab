@@ -14,10 +14,20 @@ export const AmplitudeTable = {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
     n: { type: Number, required: true },
-    measurement: { type: String, default: '-' }
+    measurement: { type: String, default: '-' },
+    // Classical bits from measurements: { qubit: 0 | 1 }
+    bits: { type: Object, default: () => ({}) }
   },
 
   computed: {
+    // e.g. "q0 = 1 · q1 = – · q2 = 0" (– means not measured yet)
+    bitsText() {
+      if (!Object.keys(this.bits).length) return '';
+      return [...Array(this.n).keys()]
+        .map(q => `q${q} = ${q in this.bits ? this.bits[q] : '–'}`)
+        .join(' · ');
+    },
+
     rows() {
       const probs = engine.probabilities(this.re, this.im);
       return probs.map((p, i) => {
@@ -62,6 +72,7 @@ export const AmplitudeTable = {
         </table>
       </div>
       <p>Measurement: {{ measurement }}</p>
+      <p v-if="bitsText" class="bits">Classical bits: {{ bitsText }}</p>
     </div>
   `
 };

@@ -109,6 +109,30 @@ export function applyCNOT(re, im, control, target, n) {
   return { re: outRe, im: outIm };
 }
 
+/**
+ * Controlled-Z: flips the sign of every amplitude where both qubits are 1.
+ * It is symmetric, so which qubit is the "control" doesn't matter. The
+ * same as H on the target, then CNOT, then H on the target.
+ */
+export function applyCZ(re, im, control, target, n) {
+  checkQubit(control, n, 'control');
+  checkQubit(target, n, 'target');
+  if (control === target) throw new RangeError('control and target must differ');
+
+  const outRe = new Float64Array(re);
+  const outIm = new Float64Array(im);
+  const mask = (1 << bitOf(control, n)) | (1 << bitOf(target, n));
+
+  for (let i = 0; i < outRe.length; i++) {
+    if ((i & mask) === mask) {
+      outRe[i] = -outRe[i];
+      outIm[i] = -outIm[i];
+    }
+  }
+
+  return { re: outRe, im: outIm };
+}
+
 /** Measurement probability of every basis state, |amplitude|². */
 export function probabilities(re, im) {
   const result = new Array(re.length);
@@ -149,6 +173,43 @@ export function measure(re, im, n, random = Math.random) {
     index,
     label: basisLabel(index, n)
   };
+}
+
+/**
+ * Measures one qubit. Gives 0 or 1 with the probabilities the state
+ * implies, then collapses only what that result rules out: amplitudes
+ * where the qubit has the other value become 0, and the rest are
+ * renormalized. Other qubits keep their superposition unless they were
+ * entangled with the measured one.
+ * Returns { re, im, bit, probability } where probability is P(bit).
+ */
+export function measureQubit(re, im, qubit, n, random = Math.random) {
+  checkQubit(qubit, n);
+
+  const bit = bitOf(qubit, n);
+  const probs = probabilities(re, im);
+  const total = probs.reduce((sum, p) => sum + p, 0);
+
+  let p1 = 0;
+  for (let i = 0; i < probs.length; i++) {
+    if ((i >> bit) & 1) p1 += probs[i];
+  }
+  p1 /= total;
+
+  const outcome = random() < p1 ? 1 : 0;
+  const probability = outcome ? p1 : 1 - p1;
+  const scale = 1 / Math.sqrt(probability * total);
+
+  const outRe = new Float64Array(re.length);
+  const outIm = new Float64Array(im.length);
+  for (let i = 0; i < re.length; i++) {
+    if (((i >> bit) & 1) === outcome) {
+      outRe[i] = re[i] * scale;
+      outIm[i] = im[i] * scale;
+    }
+  }
+
+  return { re: outRe, im: outIm, bit: outcome, probability };
 }
 
 /**

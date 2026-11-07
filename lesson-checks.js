@@ -63,6 +63,13 @@ export function evaluateCheck(check, { re, im, n, measured }) {
       return { pass: close(value, check.abs), text: `Density matrix |ρ[${check.i}][${check.j}]| = ${show(check.abs)} (found ${show(value)})` };
     }
 
+    // All the probability is on these basis states (any split between them)
+    case 'onlyStates': {
+      const allowed = new Set(check.states.map(label => labelIndex(label, n)));
+      const outside = probs.reduce((sum, p, i) => sum + (allowed.has(i) ? 0 : p), 0);
+      return { pass: close(outside, 0), text: `Only ${check.states.join(' or ')} can be measured` };
+    }
+
     // The state is a single basis state
     case 'collapsed': {
       const pass = probs.some(p => close(p, 1));
@@ -100,27 +107,43 @@ export function expandOp(op) {
 }
 
 /**
- * Runs operations on a state with the engine (no worker, no page).
- * Returns { re, im, n, measured }. `random` is passed to measurement.
+ * Runs operations on a state with the engine (no worker, no page), the
+ * same way the lab does. Returns { re, im, n, measured, bits }.
+ * `random` is passed to measurements.
+ *
+ * Operations: ['reset'], ['gate', name, q], ['cnot', c, t], ['cz', c, t],
+ * ['measure'], ['measureQubit', q], ['bell'], ['ghz'], and ['if', q, op],
+ * which runs op only if the last measurement of qubit q gave 1.
  */
 export function runOps(ops, n, start = null, random = Math.random) {
-  let state = start ? { ...start } : { ...engine.zeroState(n), measured: '-' };
+  const fresh = () => ({ ...engine.zeroState(n), measured: '-', bits: {} });
+  let state = start ? { bits: {}, ...start } : fresh();
 
-  for (const op of ops.flatMap(expandOp)) {
+  const apply = op => {
     const [kind, a, b] = op;
     if (kind === 'reset') {
-      state = { ...engine.zeroState(n), measured: '-' };
+      state = fresh();
     } else if (kind === 'gate') {
       state = { ...state, ...engine.applyGate(state.re, state.im, a, b, n) };
     } else if (kind === 'cnot') {
       state = { ...state, ...engine.applyCNOT(state.re, state.im, a, b, n) };
+    } else if (kind === 'cz') {
+      state = { ...state, ...engine.applyCZ(state.re, state.im, a, b, n) };
     } else if (kind === 'measure') {
       const m = engine.measure(state.re, state.im, n, random);
-      state = { re: m.re, im: m.im, measured: m.label };
+      const bits = Object.fromEntries([...m.label.replace(/[|⟩]/g, '')].map((d, q) => [q, Number(d)]));
+      state = { re: m.re, im: m.im, measured: m.label, bits };
+    } else if (kind === 'measureQubit') {
+      const m = engine.measureQubit(state.re, state.im, a, n, random);
+      state = { re: m.re, im: m.im, measured: `qubit ${a} gave ${m.bit}`, bits: { ...state.bits, [a]: m.bit } };
+    } else if (kind === 'if') {
+      if (state.bits[a] === 1) expandOp(b).forEach(apply);
     } else {
       throw new Error(`Unknown operation: ${kind}`);
     }
-  }
+  };
 
-  return { re: state.re, im: state.im, n, measured: state.measured };
+  ops.flatMap(expandOp).forEach(apply);
+
+  return { re: state.re, im: state.im, n, measured: state.measured, bits: state.bits };
 }

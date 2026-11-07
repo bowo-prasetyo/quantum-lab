@@ -16,7 +16,9 @@ import {
   reducedDensityMatrix,
   blochVector,
   zzCorrelation,
-  isValidState
+  isValidState,
+  applyCZ,
+  measureQubit
 } from '../engine.js';
 
 const EPS = 1e-12;
@@ -439,5 +441,90 @@ describe('isValidState', () => {
     assert.equal(isValidState([1, 1], [0, 0], 1), false, 'total probability 2');
     assert.equal(isValidState([0, 0], [0, 0], 1), false, 'all zero');
     assert.equal(isValidState(undefined, undefined, 1), false, 'missing');
+  });
+});
+
+describe('CZ', () => {
+  test('flips the sign of |11⟩ only, on every pair of 3 qubits', () => {
+    for (let a = 0; a < 3; a++) {
+      for (let b = 0; b < 3; b++) {
+        if (a === b) continue;
+        for (let index = 0; index < 8; index++) {
+          const bothSet = ((index >> (2 - a)) & 1) && ((index >> (2 - b)) & 1);
+          const out = applyCZ(...Object.values(basis(index, 3)), a, b, 3);
+          assert.equal(out.re[index], bothSet ? -1 : 1, `CZ ${a},${b} on ${basisLabel(index, 3)}`);
+        }
+      }
+    }
+  });
+
+  test('is symmetric and equals H·CNOT·H on the target, on random states', () => {
+    const rnd = seeded(21);
+    for (let trial = 0; trial < 20; trial++) {
+      const s = randomState(3, rnd);
+      const cz = applyCZ(s.re, s.im, 0, 2, 3);
+      assertState(applyCZ(s.re, s.im, 2, 0, 3), cz, 'symmetric');
+      assertState(run(3, [['H', 2], ['CNOT', 0, 2], ['H', 2]], s), cz, 'H·CNOT·H');
+    }
+  });
+
+  test('rejects control equal to target', () => {
+    const s = zeroState(2);
+    assert.throws(() => applyCZ(s.re, s.im, 0, 0, 2), RangeError);
+  });
+});
+
+describe('measuring one qubit', () => {
+  test('on a product state, only that qubit collapses', () => {
+    // q0 = |+⟩, q1 = |+⟩: measure q0; q1 stays |+⟩
+    const s = run(2, [['H', 0], ['H', 1]]);
+    for (const seed of [1, 2, 3, 4]) {
+      const m = measureQubit(s.re, s.im, 0, 2, seeded(seed));
+      const v1 = blochVector(m.re, m.im, 1, 2);
+      near(v1.x, 1, 'q1 still along +x');
+      const v0 = blochVector(m.re, m.im, 0, 2);
+      near(v0.z, m.bit ? -1 : 1, 'q0 at the pole matching the result');
+      near(m.probability, 0.5, 'P = 1/2');
+      near(probabilities(m.re, m.im).reduce((a, b) => a + b, 0), 1, 'normalized');
+    }
+  });
+
+  test('on a Bell pair, measuring qubit 0 also fixes qubit 1', () => {
+    const s = run(2, [['H', 0], ['CNOT', 0, 1]]);
+    const seen = new Set();
+    const rnd = seeded(8);
+    for (let k = 0; k < 50; k++) {
+      const m = measureQubit(s.re, s.im, 0, 2, rnd);
+      const p = probabilities(m.re, m.im);
+      near(p[m.bit ? 3 : 0], 1, 'collapsed to |00⟩ or |11⟩');
+      seen.add(m.bit);
+    }
+    assert.deepEqual([...seen].sort(), [0, 1], 'both results occur');
+  });
+
+  test('follows the state\'s probabilities (seeded, 10 000 shots)', () => {
+    // Bloch angle θ = 120°: P(1) = sin²(60°) = 0.75
+    const s = state([[0.5, 0], [Math.sqrt(3) / 2, 0]]);
+    const rnd = seeded(99);
+    let ones = 0;
+    for (let k = 0; k < 10000; k++) ones += measureQubit(s.re, s.im, 0, 1, rnd).bit;
+    assert.ok(ones > 7300 && ones < 7700, `got ${ones} ones`);
+  });
+
+  test('keeps the relative phases of the surviving amplitudes', () => {
+    // (|00⟩ + i|01⟩ + |10⟩ + i|11⟩)/2: measure q0 → (|x0⟩ + i|x1⟩)/√2
+    const s = state([[0.5, 0], [0, 0.5], [0.5, 0], [0, 0.5]]);
+    const m = measureQubit(s.re, s.im, 0, 2, () => 0.9); // gives 0
+    assert.equal(m.bit, 0);
+    assertState(m, state([[S2, 0], [0, S2], [0, 0], [0, 0]]));
+  });
+
+  test('a certain result is always given', () => {
+    const s = basis(0b101, 3);
+    for (const q of [0, 1, 2]) {
+      const m = measureQubit(s.re, s.im, q, 3, seeded(q));
+      assert.equal(m.bit, (0b101 >> (2 - q)) & 1);
+      near(m.probability, 1, 'probability 1');
+    }
   });
 });

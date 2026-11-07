@@ -30,10 +30,11 @@ export const Help = {
       <div class="card">
         <h2>Gates and buttons</h2>
         <ul>
-          <li>Each qubit has a row of gate buttons: I, H, X, Y, Z, S and T.</li>
-          <li><strong>CNOT</strong> (2 or 3 qubits): choose the control and target qubits, then press CNOT.</li>
+          <li>Each qubit has a row of gate buttons: I, H, X, Y, Z, S and T, and <strong>M</strong>, which measures just that qubit.</li>
+          <li><strong>CNOT</strong> and <strong>CZ</strong> (2 or 3 qubits): choose the control and target qubits, then press the button. For CZ, which qubit is the control doesn’t matter.</li>
           <li><strong>Create Bell Pair</strong> and <strong>GHZ State</strong> always start from |0…0⟩, so they give the same state every time.</li>
-          <li><strong>Measure</strong> picks a result at random and collapses the state to it. <strong>Reset</strong> returns to |0…0⟩.</li>
+          <li><strong>Measure all</strong> picks a result for every qubit at random and collapses the state to it. <strong>Reset</strong> returns to |0…0⟩.</li>
+          <li>Measurement results appear as <strong>classical bits</strong> under the amplitude table. Reset clears them.</li>
           <li>You can press buttons as fast as you like: each operation waits for the previous one.</li>
         </ul>
       </div>
@@ -41,7 +42,8 @@ export const Help = {
       <div class="card">
         <h2>Circuit editor</h2>
         <ul>
-          <li>Choose the <strong>selected qubit</strong>. For CNOT it is the control; choose the <strong>CNOT target</strong> too.</li>
+          <li>Choose the <strong>selected qubit</strong>. For CNOT and CZ it is the control; choose the <strong>target</strong> too.</li>
+          <li><strong>M</strong> in the circuit measures the selected qubit when the circuit runs.</li>
           <li>Add a gate by tapping or clicking it, dragging it into the circuit area (mouse, finger or pen), or focusing it and pressing Enter.</li>
           <li>Tap or click a step to remove it.</li>
           <li><strong>Run Circuit</strong> applies the steps in order to the current state, half a second apart.</li>

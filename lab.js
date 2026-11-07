@@ -17,6 +17,14 @@ import { CircuitEditor } from './components/circuit-editor.js';
 
 const STEP_DELAY_MS = 500; // pause between circuit steps so changes are visible
 
+// Circuit editor step → worker message
+function stepToMessage(step) {
+  if (step.gate === 'CNOT') return { type: 'cnot', control: step.control, target: step.target };
+  if (step.gate === 'CZ') return { type: 'cz', control: step.control, target: step.target };
+  if (step.gate === 'M') return { type: 'measureQubit', targetQubit: step.target };
+  return { type: 'gate', gate: step.gate, targetQubit: step.target };
+}
+
 export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
@@ -42,6 +50,8 @@ export const Lab = {
       stateIm: im,
       circuit: [],
       measurement: '-',
+      // Classical bits from measurements: { qubit: 0 | 1 }
+      bits: {},
       running: false,
       importedFrom: null   // name of the old simulator a state was brought over from
     };
@@ -73,13 +83,15 @@ export const Lab = {
         :n="n"
         @gate="applyGate"
         @cnot="applyCNOT"
+        @cz="applyCZ"
+        @measure-qubit="measureQubit"
         @bell="createBellState"
         @ghz="createGHZState"
         @measure="measure"
         @reset="reset"
       />
 
-      <amplitude-table v-if="show('table')" :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" />
+      <amplitude-table v-if="show('table')" :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" :bits="bits" />
       <probability-chart v-if="show('probabilities')" :re="stateRe" :im="stateIm" :n="n" />
       <bloch-spheres v-if="show('bloch')" :re="stateRe" :im="stateIm" :n="n" />
       <density-matrix v-if="show('density')" :re="stateRe" :im="stateIm" :n="n" />
@@ -171,7 +183,16 @@ export const Lab = {
 
       this.stateRe = reply.re;
       this.stateIm = reply.im;
-      if (reply.measured) this.measurement = reply.measured;
+
+      if (reply.measured) {
+        // Measuring every qubit gives every bit
+        this.measurement = reply.measured;
+        const digits = reply.measured.replace(/[|⟩]/g, '');
+        this.bits = Object.fromEntries([...digits].map((d, q) => [q, Number(d)]));
+      } else if (reply.bit !== undefined) {
+        this.measurement = `qubit ${reply.qubit} gave ${reply.bit}`;
+        this.bits = { ...this.bits, [reply.qubit]: reply.bit };
+      }
 
       await this.save();
     },
@@ -194,6 +215,7 @@ export const Lab = {
       this.stateRe = re;
       this.stateIm = im;
       this.measurement = '-';
+      this.bits = {};
     },
 
     applyGate(gate, targetQubit) {
@@ -204,8 +226,16 @@ export const Lab = {
       return this.enqueue(() => this.runOnWorker({ type: 'cnot', control, target }));
     },
 
+    applyCZ(control, target) {
+      return this.enqueue(() => this.runOnWorker({ type: 'cz', control, target }));
+    },
+
     measure() {
       return this.enqueue(() => this.runOnWorker({ type: 'measure' }));
+    },
+
+    measureQubit(qubit) {
+      return this.enqueue(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }));
     },
 
     reset() {
@@ -250,25 +280,35 @@ export const Lab = {
 
     /**
      * Runs lesson operations (see lessons.js) through the queue:
-     * ['reset'], ['gate', name, q], ['cnot', c, t], ['measure'], ['bell'], ['ghz'].
+     * ['reset'], ['gate', name, q], ['cnot', c, t], ['cz', c, t], ['measure'],
+     * ['measureQubit', q], ['bell'], ['ghz'], and ['if', q, op], which runs op
+     * only if the last measurement of qubit q gave 1.
      * `delay` pauses between steps so the learner can follow along.
      * Clears the circuit editor first if `clearCircuit` is set.
      */
     runOps(ops, { delay = 0, clearCircuit = false } = {}) {
       return this.enqueue(async () => {
         if (clearCircuit) this.circuit.splice(0);
-        for (const [kind, a, b] of ops) {
-          if (kind === 'reset') this.resetState();
-          else if (kind === 'gate') await this.runOnWorker({ type: 'gate', gate: a, targetQubit: b });
-          else if (kind === 'cnot') await this.runOnWorker({ type: 'cnot', control: a, target: b });
-          else if (kind === 'measure') await this.runOnWorker({ type: 'measure' });
-          else if (kind === 'bell') await this.bellSteps();
-          else if (kind === 'ghz') await this.ghzSteps();
-          else throw new Error(`Unknown operation: ${kind}`);
+        for (const op of ops) {
+          await this.runOp(op);
           if (delay) await new Promise(r => setTimeout(r, delay));
         }
         await this.save();
       });
+    },
+
+    // One lesson operation; call only from inside a queued task
+    async runOp([kind, a, b]) {
+      if (kind === 'reset') this.resetState();
+      else if (kind === 'gate') await this.runOnWorker({ type: 'gate', gate: a, targetQubit: b });
+      else if (kind === 'cnot') await this.runOnWorker({ type: 'cnot', control: a, target: b });
+      else if (kind === 'cz') await this.runOnWorker({ type: 'cz', control: a, target: b });
+      else if (kind === 'measure') await this.runOnWorker({ type: 'measure' });
+      else if (kind === 'measureQubit') await this.runOnWorker({ type: 'measureQubit', targetQubit: a });
+      else if (kind === 'if') { if (this.bits[a] === 1) await this.runOp(b); }
+      else if (kind === 'bell') await this.bellSteps();
+      else if (kind === 'ghz') await this.ghzSteps();
+      else throw new Error(`Unknown operation: ${kind}`);
     },
 
     /** Replaces the circuit editor's steps (lesson "Show me"). */
@@ -281,7 +321,7 @@ export const Lab = {
 
     /** Snapshot for checking a lesson result. */
     getState() {
-      return { re: this.stateRe, im: this.stateIm, n: this.n, measured: this.measurement };
+      return { re: this.stateRe, im: this.stateIm, n: this.n, measured: this.measurement, bits: { ...this.bits } };
     },
 
     // Applies the circuit's steps in order to the current state.
@@ -290,9 +330,7 @@ export const Lab = {
         this.running = true;
         try {
           for (const step of [...this.circuit]) {
-            await this.runOnWorker(step.gate === 'CNOT'
-              ? { type: 'cnot', control: step.control, target: step.target }
-              : { type: 'gate', gate: step.gate, targetQubit: step.target });
+            await this.runOnWorker(stepToMessage(step));
             await new Promise(r => setTimeout(r, STEP_DELAY_MS));
           }
         } finally {

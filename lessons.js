@@ -17,7 +17,9 @@
 //   returnsToStart            optional: true if the steps end in the Set up state on purpose
 //
 // Operations: ['reset'], ['gate', name, qubit], ['cnot', control, target],
-//             ['measure'], ['bell'], ['ghz']
+//             ['cz', control, target], ['measure'] (all qubits),
+//             ['measureQubit', qubit], ['bell'], ['ghz'],
+//             ['if', qubit, operation]: only if that qubit's last measurement gave 1
 // Basis labels use qubit 0 as the left digit: |10⟩ means qubit 0 is 1.
 
 export const PANELS = ['gates', 'table', 'probabilities', 'bloch', 'density', 'correlation', 'cube', 'editor'];
@@ -33,8 +35,6 @@ export const PARTS = [
 const BASIC = ['gates', 'table', 'probabilities', 'bloch'];
 const r = Math.SQRT1_2;
 
-// The lab has no CZ gate; H·CNOT·H on the target does the same job.
-const CZ = (control, target) => [['gate', 'H', target], ['cnot', control, target], ['gate', 'H', target]];
 
 export const LESSONS = [
   // ---------------- Part 1: one qubit ----------------
@@ -47,10 +47,10 @@ export const LESSONS = [
     why: 'Quantum computers can still do ordinary logic. X is the quantum version of NOT.',
     panels: BASIC,
     setup: [['reset']],
-    steps: ['Press X on qubit 0.', 'Press Measure.'],
+    steps: ['Press X on qubit 0.', 'Press Measure all.'],
     ops: [['gate', 'X', 0], ['measure']],
     predict: {
-      question: 'The qubit starts as |0⟩. After X, what will Measure show?',
+      question: 'The qubit starts as |0⟩. After X, what will Measure all show?',
       options: ['Always |0⟩', 'Always |1⟩', '|0⟩ or |1⟩, 50/50'],
       answer: 1
     },
@@ -91,7 +91,7 @@ export const LESSONS = [
     why: 'In quantum mechanics, observing is not passive. Measurement forces a definite answer.',
     panels: BASIC,
     setup: [['reset'], ['gate', 'H', 0]],
-    steps: ['The qubit starts in superposition (50/50).', 'Press Measure.', 'Press Measure again.'],
+    steps: ['The qubit starts in superposition (50/50).', 'Press Measure all.', 'Press Measure all again.'],
     ops: [['measure'], ['measure']],
     predict: {
       question: 'After the first measurement, what will the second one show?',
@@ -117,7 +117,7 @@ export const LESSONS = [
     ops: [['gate', 'H', 0], ['gate', 'H', 0]],
     returnsToStart: true, // the point of the lesson: H twice gives back |0⟩
     predict: {
-      question: 'After H twice, what will Measure show?',
+      question: 'After H twice, what will Measure all show?',
       options: ['Always |0⟩', 'Always |1⟩', '|0⟩ or |1⟩, 50/50'],
       answer: 0
     },
@@ -221,7 +221,7 @@ export const LESSONS = [
     steps: ['Press H on qubit 0.', 'Press H on qubit 1.'],
     ops: [['gate', 'H', 0], ['gate', 'H', 1]],
     predict: {
-      question: 'Both qubits get an H. What can Measure show?',
+      question: 'Both qubits get an H. What can Measure all show?',
       options: ['|00⟩ or |11⟩ only', 'Any of |00⟩, |01⟩, |10⟩, |11⟩, 25% each', 'Always |00⟩'],
       answer: 1
     },
@@ -256,10 +256,10 @@ export const LESSONS = [
     why: 'Entangled qubits behave as one system. This is the resource behind quantum teleportation and many algorithms.',
     panels: BASIC,
     setup: [['reset']],
-    steps: ['Press H on qubit 0.', 'Press CNOT (control Q0, target Q1).', 'Press Measure a few times, setting up again in between.'],
+    steps: ['Press H on qubit 0.', 'Press CNOT (control Q0, target Q1).', 'Press Measure all a few times, setting up again in between.'],
     ops: [['gate', 'H', 0], ['cnot', 0, 1]],
     predict: {
-      question: 'Which results can Measure show?',
+      question: 'Which results can Measure all show?',
       options: ['Any of the four, 25% each', 'Only |00⟩ or |11⟩, 50% each', 'Only |01⟩ or |10⟩'],
       answer: 1
     },
@@ -286,6 +286,33 @@ export const LESSONS = [
     checks: [
       { type: 'blochLength', qubit: 0, value: 0 },
       { type: 'blochLength', qubit: 1, value: 0 }
+    ]
+  },
+  {
+    id: 'measure-one-qubit',
+    part: 2,
+    n: 2,
+    title: 'Measuring one qubit of a Bell pair',
+    goal: 'Measure only one qubit of an entangled pair, and watch the other one respond.',
+    why: 'Measuring part of a system is how quantum computers read results, and how protocols such as teleportation work.',
+    panels: BASIC,
+    setup: [['reset'], ['bell']],
+    steps: [
+      'Set up has made a Bell pair: (|00⟩ + |11⟩)/√2. Both Bloch vectors are at the centre.',
+      'Press M on qubit 0 to measure just that qubit.',
+      'Look at both Bloch spheres, the probabilities and the classical bits.'
+    ],
+    ops: [['measureQubit', 0]],
+    predict: {
+      question: 'You measure only qubit 0. What happens to qubit 1?',
+      options: ['Nothing: it is still in a superposition', 'It now has the same value as qubit 0', 'It always becomes 0'],
+      answer: 1
+    },
+    result: 'Qubit 0 gives 0 or 1 at random, and the pair collapses to |00⟩ or |11⟩, so qubit 1 is now definitely the same value. Both Bloch vectors jump from the centre to the same pole. Measuring one qubit of a product state would leave the other untouched; here the entanglement links them. (No message can be sent this way: qubit 0’s result is random.)',
+    checks: [
+      { type: 'onlyStates', states: ['|00⟩', '|11⟩'] },
+      { type: 'collapsed' },
+      { type: 'blochLength', qubit: 1, value: 1 }
     ]
   },
   {
@@ -325,7 +352,7 @@ export const LESSONS = [
     steps: ['Press H on qubit 0.', 'Press CNOT with control Q0, target Q1.', 'Press CNOT with control Q1, target Q2.'],
     ops: [['gate', 'H', 0], ['cnot', 0, 1], ['cnot', 1, 2]],
     predict: {
-      question: 'Which results can Measure show?',
+      question: 'Which results can Measure all show?',
       options: ['Only |000⟩ or |111⟩', 'All eight, equally', 'Only |000⟩'],
       answer: 0
     },
@@ -346,14 +373,14 @@ export const LESSONS = [
     why: 'The density matrix tells a true superposition apart from a random mix that would give the same probabilities.',
     panels: ['gates', 'table', 'probabilities', 'density'],
     setup: [['reset']],
-    steps: ['Press GHZ State.', 'Look at the density matrix.', 'Then press Measure and look again.'],
+    steps: ['Press GHZ State.', 'Look at the density matrix.', 'Then press Measure all and look again.'],
     ops: [['ghz']],
     predict: {
       question: 'For the GHZ state, how many squares does the density matrix show?',
       options: ['2, on the diagonal', '4, in the corners', 'All 64'],
       answer: 1
     },
-    result: 'Two diagonal squares hold the probabilities of |000⟩ and |111⟩ (0.5 each). Two off-diagonal squares in the opposite corners link them: that is coherence, the sign of a real superposition. After Measure, only one diagonal square is left.',
+    result: 'Two diagonal squares hold the probabilities of |000⟩ and |111⟩ (0.5 each). Two off-diagonal squares in the opposite corners link them: that is coherence, the sign of a real superposition. After Measure all, only one diagonal square is left.',
     checks: [
       { type: 'density', i: 0, j: 0, abs: 0.5 },
       { type: 'density', i: 7, j: 7, abs: 0.5 },
@@ -469,15 +496,15 @@ export const LESSONS = [
     setup: [['reset'], ['gate', 'H', 0], ['gate', 'H', 1]],
     steps: [
       'Set up has put both qubits in an equal superposition: each of the four items |00⟩, |01⟩, |10⟩, |11⟩ is 25% likely.',
-      'Oracle: mark |11⟩ by flipping its sign. Press H on qubit 1, CNOT (control Q0, target Q1), then H on qubit 1. Check the amplitude table: |11⟩ is now −0.5, but every probability is still 25%.',
+      'Oracle: mark |11⟩ by flipping its sign. Press CZ (control Q0, target Q1). Check the amplitude table: |11⟩ is now −0.5, but every probability is still 25%.',
       'Diffusion (inversion about the mean): press H on both qubits, then X on both qubits.',
-      'Flip the sign of |11⟩ again: H on qubit 1, CNOT (control Q0, target Q1), H on qubit 1.',
+      'Flip the sign of |11⟩ again: press CZ.',
       'Finish the diffusion: X on both qubits, then H on both qubits.'
     ],
     ops: [
-      ...CZ(0, 1),
+      ['cz', 0, 1],
       ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'X', 0], ['gate', 'X', 1],
-      ...CZ(0, 1),
+      ['cz', 0, 1],
       ['gate', 'X', 0], ['gate', 'X', 1], ['gate', 'H', 0], ['gate', 'H', 1]
     ],
     predict: {
@@ -485,7 +512,7 @@ export const LESSONS = [
       options: ['25%, the same as guessing', '50%', '100%'],
       answer: 2
     },
-    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to 1. For four items, one round finds the answer with certainty. (H, CNOT, H on the target is a controlled-Z gate, which flips the sign of |11⟩ only.)',
+    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to 1. For four items, one round finds the answer with certainty. The CZ gate flips the sign of |11⟩ only; it is the same as H, CNOT, H on the target.',
     checks: [{ type: 'probs', values: { '|11⟩': 1 } }]
   },
   {
@@ -493,7 +520,7 @@ export const LESSONS = [
     part: 4,
     n: 3,
     title: 'Quantum teleportation',
-    goal: 'Move a qubit’s state from qubit 0 to qubit 2 using a shared Bell pair.',
+    goal: 'Move a qubit’s state from qubit 0 to qubit 2 using a shared Bell pair, two measurements and two classical bits.',
     why: 'Teleportation is how quantum networks move quantum information. It shows entanglement used as a resource, and why a quantum state can’t simply be copied.',
     panels: ['gates', 'table', 'bloch'],
     setup: [['reset'], ['gate', 'H', 0], ['gate', 'T', 0], ['gate', 'H', 0]],
@@ -501,23 +528,26 @@ export const LESSONS = [
       'Set up has given qubit 0 (Alice’s message) a state: its Bloch vector points to (0, −0.71, 0.71).',
       'Share a Bell pair between Alice (qubit 1) and Bob (qubit 2): press H on qubit 1, then CNOT with control Q1, target Q2.',
       'Alice: press CNOT with control Q0, target Q1, then H on qubit 0.',
-      'Bob’s corrections: press CNOT with control Q1, target Q2. Then H on qubit 2, CNOT with control Q0, target Q2, and H on qubit 2.',
+      'Alice measures: press M on qubit 0 and M on qubit 1. These two classical bits are what she “sends” to Bob.',
+      'Bob’s corrections: if qubit 1 gave 1, press X on qubit 2. Then, if qubit 0 gave 1, press Z on qubit 2.',
       'Compare qubit 2’s Bloch sphere with where qubit 0 started.'
     ],
     ops: [
       ['gate', 'H', 1], ['cnot', 1, 2],
       ['cnot', 0, 1], ['gate', 'H', 0],
-      ['cnot', 1, 2], ...CZ(0, 2)
+      ['measureQubit', 0], ['measureQubit', 1],
+      ['if', 1, ['gate', 'X', 2]], ['if', 0, ['gate', 'Z', 2]]
     ],
     predict: {
-      question: 'After the protocol, where does qubit 2’s Bloch vector point?',
-      options: ['Where qubit 0’s pointed at the start', 'At the north pole, |0⟩', 'At the centre, because it’s entangled'],
+      question: 'Alice’s two measurements give random bits. After Bob’s corrections, where does qubit 2’s Bloch vector point?',
+      options: ['Where qubit 0’s pointed at the start, whatever the bits were', 'It depends on the bits Alice got', 'At the centre, because it’s entangled'],
       answer: 0
     },
-    result: 'Qubit 2 now holds exactly the state qubit 0 started with, and qubit 0 no longer does (it points along +x): the state moved, it wasn’t copied. Before Bob’s corrections, qubit 2’s vector had length 0, so no information arrived until the corrections. In the real protocol Alice measures qubits 0 and 1 and sends Bob two classical bits that choose his corrections. Here the corrections are controlled gates instead, which gives the same result (the deferred measurement principle).',
+    result: 'Whatever bits Alice got, Bob’s corrections leave qubit 2 in exactly the state qubit 0 started with. Qubit 0 was measured, so it no longer has the state: it moved, it wasn’t copied. Before the corrections, qubit 2 holds one of four scrambled versions of the message, and without Alice’s two bits Bob can’t tell which. So nothing travels faster than the classical bits. Try it several times: the bits change, the result doesn’t.',
     checks: [
       { type: 'bloch', qubit: 2, x: 0, y: -r, z: r },
-      { type: 'bloch', qubit: 0, x: 1, y: 0, z: 0 }
+      { type: 'blochLength', qubit: 0, value: 1 },
+      { type: 'blochLength', qubit: 1, value: 1 }
     ]
   }
 ];

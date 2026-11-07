@@ -22,7 +22,7 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
 | 3. One lesson path | ✅ Done |
 | 4. Publish, import old saved data, redirect the old sites | ✅ Done: published on GitHub Pages, old saved states imported, the three original sites redirect here |
-| 5. New content | ✅ First three algorithm lessons: Deutsch–Jozsa, Grover’s search, teleportation |
+| 5. New content | ✅ Algorithm lessons (Deutsch–Jozsa, Grover’s search, teleportation), CZ gate, single-qubit measurement |
 
 ---
 
@@ -45,9 +45,10 @@ What each size shows:
 | Panel | 1 qubit | 2 qubits | 3 qubits |
 |---|---|---|---|
 | Gate buttons (I, H, X, Y, Z, S, T) per qubit | ✓ | ✓ | ✓ |
-| CNOT with any control and target | — | ✓ | ✓ |
+| CNOT and CZ with any control and target | — | ✓ | ✓ |
+| Measure one qubit (M) or all qubits; classical bits shown | ✓ | ✓ | ✓ |
 | Preset states (always start from \|0…0⟩) | — | Bell | Bell, GHZ |
-| Measure / Reset | ✓ | ✓ | ✓ |
+| Reset | ✓ | ✓ | ✓ |
 | Amplitude table (amplitude, probability, phase) | ✓ | ✓ | ✓ |
 | Probability chart | 2 bars | 4 bars | 8 bars |
 | Bloch sphere per qubit | 1 | 2 | 3 |
@@ -65,7 +66,8 @@ What each size shows:
 - 1-, 2- and 3-qubit quantum state simulation
 - Complex-valued quantum amplitudes
 - Single-qubit gates
-- Controlled-NOT (CNOT) on any pair of qubits
+- Controlled-NOT (CNOT) and controlled-Z (CZ) on any pair of qubits
+- Measuring a single qubit, with partial collapse
 - Bell state generation
 - GHZ state generation
 - Quantum superposition
@@ -94,7 +96,7 @@ What each size shows:
 - Client-side architecture
 - GitHub Pages compatible
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard)
-- 21 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
+- 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration
 
@@ -119,9 +121,12 @@ What each size shows:
 | Gate | Name | Description |
 |------|------|-------------|
 | CNOT | Controlled-NOT Gate | Flips the target qubit when the control qubit is \|1⟩ |
+| CZ | Controlled-Z Gate | Flips the sign where both qubits are \|1⟩ (symmetric: either qubit can be the control) |
 
-The **CNOT** button always uses qubit 0 as control and qubit 1 as target.
-In the Circuit Editor, a CNOT step uses the selected qubit as control and the next qubit as target (q0→q1, q1→q2, q2→q0).
+The **CNOT** and **CZ** buttons use the control and target qubits chosen next to them; any pair can be chosen.
+In the Circuit Editor, a CNOT or CZ step uses the selected qubit as control and the chosen target.
+
+The **M** button on each qubit's row measures just that qubit. **Measure all** measures every qubit. Results appear as classical bits under the amplitude table.
 
 ---
 
@@ -402,7 +407,7 @@ quantum-lab/
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
 ├── components/
 │   ├── app-nav.js         # Lab size selector and page links
-│   ├── gate-panel.js      # Gates, CNOT (any pair), presets, Measure, Reset
+│   ├── gate-panel.js      # Gates, M per qubit, CNOT and CZ (any pair), presets, Measure all, Reset
 │   ├── amplitude-table.js
 │   ├── probability-chart.js
 │   ├── bloch-spheres.js
@@ -415,7 +420,7 @@ quantum-lab/
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js
 │   └── help.js
-├── lessons.js             # The 21 lessons, as data
+├── lessons.js             # The 22 lessons, as data
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
 ├── engine.js              # Simulation maths: pure functions, any number of qubits
@@ -524,7 +529,7 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ## Lessons
 
-One path of 21 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
+One path of 22 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
 
 - opens a lab with the right number of qubits, showing only the panels it needs
 - asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
@@ -534,7 +539,7 @@ One path of 21 lessons takes a learner from a single qubit to three-qubit entang
 | Part | Lessons |
 |---|---|
 | 1. One qubit | Bit flip · Superposition · Measurement collapse · Reversibility · Phase you can’t see · Phase you can see: interference · Complex phase: S, T and Y · Reading the Bloch sphere |
-| 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Correlation is not entanglement |
+| 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Measuring one qubit of a Bell pair · Correlation is not entanglement |
 | 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
 | 4. Quantum algorithms | Deutsch–Jozsa: one question instead of three (3 qubits) · Grover’s search: finding the marked item (2 qubits) · Quantum teleportation (3 qubits) |
 

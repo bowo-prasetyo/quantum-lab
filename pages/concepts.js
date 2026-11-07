@@ -13,7 +13,8 @@ const SECTIONS = [
       ['Superposition', 'A state with more than one non-zero amplitude, such as H|0⟩ = (|0⟩ + |1⟩)/√2. It is a definite state, not ignorance about a hidden value: its phases can still interfere.'],
       ['Phase', 'The angle of an amplitude in the complex plane. Phase doesn’t change probabilities on its own, but when amplitudes are combined (for example by an H gate) it decides whether they add up or cancel.'],
       ['Interference', 'Amplitudes from different paths adding up (constructive) or cancelling (destructive). H then H returns |0⟩ because the paths to |1⟩ cancel; H, Z, H gives |1⟩ because Z flips one sign.'],
-      ['Measurement and collapse', 'Measuring picks one basis state at random, with the probabilities given by the amplitudes. The state then collapses to that result, so measuring again gives the same answer.']
+      ['Measurement and collapse', 'Measuring picks one basis state at random, with the probabilities given by the amplitudes. The state then collapses to that result, so measuring again gives the same answer.'],
+      ['Measuring one qubit', 'You can measure a single qubit (the M button). It gives 0 or 1, and only the amplitudes that disagree with the result are removed; the rest are rescaled. Other qubits keep their superposition, unless they were entangled with the measured one.']
     ]
   },
   {
@@ -27,6 +28,7 @@ const SECTIONS = [
       ['Phase (S)', 'Gives |1⟩ a 90° phase. S applied twice is Z.'],
       ['π/8 (T)', 'Gives |1⟩ a 45° phase. T applied twice is S. Important for universal quantum computing.'],
       ['CNOT', 'A two-qubit gate: flips the target qubit when the control qubit is 1. With H, it creates entanglement. In this lab any qubit can be the control or the target.'],
+      ['Controlled-Z (CZ)', 'Flips the sign of the amplitudes where both qubits are 1. It treats both qubits the same, so it doesn’t matter which is the control. It equals H, CNOT, H on the target.'],
       ['Reversibility', 'Every gate can be undone; information is only lost when you measure.']
     ]
   },
@@ -48,9 +50,9 @@ const SECTIONS = [
       ['Phase kickback', 'When an oracle acts on a target qubit in the state (|0⟩ − |1⟩)/√2, the flip shows up as a sign on the input instead. This turns answers into phases that interference can read.'],
       ['Deutsch–Jozsa', 'Decides whether a function is constant or balanced with a single oracle call. Afterwards the input qubits read all zeros only if f is constant.'],
       ['Grover’s search', 'Finds a marked item among N in about √N rounds. Each round marks the item with a sign flip (oracle) and then reflects all amplitudes about their average (diffusion). For four items, one round is enough.'],
-      ['Controlled-Z (CZ)', 'Flips the sign of |11⟩ only. The lab builds it as H, CNOT, H on the target qubit.'],
-      ['Teleportation', 'Moves a qubit’s state to another qubit using a shared Bell pair and two classical bits. The original is destroyed in the process, so the state is never copied (the no-cloning theorem).'],
-      ['Deferred measurement', 'A measurement whose result controls a later gate can be replaced by a controlled gate, with the measurement moved to the end. The lab’s teleportation lesson uses this.']
+      ['Teleportation', 'Moves a qubit’s state to another qubit using a shared Bell pair, two measurements and two classical bits that choose the corrections. The original is destroyed in the process, so the state is never copied (the no-cloning theorem).'],
+      ['Classical bits', 'The results of measurements. The lab shows them under the amplitude table. In teleportation, Bob needs Alice’s two bits to know which correction to apply.'],
+      ['Deferred measurement', 'A measurement whose result controls a later gate can be replaced by a controlled gate, with the measurement moved to the end, and the outcome is the same.']
     ]
   },
   {
