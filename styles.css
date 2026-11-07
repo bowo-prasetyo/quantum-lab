@@ -153,6 +153,30 @@ pre {
   gap: 8px;
 }
 
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 8px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1em;
+  text-decoration: none;
+}
+
+.nav-brand-soft {
+  color: #a9c6ff;
+  font-weight: 300;
+}
+
+/* On narrow screens the brand gets its own row above the links */
+@media (max-width: 600px) {
+  .nav-brand {
+    flex-basis: 100%;
+    margin-bottom: 4px;
+  }
+}
+
 .nav-label {
   color: #aaa;
 }

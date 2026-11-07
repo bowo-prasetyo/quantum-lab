@@ -1,3 +1,5 @@
+<p align="center"><img src="brand/glass-qubit-stacked-on-light.svg#gh-light-mode-only" alt="Glass Qubit" height="150"><img src="brand/glass-qubit-stacked-on-dark.svg#gh-dark-mode-only" alt="Glass Qubit" height="150"></p>
+
 # Glass Qubit
 
 **A quantum lab in your browser.** An educational quantum computer lab that runs entirely inside the browser.

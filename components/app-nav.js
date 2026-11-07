@@ -3,6 +3,11 @@
 export const AppNav = {
   template: `
     <nav class="card nav">
+      <router-link to="/lab/1" class="nav-brand" aria-label="Glass Qubit, home">
+        <img src="./favicon.svg" alt="" width="28" height="28" />
+        <span><span class="nav-brand-soft">Glass</span> Qubit</span>
+      </router-link>
+
       <span class="nav-label">Lab:</span>
       <router-link
         v-for="n in [1, 2, 3]"
