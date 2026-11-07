@@ -3,6 +3,7 @@
 // rotate; mouse wheel or two-finger pinch to zoom.
 
 import { phaseToRgb } from '../colors.js';
+import { redrawOnResize } from './canvas-fit.js';
 
 function mat4Perspective(fov, aspect, near, far) {
   const f = 1.0 / Math.tan(fov / 2);
@@ -70,6 +71,8 @@ const FRAGMENT_SHADER = `
 `;
 
 export const Cube3D = {
+  mixins: [redrawOnResize],
+
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true }
@@ -88,8 +91,8 @@ export const Cube3D = {
       <canvas
         ref="canvas"
         class="webgl-canvas"
-        width="600"
-        height="300"
+        role="img"
+        aria-label="3D view of the 8 basis states (the same probabilities and phases are in the Quantum State table)"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
@@ -113,7 +116,7 @@ export const Cube3D = {
     this.$refs.canvas.addEventListener('wheel', this.onWheel, { passive: false });
 
     this.init();
-    this.render();
+    this.draw();
   },
 
   beforeUnmount() {
@@ -123,6 +126,24 @@ export const Cube3D = {
   watch: { re() { this.render(); }, im() { this.render(); } },
 
   methods: {
+    // Sizes the canvas to its displayed width at the screen's pixel
+    // density (see canvas-fit.js), then draws. Skipped while hidden.
+    draw() {
+      const canvas = this.$refs.canvas;
+      const width = canvas.clientWidth;
+      if (!width) return;
+      const height = Math.round(Math.min(300, Math.max(220, width * 0.5)));
+      const dpr = window.devicePixelRatio || 1;
+      canvas.style.height = `${height}px`;
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
+      // Point sizes are in device pixels and were tuned for a 300 px tall view
+      this.pointScale = dpr * height / 300;
+      this.render();
+    },
+
     init() {
       const gl = this.$refs.canvas.getContext('webgl');
       if (!gl) {
@@ -193,7 +214,7 @@ export const Cube3D = {
         const im = this.im[i];
         // Corner of the cube: one axis per qubit (q0 = x, q1 = y, q2 = z)
         vertices.push((i >> 2) & 1 ? 1 : -1, (i >> 1) & 1 ? 1 : -1, i & 1 ? 1 : -1);
-        sizes.push(5 + (re * re + im * im) * 60);
+        sizes.push((5 + (re * re + im * im) * 60) * (this.pointScale || 1));
         colors.push(...phaseToRgb(Math.atan2(im, re)));
       }
 

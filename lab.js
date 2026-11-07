@@ -17,6 +17,19 @@ import { CircuitEditor } from './components/circuit-editor.js';
 
 const STEP_DELAY_MS = 500; // pause between circuit steps so changes are visible
 
+// Two columns from this width up (keep in step with "Workbench" in styles.css)
+const WIDE_QUERY = '(min-width: 1000px)';
+
+// The views, in display order, with their tab labels on narrow screens
+const VIEWS = [
+  { key: 'table', label: 'State' },
+  { key: 'probabilities', label: 'Probabilities' },
+  { key: 'bloch', label: 'Bloch spheres' },
+  { key: 'density', label: 'Density matrix' },
+  { key: 'correlation', label: 'Correlations' },
+  { key: 'cube', label: '3D' }
+];
+
 // Circuit editor step → worker message
 function stepToMessage(step) {
   if (step.gate === 'CNOT') return { type: 'cnot', control: step.control, target: step.target };
@@ -53,12 +66,21 @@ export const Lab = {
       // Classical bits from measurements: { qubit: 0 | 1 }
       bits: {},
       running: false,
-      importedFrom: null   // name of the old simulator a state was brought over from
+      importedFrom: null,  // name of the old simulator a state was brought over from
+      narrow: !window.matchMedia(WIDE_QUERY).matches,
+      activeView: 'table'  // the view tab shown on narrow screens
     };
   },
 
+  // Layout (see "Workbench" in styles.css):
+  //   wide screens (≥ 1000 px): the controls (gates, circuit editor, and a
+  //     lesson's steps, passed in the "side" slot) stay in a sticky column
+  //     on the left while the views fill the right, so a gate's effect is
+  //     visible the moment it is pressed;
+  //   narrow screens: one column, with the views in tabs (one view at a
+  //     time) above the gates, like a calculator's display above its keys.
   template: `
-    <div :class="{ container: !embedded }">
+    <div :class="{ container: !embedded, wide: !embedded }">
       <template v-if="!embedded">
         <app-nav />
 
@@ -78,39 +100,108 @@ export const Lab = {
         <button class="link-button" @click="importedFrom = null">Dismiss</button>
       </div>
 
-      <gate-panel
-        v-if="show('gates')"
-        :n="n"
-        @gate="applyGate"
-        @cnot="applyCNOT"
-        @cz="applyCZ"
-        @measure-qubit="measureQubit"
-        @bell="createBellState"
-        @ghz="createGHZState"
-        @measure="measure"
-        @reset="reset"
-      />
+      <div class="workbench">
+        <div class="workbench-controls">
+          <div v-if="$slots.side" class="workbench-side">
+            <slot name="side" />
+          </div>
 
-      <amplitude-table v-if="show('table')" :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" :bits="bits" />
-      <probability-chart v-if="show('probabilities')" :re="stateRe" :im="stateIm" :n="n" />
-      <bloch-spheres v-if="show('bloch')" :re="stateRe" :im="stateIm" :n="n" />
-      <density-matrix v-if="show('density')" :re="stateRe" :im="stateIm" :n="n" />
-      <correlation-graph v-if="n >= 2 && show('correlation')" :re="stateRe" :im="stateIm" :n="n" />
-      <cube-3d v-if="n === 3 && show('cube')" :re="stateRe" :im="stateIm" />
+          <div class="workbench-tools">
+            <gate-panel
+              v-if="show('gates')"
+              :n="n"
+              @gate="applyGate"
+              @cnot="applyCNOT"
+              @cz="applyCZ"
+              @measure-qubit="measureQubit"
+              @bell="createBellState"
+              @ghz="createGHZState"
+              @measure="measure"
+              @reset="reset"
+            />
 
-      <circuit-editor
-        v-if="show('editor')"
-        :n="n"
-        :circuit="circuit"
-        :running="running"
-        @add="addStep"
-        @remove="removeStep"
-        @run="runCircuit"
-      />
+            <circuit-editor
+              v-if="show('editor')"
+              :n="n"
+              :circuit="circuit"
+              :running="running"
+              @add="addStep"
+              @remove="removeStep"
+              @run="runCircuit"
+            />
+          </div>
+        </div>
+
+        <div class="workbench-views">
+          <div
+            v-if="tabbed"
+            class="view-tabs"
+            role="tablist"
+            aria-label="Views"
+            @keydown="onTabKeydown"
+          >
+            <button
+              v-for="v in views"
+              :key="v.key"
+              :id="'view-tab-' + v.key"
+              class="view-tab"
+              role="tab"
+              :aria-selected="String(v.key === currentView)"
+              :aria-controls="'view-' + v.key"
+              :tabindex="v.key === currentView ? 0 : -1"
+              @click="activeView = v.key"
+            >{{ v.label }}</button>
+          </div>
+
+          <section v-if="show('table')" v-bind="viewAttrs('table')">
+            <amplitude-table :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" :bits="bits" />
+          </section>
+          <section v-if="show('probabilities')" v-bind="viewAttrs('probabilities')">
+            <probability-chart :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="show('bloch')" v-bind="viewAttrs('bloch')">
+            <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="show('density')" v-bind="viewAttrs('density')">
+            <density-matrix :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="n >= 2 && show('correlation')" v-bind="viewAttrs('correlation')">
+            <correlation-graph :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="n === 3 && show('cube')" v-bind="viewAttrs('cube')">
+            <cube-3d :re="stateRe" :im="stateIm" />
+          </section>
+        </div>
+      </div>
     </div>
   `,
 
+  computed: {
+    // The views this lab shows, in order, with their tab labels
+    views() {
+      return VIEWS
+        .filter(v => this.show(v.key))
+        .filter(v => !(v.key === 'correlation' && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
+        .map(v => ({ key: v.key, label: v.key === 'bloch' && this.n === 1 ? 'Bloch sphere' : v.label }));
+    },
+
+    // Tabs only on narrow screens, and only if there is more than one view
+    tabbed() {
+      return this.narrow && this.views.length > 1;
+    },
+
+    // The chosen tab, or the first view if the chosen one isn't shown here
+    currentView() {
+      const keys = this.views.map(v => v.key);
+      return keys.includes(this.activeView) ? this.activeView : keys[0];
+    }
+  },
+
   created() {
+    this.wideQuery = window.matchMedia(WIDE_QUERY);
+    this.onWideChange = e => { this.narrow = !e.matches; };
+    this.wideQuery.addEventListener('change', this.onWideChange);
+
     // Every operation runs through this queue, one at a time, and each
     // starts only after the previous worker reply has arrived. So it always
     // acts on the latest state, however fast the buttons are pressed.
@@ -155,6 +246,7 @@ export const Lab = {
 
   beforeUnmount() {
     this.worker.terminate();
+    this.wideQuery.removeEventListener('change', this.onWideChange);
   },
 
   methods: {
@@ -199,6 +291,34 @@ export const Lab = {
 
     show(panel) {
       return !this.panels || this.panels.includes(panel);
+    },
+
+    // Attributes for a view's wrapper: a tab panel on narrow screens
+    viewAttrs(key) {
+      if (!this.tabbed) return { class: 'lab-view' };
+      return {
+        class: 'lab-view',
+        id: 'view-' + key,
+        role: 'tabpanel',
+        'aria-labelledby': 'view-tab-' + key,
+        hidden: key !== this.currentView
+      };
+    },
+
+    // Arrow keys, Home and End move between view tabs (WAI-ARIA tabs pattern)
+    onTabKeydown(e) {
+      const keys = this.views.map(v => v.key);
+      const i = keys.indexOf(this.currentView);
+      const next = {
+        ArrowRight: (i + 1) % keys.length,
+        ArrowLeft: (i - 1 + keys.length) % keys.length,
+        Home: 0,
+        End: keys.length - 1
+      }[e.key];
+      if (next === undefined) return;
+      e.preventDefault();
+      this.activeView = keys[next];
+      this.$nextTick(() => document.getElementById('view-tab-' + keys[next])?.focus());
     },
 
     async save() {

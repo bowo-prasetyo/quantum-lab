@@ -30,30 +30,35 @@ export const GatePanel = {
     }
   },
 
+  // One row per qubit (label, seven gates, M), so the panel stays compact
+  // enough to sit beside the views on a wide screen and above them on a phone.
   template: `
-    <div class="card">
+    <div class="card gate-panel">
       <h2>Gates</h2>
 
-      <div v-for="q in qubits" :key="q">
-        <h3>Qubit {{ q }}</h3>
+      <div
+        v-for="q in qubits"
+        :key="q"
+        class="gate-row"
+        role="group"
+        :aria-label="'Qubit ' + q"
+      >
+        <span class="gate-row-label" aria-hidden="true">Q{{ q }}</span>
         <button
           v-for="g in gates"
           :key="g"
+          class="gate-button"
           @click="$emit('gate', g, q)"
         >{{ g }}</button>
         <button
-          class="measure-button"
+          class="gate-button measure-button"
           :aria-label="'Measure qubit ' + q"
           :title="'Measure qubit ' + q + ' only'"
           @click="$emit('measure-qubit', q)"
         >M</button>
       </div>
 
-      <hr>
-
       <div v-if="n >= 2" class="cnot-row">
-        <button @click="$emit('cnot', cnotControl, cnotTarget)">CNOT</button>
-        <button @click="$emit('cz', cnotControl, cnotTarget)">CZ</button>
         <label>
           control
           <select v-model.number="cnotControl" aria-label="CNOT and CZ control qubit">
@@ -67,12 +72,18 @@ export const GatePanel = {
             <option v-for="q in qubits" :key="q" :value="q">Q{{ q }}</option>
           </select>
         </label>
+        <div class="button-grid">
+          <button @click="$emit('cnot', cnotControl, cnotTarget)">CNOT</button>
+          <button @click="$emit('cz', cnotControl, cnotTarget)">CZ</button>
+        </div>
       </div>
 
-      <button v-if="n >= 2" @click="$emit('bell')">Create Bell Pair</button>
-      <button v-if="n === 3" @click="$emit('ghz')">GHZ State</button>
-      <button @click="$emit('measure')">Measure all</button>
-      <button @click="$emit('reset')">Reset</button>
+      <div class="action-row button-grid">
+        <button v-if="n >= 2" @click="$emit('bell')">Create Bell Pair</button>
+        <button v-if="n === 3" @click="$emit('ghz')">GHZ State</button>
+        <button @click="$emit('measure')">Measure all</button>
+        <button @click="$emit('reset')">Reset</button>
+      </div>
 
       <p class="caption">
         <strong>M</strong> measures just that qubit; <strong>Measure all</strong> measures every qubit.

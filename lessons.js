@@ -197,7 +197,7 @@ export const LESSONS = [
     why: 'The Bloch sphere shows a qubit’s whole state in one picture, and it is used throughout the rest of the path.',
     panels: BASIC,
     setup: [['reset']],
-    steps: ['Press H on qubit 0.', 'Press T on qubit 0.', 'Read the x, y and z values on the sphere.'],
+    steps: ['Press H on qubit 0.', 'Press T on qubit 0.', 'Read the x, y and z values under the sphere.'],
     ops: [['gate', 'H', 0], ['gate', 'T', 0]],
     predict: {
       question: 'T is a 45° phase. Starting from +x, where does the vector end up?',

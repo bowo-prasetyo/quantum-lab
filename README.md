@@ -99,6 +99,8 @@ What each size shows:
 - IndexedDB persistence
 - Client-side architecture
 - GitHub Pages compatible
+- Workbench layout: on wide screens the gates (and a lesson's steps) stay beside the views, so a gate's effect is visible as it is pressed; on phones the views are in tabs above the gates
+- Charts drawn at the screen's real size and pixel density, so they stay sharp and readable on any screen
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard)
 - 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
