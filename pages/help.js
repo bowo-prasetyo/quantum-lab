@@ -68,7 +68,18 @@ export const Help = {
         <ul>
           <li>Drag with the mouse or one finger to rotate the cube.</li>
           <li>Use the mouse wheel, or pinch with two fingers, to zoom.</li>
+          <li>With the keyboard: the arrow keys rotate it, and + and − zoom.</li>
           <li>On a phone, start scrolling the page outside the 3D view.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Reading the views without colour, and with a screen reader</h2>
+        <ul>
+          <li>Point at, tap, or focus the <strong>density matrix</strong> and use the arrow keys: the square you are on is outlined and its exact size and phase appear under it.</li>
+          <li>Point at or tap a corner of the <strong>3D view</strong> to read its probability and phase. With the keyboard, focus it and use the arrow keys to rotate it, and + and − to zoom.</li>
+          <li>With a screen reader, every action is followed by a short summary of what it did and the possible outcomes, such as “H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%.” The charts have text descriptions, and the Quantum State table holds every number.</li>
+          <li>The lab adds no animation of its own, and a circuit run or Show me changes the views in steps half a second apart, so you can follow along.</li>
         </ul>
       </div>
 

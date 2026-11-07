@@ -14,6 +14,13 @@
 import { QubitPicker } from './qubit-picker.js';
 import { gateHints } from './gate-hints.js';
 
+/** A circuit step as text: 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure qubit 2). */
+export function stepLabel(step) {
+  if (step.gate === 'CNOT') return `CNOT q${step.control}→q${step.target}`;
+  if (step.gate === 'CZ') return `CZ q${step.control},q${step.target}`;
+  return `${step.gate} q${step.target}`;
+}
+
 const SINGLE_GATES = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T', 'M'];
 const PAIR_GATES = ['CNOT', 'CZ'];
 
@@ -201,7 +208,8 @@ export const CircuitEditor = {
         >Undo</button>
       </div>
 
-      <p class="caption circuit-status" role="status">{{ status }}</p>
+      <!-- Visual only: the lab announces each step, with the state it gives -->
+      <p class="caption circuit-status">{{ status }}</p>
 
       <!-- Chip that follows the finger during a touch drag -->
       <div
@@ -213,12 +221,7 @@ export const CircuitEditor = {
   `,
 
   methods: {
-    // e.g. 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure qubit 2)
-    stepLabel(step) {
-      if (step.gate === 'CNOT') return `CNOT q${step.control}→q${step.target}`;
-      if (step.gate === 'CZ') return `CZ q${step.control},q${step.target}`;
-      return `${step.gate} q${step.target}`;
-    },
+    stepLabel,
 
     isDone(index) {
       return this.applied !== null && index < this.applied;

@@ -278,6 +278,33 @@ pre {
   margin-right: 4px;
 }
 
+/* A canvas that can be explored with the keyboard (density matrix, 3D view) */
+.readable-canvas:focus-visible,
+.webgl-canvas:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Exact value of the entry or corner being read, under the canvas */
+.readout {
+  min-height: 1.4em;
+  margin: 8px 0 0;
+  color: #ddd;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Respect "reduce motion": nothing slides or fades */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Read by screen readers, not shown */
 .visually-hidden {
   position: absolute;
@@ -438,8 +465,9 @@ button:disabled {
   font-weight: normal;
 }
 
+/* Dimmed, but still 4.9:1 against the card (WCAG AA needs 4.5:1) */
 .amp-table tr.zero td {
-  color: #666;
+  color: #8a8a8a;
 }
 
 /* ---------- Lessons ---------- */
