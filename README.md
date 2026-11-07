@@ -1,19 +1,55 @@
-# 3-Qubit Quantum Simulator
+# Quantum Lab
 
-An educational quantum computer simulator that runs entirely inside the browser.
+An educational quantum computer lab that runs entirely inside the browser.
 
-The application demonstrates the behavior of a 3-qubit quantum system using modern web technologies without requiring any backend server.
+One app covers **1, 2 and 3 qubits**, with the same simulator, visuals and vocabulary at every size, so what you learn about one qubit carries over to two and three.
 
 Users can explore quantum gates, superposition, phase, entanglement, density matrices, Bloch spheres, and measurement collapse through interactive visualizations.
 
-The simulator is fully client-side and deployable on GitHub Pages.
+The lab is fully client-side and deployable on GitHub Pages.
+
+It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/quantum-1qubit), [2 qubits](https://github.com/bowo-prasetyo/quantum-2qubits) and [3 qubits](https://github.com/bowo-prasetyo/quantum-3qubits), following the [merge plan](docs/MERGE_PLAN.md).
 
 ---
 
-## Live Demo
+## Status
 
-- Demo: https://bowo-prasetyo.github.io/quantum-3qubits/
-- Repository: https://github.com/bowo-prasetyo/quantum-3qubits/
+| Merge plan phase | Status |
+|---|---|
+| 1. Shared engine and tests | ✅ Done |
+| 2. One lab for 1, 2 and 3 qubits | ✅ Done |
+| 3. One lesson path | Next. Until then, the User Manual and Concepts pages describe the 3-qubit lab |
+| 4. Publish, import old saved data, redirect the old sites | Planned. The lab isn't published yet; the three original sites stay live until then |
+
+---
+
+## Using the Lab
+
+The address chooses the size:
+
+| Address | Lab |
+|---|---|
+| `#/lab/1` (also the start page) | 1 qubit |
+| `#/lab/2` | 2 qubits |
+| `#/lab/3` | 3 qubits |
+| `#/concepts` | Quantum Concepts |
+| `#/manual` | User Manual |
+
+What each size shows:
+
+| Panel | 1 qubit | 2 qubits | 3 qubits |
+|---|---|---|---|
+| Gate buttons (I, H, X, Y, Z, S, T) per qubit | ✓ | ✓ | ✓ |
+| CNOT with any control and target | — | ✓ | ✓ |
+| Preset states (always start from \|0…0⟩) | — | Bell | Bell, GHZ |
+| Measure / Reset | ✓ | ✓ | ✓ |
+| Amplitude table (amplitude, probability, phase) | ✓ | ✓ | ✓ |
+| Probability chart | 2 bars | 4 bars | 8 bars |
+| Bloch sphere per qubit | 1 | 2 | 3 |
+| Density matrix | 2×2 | 4×4 | 8×8 |
+| Correlation graph | — | 1 edge | 3 edges |
+| 3D basis-state cube | — | — | ✓ |
+| Circuit editor (tap, drag or keyboard) | ✓ | ✓ | ✓ |
 
 ---
 
@@ -21,10 +57,10 @@ The simulator is fully client-side and deployable on GitHub Pages.
 
 ### Quantum Simulation
 
-- 3-qubit quantum state simulation
+- 1-, 2- and 3-qubit quantum state simulation
 - Complex-valued quantum amplitudes
 - Single-qubit gates
-- Controlled-NOT (CNOT) operations
+- Controlled-NOT (CNOT) on any pair of qubits
 - Bell state generation
 - GHZ state generation
 - Quantum superposition
@@ -36,7 +72,7 @@ The simulator is fully client-side and deployable on GitHub Pages.
 
 ### Visualization
 
-- Quantum state display
+- Amplitude table (amplitude, probability and phase of each basis state)
 - Probability distribution chart
 - Density matrix visualization
 - Reduced density matrix computation
@@ -157,18 +193,19 @@ This helps visualize:
 
 ## Bell States
 
-The simulator can generate Bell states such as:
+In the 2- and 3-qubit labs, the **Create Bell Pair** button builds the Bell state
 
 ```text
-(|000⟩ + |110⟩) / √2
+(|00⟩ + |11⟩) / √2         in the 2-qubit lab
+(|000⟩ + |110⟩) / √2       in the 3-qubit lab
 ```
 
-starting from |000⟩ (press **Reset** first), using:
+It always starts from |0…0⟩ (it resets first), then applies:
 
 1. Hadamard gate on qubit 0
 2. CNOT gate (control qubit 0, target qubit 1)
 
-The **Create Bell Pair** button runs both steps. It does not reset first.
+The 3-qubit case is described below.
 
 Bell states demonstrate two-qubit entanglement.
 
@@ -191,13 +228,11 @@ The simulator can generate a three-qubit GHZ state:
 (|000⟩ + |111⟩) / √2
 ```
 
-starting from |000⟩ (press **Reset** first), using:
+In the 3-qubit lab, the **GHZ State** button always starts from |000⟩ (it resets first), then applies:
 
 1. Hadamard gate on qubit 0
 2. CNOT gate (control qubit 0, target qubit 1)
 3. CNOT gate (control qubit 1, target qubit 2)
-
-The **GHZ State** button runs all three steps. It does not reset first.
 
 The GHZ state entangles all three qubits simultaneously.
 
@@ -354,17 +389,32 @@ To upgrade a library:
 ## Project Structure
 
 ```text
-quantum-3qubits/
+quantum-lab/
 ├── index.html
-├── app.js
-├── router.js          # Vue pages and visualizations
-├── engine.js          # Simulation maths: pure functions, any number of qubits
-├── worker.js          # Background worker: runs engine.js gates and measurement
-├── db.js
+├── app.js                 # Creates the Vue app
+├── router.js              # Routes: #/lab/:n, #/concepts, #/manual
+├── lab.js                 # The lab page: state, operation queue, worker, saving
+├── components/
+│   ├── app-nav.js         # Lab size selector and page links
+│   ├── gate-panel.js      # Gates, CNOT (any pair), presets, Measure, Reset
+│   ├── amplitude-table.js
+│   ├── probability-chart.js
+│   ├── bloch-spheres.js
+│   ├── density-matrix.js
+│   ├── correlation-graph.js
+│   ├── cube-3d.js         # WebGL view (3 qubits)
+│   └── circuit-editor.js  # Tap, drag (mouse or touch) or keyboard
+├── pages/
+│   ├── concepts.js
+│   └── manual.js
+├── engine.js              # Simulation maths: pure functions, any number of qubits
+├── worker.js              # Background worker: runs engine.js gates and measurement
+├── colors.js              # Phase → colour, shared by the views
+├── db.js                  # Saved state per lab size (IndexedDB)
 ├── styles.css
 ├── tests/
-│   └── engine.test.js # Unit tests for engine.js
-├── package.json       # Only configures the tests; the app has no build step
+│   └── engine.test.js     # Unit tests for engine.js
+├── package.json           # Only configures the tests; the app has no build step
 ├── docs/
 └── README.md
 ```
@@ -398,6 +448,8 @@ All the simulation maths lives in `engine.js`, a set of pure functions with no d
 
 ### Main Thread
 
+The lab page (`lab.js`) owns the state and runs every operation through one queue, so each gate acts on the latest state however fast buttons are pressed. Each panel is a component that redraws from the state it is given.
+
 Responsible for:
 
 - Vue UI rendering
@@ -428,15 +480,17 @@ Gates and measurements run in the background, and the main thread computes what 
 
 ## Persistence
 
-The simulator automatically stores the latest quantum state and the Circuit Editor's steps using IndexedDB.
+Each lab size automatically stores its own quantum state and Circuit Editor steps using IndexedDB.
 
-After refreshing the browser, both are restored automatically.
+After refreshing the browser or switching sizes, both are restored. Saved data that is invalid (for example, from another version) is ignored.
+
+The lab uses its own database (`quantum-lab`), separate from the three original simulators' databases on the same site.
 
 ---
 
 ## Educational Use Cases
 
-The included User Manual demonstrates:
+The included User Manual, written for the 3-qubit lab, demonstrates:
 
 1. Classical bit flip
 2. Quantum superposition
@@ -466,7 +520,7 @@ The plan is to merge the 1-, 2- and 3-qubit simulators into one guided Quantum L
 - [Product vision](docs/VISION.md)
 - [Merge plan](docs/MERGE_PLAN.md)
 
-Both are proposals for review.
+Both have been agreed.
 
 ---
 

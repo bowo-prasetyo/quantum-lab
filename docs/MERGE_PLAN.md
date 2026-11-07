@@ -1,6 +1,6 @@
 # Merge Plan: One Quantum Lab from Three Simulators
 
-> Status: **proposal for review**. It follows [the product vision](VISION.md). Nothing here changes the apps until the decisions below are made.
+> Status: **agreed** (all five recommendations accepted). It follows [the product vision](VISION.md). Phases 1 and 2 are done; Phase 3 is next.
 
 ## Summary
 

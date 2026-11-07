@@ -253,3 +253,21 @@ export function zzCorrelation(re, im, q1, q2, n) {
 
   return correlation;
 }
+
+/**
+ * True if (re, im) is a usable n-qubit state: arrays of length 2^n holding
+ * finite numbers, with total probability 1 (within `tolerance`).
+ * Used to reject saved data that is corrupt or from another version.
+ */
+export function isValidState(re, im, n, tolerance = 1e-6) {
+  const size = 1 << n;
+  if (!re || !im || re.length !== size || im.length !== size) return false;
+
+  let total = 0;
+  for (let i = 0; i < size; i++) {
+    if (!Number.isFinite(re[i]) || !Number.isFinite(im[i])) return false;
+    total += re[i] * re[i] + im[i] * im[i];
+  }
+
+  return Math.abs(total - 1) <= tolerance;
+}
