@@ -84,13 +84,6 @@ pre {
   overflow-x: auto;
 }
 
-.gate-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-
 .gate {
   padding: 10px 14px;
   background: #444;
@@ -184,6 +177,118 @@ pre {
 .circuit-status {
   min-height: 1.2em;
   margin-bottom: 0;
+}
+
+/* Circuit editor palette: rows like the Gates panel, in grey, because
+   these chips add a step to the circuit rather than act at once */
+.palette-row .gate,
+.palette-pair-gates .gate {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  min-height: 40px;
+}
+
+.palette-pair-gates {
+  flex: 1 1 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.palette-pair {
+  margin-bottom: 6px;
+}
+
+@media (pointer: coarse) {
+  .palette-row .gate,
+  .palette-pair-gates .gate {
+    min-height: 44px;
+  }
+}
+
+/* Control → target picker (CNOT and CZ), shared by both panels */
+/* Control row above target row, chips lined up under each other */
+.qubit-picker {
+  flex: 1 1 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.picker-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.picker-label {
+  min-width: 4.5em;
+  color: #aaa;
+}
+
+.picker-chip {
+  margin: 0;
+  padding: 6px 10px;
+  min-width: 40px;
+  min-height: 36px;
+  background: #2a2a2a;
+  color: #eee;
+  border: 1px solid #444;
+}
+
+.picker-chip[aria-checked="true"] {
+  background: #2f6fed;
+  border-color: #fff;
+  color: #fff;
+}
+
+.picker-chip:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.picker-chip:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .picker-chip {
+    min-height: 44px;
+  }
+}
+
+/* What the last hovered, focused or tapped gate does. Two lines high, so
+   the panel doesn't jump as the text changes. */
+.gate-hint {
+  min-height: 2.8em;
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #222;
+  color: #ccc;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.gate-hint strong {
+  color: #fff;
+  margin-right: 4px;
+}
+
+/* Read by screen readers, not shown */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* A fieldset used only to disable its buttons together, with no look of its own */
@@ -293,11 +398,6 @@ pre {
   color: #8fb2ff;
 }
 
-button.selected {
-  outline: 2px solid #fff;
-  outline-offset: 2px;
-}
-
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -308,15 +408,6 @@ button:disabled {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-
-.cnot-row select {
-  margin-left: 4px;
-  padding: 6px;
-  border-radius: 6px;
-  background: #2a2a2a;
-  color: #eee;
-  border: 1px solid #444;
 }
 
 .table-scroll {

@@ -130,7 +130,7 @@ What each size shows:
 | CNOT | Controlled-NOT Gate | Flips the target qubit when the control qubit is \|1⟩ |
 | CZ | Controlled-Z Gate | Flips the sign where both qubits are \|1⟩ (symmetric: either qubit can be the control) |
 
-The **CNOT** and **CZ** buttons use the control and target qubits chosen next to them; any pair can be chosen.
+The **CNOT** and **CZ** buttons use the control and target qubits chosen next to them; any pair can be chosen. The Gates panel and the circuit editor share one control → target picker and one choice. Pointing at, focusing or tapping any gate shows a one-line description of what it does (also given to screen readers); `tests/gate-info.test.js` checks each description against the simulator.
 In the Circuit Editor, a CNOT or CZ step uses the selected qubit as control and the chosen target.
 
 The **M** button on each qubit's row measures just that qubit. **Measure all** measures every qubit. Results appear as classical bits under the amplitude table.

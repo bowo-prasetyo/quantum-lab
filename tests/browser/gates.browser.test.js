@@ -13,6 +13,10 @@ const probabilities = page => page.locator('.amp-table tbody tr td:nth-child(3)'
 const amplitudes = page => page.locator('.amp-table tbody tr td:nth-child(2)').allInnerTexts();
 const button = (page, name, nth = 0) => page.getByRole('button', { name, exact: true }).nth(nth);
 const settle = page => page.waitForTimeout(400);
+// Chooses a qubit in the Gates panel's control → target picker
+const pick = (page, group, qubit) => page.locator('.gate-panel')
+  .getByRole('radiogroup', { name: group }).getByRole('radio', { name: qubit, exact: true }).click();
+const addToCircuit = (page, name) => page.getByRole('button', { name, exact: true }).click();
 
 describe('CZ and single-qubit measurement', () => {
   test('CZ flips the sign of |11⟩ only, with any chosen pair', async () => {
@@ -20,8 +24,8 @@ describe('CZ and single-qubit measurement', () => {
     try {
       // H on all three qubits, then CZ on qubits 2 and 0
       for (const q of [0, 1, 2]) await button(page, 'H', q).click();
-      await page.getByLabel('CNOT and CZ control qubit').selectOption('2');
-      await page.getByLabel('CNOT and CZ target qubit').selectOption('0');
+      await pick(page, 'Control qubit', 'Q2');
+      await pick(page, 'Target qubit', 'Q0');
       await button(page, 'CZ').click();
       await settle(page);
       const amps = await amplitudes(page);
@@ -94,12 +98,10 @@ describe('CZ and single-qubit measurement', () => {
   test('the circuit editor runs CZ and M steps', async () => {
     const { page, errors } = await openPage(env.browser, env.base + '#/lab/2');
     try {
-      await page.locator('.gate', { hasText: /^X$/ }).click();                 // X q0
-      await page.getByRole('button', { name: 'Q1', exact: true }).first().click();
-      await page.locator('.gate', { hasText: /^X$/ }).click();                 // X q1
-      await page.getByRole('button', { name: 'Q0', exact: true }).first().click();
-      await page.locator('.gate', { hasText: /^CZ$/ }).click();                // CZ q0,q1
-      await page.locator('.gate', { hasText: /^M$/ }).click();                 // M q0
+      await addToCircuit(page, 'Add X on Q0');
+      await addToCircuit(page, 'Add X on Q1');
+      await addToCircuit(page, 'Add CZ, control Q0, target Q1');
+      await addToCircuit(page, 'Add M on Q0');
       const steps = (await page.locator('.circuit-step-label').allInnerTexts()).map(s => s.trim());
       assert.deepEqual(steps, ['X q0', 'X q1', 'CZ q0,q1', 'M q0']);
       await button(page, 'Run Circuit').click();

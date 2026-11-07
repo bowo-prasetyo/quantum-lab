@@ -1,37 +1,38 @@
 // Gate buttons and a Measure (M) button for each qubit, CNOT and CZ with any
 // control and target, presets, Measure (all), Reset and Undo. Emits events;
 // the lab page runs them. Everything is disabled while a circuit runs.
+//
+// CNOT and CZ use the lab's control → target pair, chosen with the same
+// picker as in the circuit editor. Each gate is described in a hint line
+// (hover, focus or tap) and to screen readers (see gate-hints.js).
+
+import { QubitPicker } from './qubit-picker.js';
+import { gateHints } from './gate-hints.js';
 
 export const GatePanel = {
+  components: { QubitPicker },
+  mixins: [gateHints],
+
   props: {
     n: { type: Number, required: true },
+    // CNOT and CZ control and target (shared with the circuit editor)
+    control: { type: Number, default: 0 },
+    target: { type: Number, default: 1 },
     // A circuit is running: hold the buttons until it finishes
     disabled: { type: Boolean, default: false },
     canUndo: { type: Boolean, default: false }
   },
-  emits: ['gate', 'cnot', 'cz', 'measure-qubit', 'bell', 'ghz', 'measure', 'reset', 'undo'],
+  emits: ['gate', 'cnot', 'cz', 'measure-qubit', 'bell', 'ghz', 'measure', 'reset', 'undo', 'pair'],
 
   data() {
     return {
-      gates: ['I', 'H', 'X', 'Y', 'Z', 'S', 'T'],
-      cnotControl: 0,
-      cnotTarget: 1
+      gates: ['I', 'H', 'X', 'Y', 'Z', 'S', 'T']
     };
   },
 
   computed: {
     qubits() {
       return [...Array(this.n).keys()];
-    }
-  },
-
-  watch: {
-    // Keep control and target different
-    cnotControl(c) {
-      if (c === this.cnotTarget) this.cnotTarget = (c + 1) % this.n;
-    },
-    cnotTarget(t) {
-      if (t === this.cnotControl) this.cnotControl = (t + 1) % this.n;
     }
   },
 
@@ -55,33 +56,32 @@ export const GatePanel = {
             v-for="g in gates"
             :key="g"
             class="gate-button"
-            @click="$emit('gate', g, q)"
+            :aria-describedby="descId(g)"
+            @pointerenter="showHint(g)"
+            @focus="showHint(g)"
+            @click="showHint(g); $emit('gate', g, q)"
           >{{ g }}</button>
           <button
             class="gate-button measure-button"
             :aria-label="'Measure qubit ' + q"
-            :title="'Measure qubit ' + q + ' only'"
-            @click="$emit('measure-qubit', q)"
+            :aria-describedby="descId('M')"
+            @pointerenter="showHint('M')"
+            @focus="showHint('M')"
+            @click="showHint('M'); $emit('measure-qubit', q)"
           >M</button>
         </div>
 
         <div v-if="n >= 2" class="cnot-row">
-          <label>
-            control
-            <select v-model.number="cnotControl" aria-label="CNOT and CZ control qubit">
-              <option v-for="q in qubits" :key="q" :value="q">Q{{ q }}</option>
-            </select>
-          </label>
-          <span aria-hidden="true">→</span>
-          <label>
-            target
-            <select v-model.number="cnotTarget" aria-label="CNOT and CZ target qubit">
-              <option v-for="q in qubits" :key="q" :value="q">Q{{ q }}</option>
-            </select>
-          </label>
+          <qubit-picker :n="n" :control="control" :target="target" @change="$emit('pair', $event)" />
           <div class="button-grid">
-            <button @click="$emit('cnot', cnotControl, cnotTarget)">CNOT</button>
-            <button @click="$emit('cz', cnotControl, cnotTarget)">CZ</button>
+            <button
+              v-for="g in ['CNOT', 'CZ']"
+              :key="g"
+              :aria-describedby="descId(g)"
+              @pointerenter="showHint(g)"
+              @focus="showHint(g)"
+              @click="showHint(g); $emit(g.toLowerCase(), control, target)"
+            >{{ g }}</button>
           </div>
         </div>
 
@@ -99,12 +99,19 @@ export const GatePanel = {
         </div>
       </fieldset>
 
+      <!-- What the last hovered, focused or tapped gate does. Hidden from
+           screen readers, which get the same text via aria-describedby. -->
+      <p class="gate-hint" aria-hidden="true">
+        <template v-if="hintGate"><strong>{{ hintGate }}</strong> {{ GATE_INFO[hintGate] }}</template>
+        <template v-else>Point at, focus or tap a gate to see what it does.</template>
+      </p>
+      <span v-for="(text, g) in GATE_INFO" :key="g" :id="descId(g)" class="visually-hidden">{{ text }}</span>
+
       <p class="caption">
         <strong>M</strong> measures just that qubit; <strong>Measure all</strong> measures every qubit.
         <strong>Undo</strong> steps back, even past a measurement: the simulator
         remembers the state from before, which a real quantum computer can’t do.
         <template v-if="n >= 2">
-          CZ flips the sign where both chosen qubits are 1 (which one is the control doesn’t matter).
           Create Bell Pair{{ n === 3 ? ' and GHZ State start' : ' starts' }}
           from |{{ '0'.repeat(n) }}⟩, so they always give the same state.
         </template>
