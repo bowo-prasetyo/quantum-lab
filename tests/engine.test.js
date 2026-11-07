@@ -15,7 +15,8 @@ import {
   densityMatrix,
   reducedDensityMatrix,
   blochVector,
-  zzCorrelation
+  zzCorrelation,
+  isValidState
 } from '../engine.js';
 
 const EPS = 1e-12;
@@ -416,5 +417,27 @@ describe('⟨ZᵢZⱼ⟩ correlation', () => {
   test('a Bell pair on q0, q1 gives 1 for that pair and 0 for pairs with q2', () => {
     const s = run(3, [['H', 0], ['CNOT', 0, 1]]);
     near(zz(s, 0, 1), 1, 'q0q1'); near(zz(s, 0, 2), 0, 'q0q2'); near(zz(s, 1, 2), 0, 'q1q2');
+  });
+});
+
+describe('isValidState', () => {
+  test('accepts normalized states of the right length', () => {
+    for (const n of [1, 2, 3]) {
+      const s = zeroState(n);
+      assert.ok(isValidState(s.re, s.im, n), `|0…0⟩, n = ${n}`);
+      const r = randomState(n, seeded(n));
+      assert.ok(isValidState(r.re, r.im, n), `random, n = ${n}`);
+      assert.ok(isValidState(Array.from(r.re), Array.from(r.im), n), `plain arrays, n = ${n}`);
+    }
+  });
+
+  test('rejects wrong length, non-finite values and unnormalized states', () => {
+    const s = zeroState(2);
+    assert.equal(isValidState(s.re, s.im, 3), false, 'wrong length');
+    assert.equal(isValidState([1, 0], [0], 1), false, 'mismatched arrays');
+    assert.equal(isValidState([NaN, 0], [0, 0], 1), false, 'NaN');
+    assert.equal(isValidState([1, 1], [0, 0], 1), false, 'total probability 2');
+    assert.equal(isValidState([0, 0], [0, 0], 1), false, 'all zero');
+    assert.equal(isValidState(undefined, undefined, 1), false, 'missing');
   });
 });

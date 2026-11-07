@@ -1,6 +1,6 @@
 # Product Vision: Quantum Lab
 
-> Status: **proposal for review**. Nothing in this document changes the apps yet.
+> Status: **agreed**.
 
 ## Vision
 

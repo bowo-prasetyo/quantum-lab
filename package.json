@@ -1,7 +1,7 @@
 {
-  "name": "quantum-3qubits",
+  "name": "quantum-lab",
   "private": true,
-  "description": "3-qubit quantum simulator. No build step: the app runs straight from these files. This file only configures the tests.",
+  "description": "Quantum Lab: a 1-, 2- and 3-qubit quantum simulator. No build step: the app runs straight from these files. This file only configures the tests.",
   "type": "module",
   "scripts": {
     "test": "node --test"

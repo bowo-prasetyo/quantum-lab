@@ -143,3 +143,99 @@ pre {
   pointer-events: none;
   z-index: 1000;
 }
+
+/* ---------- Quantum Lab ---------- */
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.nav-label {
+  color: #aaa;
+}
+
+.nav-sep {
+  flex: 1;
+}
+
+.nav-link {
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #2a2a2a;
+  color: #eee;
+  text-decoration: none;
+}
+
+.nav-link.active {
+  background: #2f6fed;
+  color: white;
+}
+
+.notice {
+  border-left: 4px solid #2f6fed;
+}
+
+.notice a {
+  color: #8fb2ff;
+}
+
+button.selected {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cnot-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cnot-row select {
+  margin-left: 4px;
+  padding: 6px;
+  border-radius: 6px;
+  background: #2a2a2a;
+  color: #eee;
+  border: 1px solid #444;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.amp-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-variant-numeric: tabular-nums;
+}
+
+.amp-table th,
+.amp-table td {
+  padding: 6px 10px;
+  text-align: right;
+  border-bottom: 1px solid #2a2a2a;
+  white-space: nowrap;
+}
+
+.amp-table th:first-child,
+.amp-table td:first-child {
+  text-align: left;
+}
+
+.amp-table th {
+  color: #aaa;
+  font-weight: normal;
+}
+
+.amp-table tr.zero td {
+  color: #666;
+}
