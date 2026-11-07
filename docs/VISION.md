@@ -1,10 +1,10 @@
-# Product Vision: Quantum Lab
+# Product Vision: Glass Qubit
 
-> Status: **agreed**.
+> Status: **agreed**. The product was called *Quantum Lab* until November 2026; only the name changed.
 
 ## Vision
 
-Quantum Lab is a free, install-free browser lab where curious beginners (high-school and first-year university students, and self-learners with no physics or linear-algebra background) learn how a quantum computer works by doing it: they apply gates to one, two, then three qubits and see every effect at once, on the probabilities, on each qubit's Bloch sphere and on the full state. One guided path takes the learner from a single qubit to three-qubit entanglement, using the same simulator, visuals and vocabulary at every step, so what they learn about one qubit carries over unchanged to two and three. We will know it works when a learner who finishes the path can explain superposition, measurement, phase and interference, and entanglement in their own words, and can predict the measurement results of a small circuit before running it. Quantum Lab is not a research-grade or many-qubit simulator, a programming course, or a showcase for graphics technology. It stays small, correct, private (no accounts, no tracking, everything runs and is saved in the browser) and honest: every claim it makes about quantum mechanics or about itself is true and tested.
+Glass Qubit is a free, install-free browser lab where curious beginners (high-school and first-year university students, and self-learners with no physics or linear-algebra background) learn how a quantum computer works by doing it: they apply gates to one, two, then three qubits and see every effect at once, on the probabilities, on each qubit's Bloch sphere and on the full state. One guided path takes the learner from a single qubit to three-qubit entanglement, using the same simulator, visuals and vocabulary at every step, so what they learn about one qubit carries over unchanged to two and three. We will know it works when a learner who finishes the path can explain superposition, measurement, phase and interference, and entanglement in their own words, and can predict the measurement results of a small circuit before running it. Glass Qubit is not a research-grade or many-qubit simulator, a programming course, or a showcase for graphics technology. It stays small, correct, private (no accounts, no tracking, everything runs and is saved in the browser) and honest: every claim it makes about quantum mechanics or about itself is true and tested.
 
 ## What this means for decisions
 
