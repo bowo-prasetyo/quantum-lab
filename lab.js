@@ -63,7 +63,7 @@ export const Lab = {
         <app-nav />
 
         <div class="card">
-          <h1>Quantum Lab: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
+          <h1>Glass Qubit: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
           <p>
             {{ 1 << n }} basis states, from |{{ '0'.repeat(n) }}⟩ to |{{ '1'.repeat(n) }}⟩.
             Apply gates and watch every view change.

@@ -1,6 +1,8 @@
-# Quantum Lab
+# Glass Qubit
 
-An educational quantum computer lab that runs entirely inside the browser.
+**A quantum lab in your browser.** An educational quantum computer lab that runs entirely inside the browser.
+
+The name says what the lab is for: like looking through glass, you see every effect of a gate at once, on the probabilities, on each qubit's Bloch sphere and on the full state, with nothing hidden. It was called *Quantum Lab* until November 2026; the address and the repository name stay the same.
 
 One app covers **1, 2 and 3 qubits**, with the same simulator, visuals and vocabulary at every size, so what you learn about one qubit carries over to two and three.
 
@@ -549,7 +551,7 @@ Lessons are plain data in `lessons.js`. Each one lists its steps as operations a
 
 ## Product Direction
 
-The plan is to merge the 1-, 2- and 3-qubit simulators into one guided Quantum Lab. See:
+The plan was to merge the 1-, 2- and 3-qubit simulators into one guided lab, Glass Qubit. See:
 
 - [Product vision](docs/VISION.md)
 - [Merge plan](docs/MERGE_PLAN.md)
