@@ -19,7 +19,7 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 | 1. Shared engine and tests | ✅ Done |
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
 | 3. One lesson path | ✅ Done |
-| 4. Publish, import old saved data, redirect the old sites | Planned. The lab isn't published yet; the three original sites stay live until then |
+| 4. Publish, import old saved data, redirect the old sites | In progress: importing old saved data ✅. Next: publish on GitHub Pages, then redirect the three original sites |
 
 ---
 
@@ -418,12 +418,16 @@ quantum-lab/
 ├── worker.js              # Background worker: runs engine.js gates and measurement
 ├── colors.js              # Phase → colour, shared by the views
 ├── db.js                  # Saved state per lab size (IndexedDB)
+├── import-old.js          # One-time import from the original simulators
 ├── styles.css
 ├── tests/
 │   ├── engine.test.js     # Unit tests for engine.js
 │   ├── lessons.test.js    # Every lesson's result, checked with the engine
+│   ├── import.test.js     # Parsing the original simulators' saved data
 │   └── browser/
-│       └── lessons.browser.test.js  # Every lesson, checked in a real browser
+│       ├── helpers.js
+│       ├── lessons.browser.test.js  # Every lesson, checked in a real browser
+│       └── import.browser.test.js   # Importing old saved states
 ├── package.json           # Only configures the tests; the app has no build step
 ├── docs/
 └── README.md
@@ -444,7 +448,7 @@ They cover:
 - the engine: gate matrices and identities, CNOT on every pair of qubits, Bell and GHZ states, normalization, measurement statistics, density matrices, reduced states, Bloch vectors and correlations
 - every lesson: its data is complete, its prediction answer is valid, and running Set up then its steps gives the result it promises
 
-**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. They need Playwright and network access (Vue loads from the CDN):
+**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
 
 ```bash
 npm install
@@ -505,6 +509,12 @@ Each lab size automatically stores its own quantum state and Circuit Editor step
 After refreshing the browser or switching sizes, both are restored. Saved data that is invalid (for example, from another version) is ignored.
 
 The lab uses its own database (`quantum-lab`), separate from the three original simulators' databases on the same site.
+
+**Bringing over old saved states.** The first time a lab size opens with nothing saved, it imports that size's state from the matching original simulator, plus the circuit for 3 qubits, and says so in a notice. It then saves its own copy, so the import happens only once.
+
+- The old data (`quantum-db`, `quantum-db-2`, `quantum-db-3`) is only read, never changed or deleted.
+- Invalid old data is ignored.
+- If an old database doesn't exist, it isn't created. An empty one would break that simulator.
 
 ---
 

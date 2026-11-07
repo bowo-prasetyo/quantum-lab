@@ -42,7 +42,8 @@ export const Lab = {
       stateIm: im,
       circuit: [],
       measurement: '-',
-      running: false
+      running: false,
+      importedFrom: null   // name of the old simulator a state was brought over from
     };
   },
 
@@ -60,6 +61,12 @@ export const Lab = {
           </p>
         </div>
       </template>
+
+      <div v-if="importedFrom" class="card notice" role="status">
+        Welcome back! We brought over your saved state{{ circuit.length ? ' and circuit' : '' }}
+        from the {{ importedFrom }}.
+        <button class="link-button" @click="importedFrom = null">Dismiss</button>
+      </div>
 
       <gate-panel
         v-if="show('gates')"
@@ -126,6 +133,7 @@ export const Lab = {
           this.stateRe = saved.re;
           this.stateIm = saved.im;
           this.circuit = saved.circuit;
+          if (saved.importedFrom) this.importedFrom = saved.importedFrom;
         }
       } catch (err) {
         console.warn('Could not load saved state:', err);

@@ -8,21 +8,9 @@
 
 import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname, join, normalize } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { chromium } from 'playwright';
 
 import { LESSONS } from '../../lessons.js';
-
-const ROOT = fileURLToPath(new URL('../../', import.meta.url));
-const TYPES = {
-  '.html': 'text/html',
-  '.js': 'text/javascript',
-  '.css': 'text/css',
-  '.json': 'application/json'
-};
+import { startBrowser, openPage as open } from './helpers.js';
 
 // Panel key → heading the lab shows for it
 const PANEL_HEADINGS = {
@@ -35,42 +23,17 @@ const PANEL_HEADINGS = {
   editor: 'Circuit Editor'
 };
 
-let server;
-let browser;
+let env;
 let base;
 
 before(async () => {
-  // Minimal static file server for the repo
-  server = createServer(async (req, res) => {
-    const path = normalize(decodeURIComponent(new URL(req.url, 'http://x').pathname));
-    const file = join(ROOT, path === '/' ? 'index.html' : path);
-    if (!file.startsWith(ROOT)) { res.writeHead(403).end(); return; }
-    try {
-      const body = await readFile(file);
-      res.writeHead(200, { 'Content-Type': TYPES[extname(file)] || 'application/octet-stream' }).end(body);
-    } catch {
-      res.writeHead(404).end();
-    }
-  });
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  base = `http://127.0.0.1:${server.address().port}/`;
-  browser = await chromium.launch();
+  env = await startBrowser();
+  base = env.base;
 });
 
-after(async () => {
-  await browser?.close();
-  await new Promise(resolve => server.close(resolve));
-});
+after(() => env.close());
 
-async function openPage(hash) {
-  const page = await (await browser.newContext()).newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(e.message));
-  page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(base + hash);
-  await page.locator('h1').first().waitFor();
-  return { page, errors };
-}
+const openPage = hash => open(env.browser, base + hash);
 
 describe('every lesson in the browser', () => {
   for (const [index, lesson] of LESSONS.entries()) {
