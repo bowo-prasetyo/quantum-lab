@@ -239,3 +239,104 @@ button:disabled {
 .amp-table tr.zero td {
   color: #666;
 }
+
+/* ---------- Lessons ---------- */
+
+.lesson-list li {
+  margin-bottom: 12px;
+}
+
+.lesson-list a,
+.lesson-nav a,
+.card p a,
+.caption a {
+  color: #8fb2ff;
+}
+
+.badge {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+.badge.right {
+  background: #1f4d2b;
+  color: #9be3ac;
+}
+
+.badge.wrong {
+  background: #4d2a1f;
+  color: #f0b39b;
+}
+
+.link-button {
+  background: none;
+  color: #8fb2ff;
+  padding: 0 4px;
+  text-decoration: underline;
+}
+
+.predict .options {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.option {
+  background: #2a2a2a;
+  text-align: left;
+}
+
+.option.chosen {
+  outline: 2px solid #fff;
+}
+
+.option.right {
+  background: #1f6b36;
+  opacity: 1;
+}
+
+.option.wrong {
+  background: #7a3020;
+  opacity: 1;
+}
+
+.option:disabled {
+  cursor: default;
+}
+
+.verdict {
+  font-weight: bold;
+}
+
+.check-result {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+}
+
+.check-result.pass {
+  background: #16331f;
+}
+
+.check-result.fail {
+  background: #33201a;
+}
+
+.lesson-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.concepts dt {
+  font-weight: bold;
+  margin-top: 12px;
+}
+
+.concepts dd {
+  margin: 4px 0 0;
+  color: #ccc;
+}

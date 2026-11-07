@@ -9,13 +9,26 @@ permissions:
   contents: read
 
 jobs:
-  engine:
-    name: Engine unit tests
+  unit:
+    name: Engine and lesson unit tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      # No dependencies to install: the tests use Node's built-in runner
+      # No dependencies needed: the unit tests use Node's built-in runner
       - run: npm test
+
+  browser:
+    name: Lessons in a browser
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

@@ -26,7 +26,13 @@ export const Lab = {
   },
 
   props: {
-    n: { type: Number, required: true }
+    n: { type: Number, required: true },
+    // Inside a lesson: no navigation or heading
+    embedded: { type: Boolean, default: false },
+    // Panels to show (see PANELS in lessons.js); null shows all for this size
+    panels: { type: Array, default: null },
+    // Save and restore state for this size; lessons use false
+    persist: { type: Boolean, default: true }
   },
 
   data() {
@@ -41,18 +47,22 @@ export const Lab = {
   },
 
   template: `
-    <div class="container">
-      <app-nav />
+    <div :class="{ container: !embedded }">
+      <template v-if="!embedded">
+        <app-nav />
 
-      <div class="card">
-        <h1>Quantum Lab: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
-        <p>
-          {{ 1 << n }} basis states, from |{{ '0'.repeat(n) }}⟩ to |{{ '1'.repeat(n) }}⟩.
-          Apply gates and watch every view change.
-        </p>
-      </div>
+        <div class="card">
+          <h1>Quantum Lab: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
+          <p>
+            {{ 1 << n }} basis states, from |{{ '0'.repeat(n) }}⟩ to |{{ '1'.repeat(n) }}⟩.
+            Apply gates and watch every view change.
+            New here? Start with the <router-link to="/lessons">lessons</router-link>.
+          </p>
+        </div>
+      </template>
 
       <gate-panel
+        v-if="show('gates')"
         :n="n"
         @gate="applyGate"
         @cnot="applyCNOT"
@@ -62,14 +72,15 @@ export const Lab = {
         @reset="reset"
       />
 
-      <amplitude-table :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" />
-      <probability-chart :re="stateRe" :im="stateIm" :n="n" />
-      <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
-      <density-matrix :re="stateRe" :im="stateIm" :n="n" />
-      <correlation-graph v-if="n >= 2" :re="stateRe" :im="stateIm" :n="n" />
-      <cube-3d v-if="n === 3" :re="stateRe" :im="stateIm" />
+      <amplitude-table v-if="show('table')" :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" />
+      <probability-chart v-if="show('probabilities')" :re="stateRe" :im="stateIm" :n="n" />
+      <bloch-spheres v-if="show('bloch')" :re="stateRe" :im="stateIm" :n="n" />
+      <density-matrix v-if="show('density')" :re="stateRe" :im="stateIm" :n="n" />
+      <correlation-graph v-if="n >= 2 && show('correlation')" :re="stateRe" :im="stateIm" :n="n" />
+      <cube-3d v-if="n === 3 && show('cube')" :re="stateRe" :im="stateIm" />
 
       <circuit-editor
+        v-if="show('editor')"
         :n="n"
         :circuit="circuit"
         :running="running"
@@ -106,6 +117,8 @@ export const Lab = {
   },
 
   mounted() {
+    if (!this.persist) return;
+
     this.enqueue(async () => {
       try {
         const saved = await loadLab(this.n);
@@ -155,7 +168,12 @@ export const Lab = {
       await this.save();
     },
 
+    show(panel) {
+      return !this.panels || this.panels.includes(panel);
+    },
+
     async save() {
+      if (!this.persist) return;
       try {
         await saveLab(this.n, this.stateRe, this.stateIm, this.circuit);
       } catch (err) {
@@ -191,20 +209,25 @@ export const Lab = {
 
     // Presets start from |0…0⟩ so they always give the advertised state.
     createBellState() {
-      return this.enqueue(async () => {
-        this.resetState();
-        await this.runOnWorker({ type: 'gate', gate: 'H', targetQubit: 0 });
-        await this.runOnWorker({ type: 'cnot', control: 0, target: 1 });
-      });
+      return this.enqueue(() => this.bellSteps());
     },
 
     createGHZState() {
-      return this.enqueue(async () => {
-        this.resetState();
-        await this.runOnWorker({ type: 'gate', gate: 'H', targetQubit: 0 });
-        await this.runOnWorker({ type: 'cnot', control: 0, target: 1 });
-        await this.runOnWorker({ type: 'cnot', control: 1, target: 2 });
-      });
+      return this.enqueue(() => this.ghzSteps());
+    },
+
+    // Preset sequences; call only from inside a queued task
+    async bellSteps() {
+      this.resetState();
+      await this.runOnWorker({ type: 'gate', gate: 'H', targetQubit: 0 });
+      await this.runOnWorker({ type: 'cnot', control: 0, target: 1 });
+    },
+
+    async ghzSteps() {
+      this.resetState();
+      await this.runOnWorker({ type: 'gate', gate: 'H', targetQubit: 0 });
+      await this.runOnWorker({ type: 'cnot', control: 0, target: 1 });
+      await this.runOnWorker({ type: 'cnot', control: 1, target: 2 });
     },
 
     addStep(step) {
@@ -215,6 +238,42 @@ export const Lab = {
     removeStep(index) {
       this.circuit.splice(index, 1);
       this.save();
+    },
+
+    /**
+     * Runs lesson operations (see lessons.js) through the queue:
+     * ['reset'], ['gate', name, q], ['cnot', c, t], ['measure'], ['bell'], ['ghz'].
+     * `delay` pauses between steps so the learner can follow along.
+     * Clears the circuit editor first if `clearCircuit` is set.
+     */
+    runOps(ops, { delay = 0, clearCircuit = false } = {}) {
+      return this.enqueue(async () => {
+        if (clearCircuit) this.circuit.splice(0);
+        for (const [kind, a, b] of ops) {
+          if (kind === 'reset') this.resetState();
+          else if (kind === 'gate') await this.runOnWorker({ type: 'gate', gate: a, targetQubit: b });
+          else if (kind === 'cnot') await this.runOnWorker({ type: 'cnot', control: a, target: b });
+          else if (kind === 'measure') await this.runOnWorker({ type: 'measure' });
+          else if (kind === 'bell') await this.bellSteps();
+          else if (kind === 'ghz') await this.ghzSteps();
+          else throw new Error(`Unknown operation: ${kind}`);
+          if (delay) await new Promise(r => setTimeout(r, delay));
+        }
+        await this.save();
+      });
+    },
+
+    /** Replaces the circuit editor's steps (lesson "Show me"). */
+    setCircuit(steps) {
+      return this.enqueue(async () => {
+        this.circuit.splice(0, this.circuit.length, ...steps);
+        await this.save();
+      });
+    },
+
+    /** Snapshot for checking a lesson result. */
+    getState() {
+      return { re: this.stateRe, im: this.stateIm, n: this.n, measured: this.measurement };
     },
 
     // Applies the circuit's steps in order to the current state.

@@ -1,4 +1,4 @@
-// Top navigation: lab size selector plus the reference pages.
+// Top navigation: lab size selector, lessons and reference pages.
 
 export const AppNav = {
   template: `
@@ -14,8 +14,9 @@ export const AppNav = {
 
       <span class="nav-sep"></span>
 
+      <router-link to="/lessons" class="nav-link" active-class="active">Lessons</router-link>
       <router-link to="/concepts" class="nav-link" active-class="active">Concepts</router-link>
-      <router-link to="/manual" class="nav-link" active-class="active">User Manual</router-link>
+      <router-link to="/help" class="nav-link" active-class="active">Help</router-link>
     </nav>
   `
 };
