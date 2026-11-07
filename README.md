@@ -101,7 +101,8 @@ What each size shows:
 - GitHub Pages compatible
 - Workbench layout: on wide screens the gates (and a lesson's steps) stay beside the views, so a gate's effect is visible as it is pressed; on phones the views are in tabs above the gates
 - Charts drawn at the screen's real size and pixel density, so they stay sharp and readable on any screen
-- Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard)
+- Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard): run the whole circuit or step through it one gate at a time, from |0…0⟩ or the current state
+- Undo (button or Ctrl+Z) for gates, measurements, Reset and circuit edits
 - 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration

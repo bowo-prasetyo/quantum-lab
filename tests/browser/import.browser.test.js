@@ -83,7 +83,7 @@ describe('importing from the original simulators', () => {
       await openLab(page, 3);
 
       assert.deepEqual(await probabilities(page), ['50.0%', '0.0%', '0.0%', '0.0%', '0.0%', '0.0%', '0.0%', '50.0%']);
-      assert.deepEqual((await page.locator('.circuit-step').allInnerTexts()).map(s => s.trim()), ['H q0', 'CNOT q0→q1']);
+      assert.deepEqual((await page.locator('.circuit-step-label').allInnerTexts()).map(s => s.trim()), ['H q0', 'CNOT q0→q1']);
       const notice = await page.locator('.notice[role=status]').innerText();
       assert.match(notice, /saved state and circuit\s+from the 3-qubit simulator/);
 

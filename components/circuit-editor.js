@@ -1,14 +1,23 @@
 // Build a circuit step by step, then run it. Three ways to add a gate:
 // drag it with a mouse (native drag and drop), drag it with a finger or pen
 // (pointer events), or tap / click / press Enter on it.
+//
+// Run Circuit plays every step; Step applies one step at a time. Both start
+// from |0…0⟩ unless "Start from |0…0⟩" is unticked. The lab tracks how many
+// steps have been applied (`applied`), and the editor highlights them.
 
 export const CircuitEditor = {
   props: {
     n: { type: Number, required: true },
     circuit: { type: Array, required: true },
-    running: { type: Boolean, default: false }
+    running: { type: Boolean, default: false },
+    // Steps applied so far by Run or Step, or null if not stepping
+    applied: { type: Number, default: null },
+    // Show an Undo button here (when the lab has no gate panel to hold it)
+    showUndo: { type: Boolean, default: false },
+    canUndo: { type: Boolean, default: false }
   },
-  emits: ['add', 'remove', 'run'],
+  emits: ['add', 'remove', 'clear', 'run', 'step', 'undo'],
 
   data() {
     return {
@@ -16,13 +25,27 @@ export const CircuitEditor = {
       cnotTarget: this.n > 1 ? 1 : 0,
       draggingGate: null,
       // { gate, x, y, startX, startY, moved, over } during a touch/pen drag
-      touchDrag: null
+      touchDrag: null,
+      fromZero: true
     };
   },
 
   computed: {
     qubits() {
       return [...Array(this.n).keys()];
+    },
+    zeros() {
+      return '0'.repeat(this.n);
+    },
+    // e.g. "Step 2 of 3: CNOT q0→q1", read out by screen readers
+    status() {
+      if (this.applied === null || this.applied === 0) return '';
+      const total = this.circuit.length;
+      const last = this.circuit[this.applied - 1];
+      const text = `Step ${this.applied} of ${total}${last ? ': ' + this.stepLabel(last) : ''}.`;
+      return this.applied >= total && !this.running
+        ? `${text} All steps applied; Step starts again.`
+        : text;
     },
     paletteGates() {
       const gates = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T'];
@@ -60,6 +83,7 @@ export const CircuitEditor = {
           role="button"
           tabindex="0"
           :aria-label="'Add ' + g + ' gate'"
+          :aria-disabled="running ? 'true' : null"
           draggable="true"
           @dragstart="draggingGate = g"
           @pointerdown="onGatePointerDown($event, g)"
@@ -93,28 +117,60 @@ export const CircuitEditor = {
 
       <p class="caption">
         Tap or drag a gate to add it to the selected qubit (M measures that qubit).
-        Tap a circuit step to remove it.
+        Press × on a step to remove it.
       </p>
 
-      <div
+      <ol
         ref="dropzone"
         class="circuit-dropzone"
         :class="{ 'drop-target': touchDrag && touchDrag.over }"
+        aria-label="Circuit steps"
         @dragover.prevent
         @drop="onDrop"
       >
-        <div
+        <li
           v-for="(step, index) in circuit"
           :key="index"
           class="circuit-step"
-          title="Tap or click to remove"
-          @click="$emit('remove', index)"
-        >{{ stepLabel(step) }}</div>
+          :class="{ done: isDone(index), current: isCurrent(index) }"
+          :aria-current="isCurrent(index) ? 'step' : null"
+        >
+          <span class="circuit-step-label">{{ stepLabel(step) }}</span>
+          <button
+            class="circuit-step-remove"
+            :aria-label="'Remove step ' + (index + 1) + ', ' + stepLabel(step)"
+            :title="'Remove ' + stepLabel(step)"
+            :disabled="running"
+            @click="remove(index)"
+          >×</button>
+        </li>
+        <li v-if="!circuit.length" class="circuit-empty">Empty: add gates above.</li>
+      </ol>
+
+      <label class="check-label">
+        <input type="checkbox" v-model="fromZero" :disabled="running" />
+        Start from |{{ zeros }}⟩
+      </label>
+
+      <div class="button-grid circuit-actions">
+        <button :disabled="!circuit.length || running" @click="$emit('run', { fromZero })">
+          {{ running ? 'Running…' : 'Run Circuit' }}
+        </button>
+        <button
+          :disabled="!circuit.length || running"
+          title="Apply the next step"
+          @click="$emit('step', { fromZero })"
+        >Step</button>
+        <button :disabled="!circuit.length || running" @click="$emit('clear')">Clear</button>
+        <button
+          v-if="showUndo"
+          :disabled="!canUndo || running"
+          aria-keyshortcuts="Control+Z Meta+Z"
+          @click="$emit('undo')"
+        >Undo</button>
       </div>
 
-      <button :disabled="!circuit.length || running" @click="$emit('run')">
-        {{ running ? 'Running…' : 'Run Circuit' }}
-      </button>
+      <p class="caption circuit-status" role="status">{{ status }}</p>
 
       <!-- Chip that follows the finger during a touch drag -->
       <div
@@ -133,7 +189,27 @@ export const CircuitEditor = {
       return `${step.gate} q${step.target}`;
     },
 
+    isDone(index) {
+      return this.applied !== null && index < this.applied;
+    },
+
+    isCurrent(index) {
+      return this.applied !== null && index === this.applied - 1;
+    },
+
+    // Removes a step, then keeps keyboard focus in the list: on the step
+    // that took its place, the one before, or the palette if none is left.
+    remove(index) {
+      this.$emit('remove', index);
+      this.$nextTick(() => {
+        const buttons = this.$el.querySelectorAll('.circuit-step-remove');
+        const next = buttons[index] || buttons[index - 1] || this.$el.querySelector('.gate');
+        next?.focus();
+      });
+    },
+
     addGate(gate) {
+      if (this.running) return;
       this.$emit('add', gate === 'CNOT' || gate === 'CZ'
         ? { gate, control: this.selectedQubit, target: this.cnotTarget }
         : { gate, target: this.selectedQubit });
