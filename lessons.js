@@ -5,7 +5,7 @@
 // the same lessons.
 //
 // Each lesson:
-//   id, part, title, n        part 1–3; n = number of qubits in its lab
+//   id, part, title, n        part 1–4; n = number of qubits in its lab
 //   goal, why                 what to learn and why it matters
 //   panels                    lab panels to show (see PANELS)
 //   setup                     operations run by "Set up" (always starts with reset)
@@ -22,14 +22,19 @@
 
 export const PANELS = ['gates', 'table', 'probabilities', 'bloch', 'density', 'correlation', 'cube', 'editor'];
 
+// n: the number of qubits every lesson in the part uses (null if it varies)
 export const PARTS = [
   { part: 1, title: 'One qubit', n: 1 },
   { part: 2, title: 'Two qubits', n: 2 },
-  { part: 3, title: 'Three qubits', n: 3 }
+  { part: 3, title: 'Three qubits', n: 3 },
+  { part: 4, title: 'Quantum algorithms', n: null }
 ];
 
 const BASIC = ['gates', 'table', 'probabilities', 'bloch'];
 const r = Math.SQRT1_2;
+
+// The lab has no CZ gate; H·CNOT·H on the target does the same job.
+const CZ = (control, target) => [['gate', 'H', target], ['cnot', control, target], ['gate', 'H', target]];
 
 export const LESSONS = [
   // ---------------- Part 1: one qubit ----------------
@@ -426,6 +431,94 @@ export const LESSONS = [
     },
     result: 'Both circuits give (|000⟩ + |111⟩)/√2. Qubit 0 controls both CNOTs, so qubits 1 and 2 copy its value, and all three always agree. Different circuits can build the same state.',
     checks: [{ type: 'probs', values: { '|000⟩': 0.5, '|111⟩': 0.5 } }]
+  },
+
+  // ---------------- Part 4: quantum algorithms ----------------
+  {
+    id: 'deutsch-jozsa',
+    part: 4,
+    n: 3,
+    title: 'Deutsch–Jozsa: one question instead of three',
+    goal: 'Find out whether a hidden function is constant or balanced by calling it only once.',
+    why: 'This is the first algorithm shown to beat any classical method on its problem. It runs on interference, the idea from Part 1.',
+    panels: ['gates', 'table', 'probabilities'],
+    setup: [['reset'], ['gate', 'X', 2], ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'H', 2]],
+    steps: [
+      'A hidden function f takes two bits (qubits 0 and 1) and returns one bit. It is either constant (the same answer for every input) or balanced (0 for half the inputs, 1 for the rest). Classically, you might need 3 calls to tell which.',
+      'Set up has put qubits 0 and 1 in an equal superposition of all four inputs, and qubit 2 in the state (|0⟩ − |1⟩)/√2.',
+      'Call the oracle once. This one computes f(x) = x₀ XOR x₁: press CNOT with control Q0, target Q2, then CNOT with control Q1, target Q2.',
+      'Press H on qubit 0 and H on qubit 1, then look at qubits 0 and 1 (the first two digits).'
+    ],
+    ops: [['cnot', 0, 2], ['cnot', 1, 2], ['gate', 'H', 0], ['gate', 'H', 1]],
+    predict: {
+      question: 'This f is balanced. After one oracle call and the final H gates, what will qubits 0 and 1 show?',
+      options: ['Always 00', 'Never 00', 'A random result each time'],
+      answer: 1
+    },
+    result: 'Qubits 0 and 1 always read 11, never 00. The oracle flipped the sign of the inputs where f(x) = 1 (phase kickback through qubit 2), and the final H gates turned that phase pattern into a definite answer. A constant f always gives 00; any balanced f never does. One call settles it. Try it with no CNOTs (f = 0, constant): you get 00.',
+    checks: [{ type: 'probs', values: { '|110⟩': 0.5, '|111⟩': 0.5 } }]
+  },
+  {
+    id: 'grover',
+    part: 4,
+    n: 2,
+    title: 'Grover’s search: finding the marked item',
+    goal: 'Find which of four items is marked, using one round of Grover’s search.',
+    why: 'Grover’s algorithm searches N items in about √N steps instead of N. It shows how to grow the probability of the right answer.',
+    panels: ['gates', 'table', 'probabilities'],
+    setup: [['reset'], ['gate', 'H', 0], ['gate', 'H', 1]],
+    steps: [
+      'Set up has put both qubits in an equal superposition: each of the four items |00⟩, |01⟩, |10⟩, |11⟩ is 25% likely.',
+      'Oracle: mark |11⟩ by flipping its sign. Press H on qubit 1, CNOT (control Q0, target Q1), then H on qubit 1. Check the amplitude table: |11⟩ is now −0.5, but every probability is still 25%.',
+      'Diffusion (inversion about the mean): press H on both qubits, then X on both qubits.',
+      'Flip the sign of |11⟩ again: H on qubit 1, CNOT (control Q0, target Q1), H on qubit 1.',
+      'Finish the diffusion: X on both qubits, then H on both qubits.'
+    ],
+    ops: [
+      ...CZ(0, 1),
+      ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'X', 0], ['gate', 'X', 1],
+      ...CZ(0, 1),
+      ['gate', 'X', 0], ['gate', 'X', 1], ['gate', 'H', 0], ['gate', 'H', 1]
+    ],
+    predict: {
+      question: 'Four items, one marked. After one round of Grover’s search, what is the chance of measuring the marked item |11⟩?',
+      options: ['25%, the same as guessing', '50%', '100%'],
+      answer: 2
+    },
+    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to 1. For four items, one round finds the answer with certainty. (H, CNOT, H on the target is a controlled-Z gate, which flips the sign of |11⟩ only.)',
+    checks: [{ type: 'probs', values: { '|11⟩': 1 } }]
+  },
+  {
+    id: 'teleportation',
+    part: 4,
+    n: 3,
+    title: 'Quantum teleportation',
+    goal: 'Move a qubit’s state from qubit 0 to qubit 2 using a shared Bell pair.',
+    why: 'Teleportation is how quantum networks move quantum information. It shows entanglement used as a resource, and why a quantum state can’t simply be copied.',
+    panels: ['gates', 'table', 'bloch'],
+    setup: [['reset'], ['gate', 'H', 0], ['gate', 'T', 0], ['gate', 'H', 0]],
+    steps: [
+      'Set up has given qubit 0 (Alice’s message) a state: its Bloch vector points to (0, −0.71, 0.71).',
+      'Share a Bell pair between Alice (qubit 1) and Bob (qubit 2): press H on qubit 1, then CNOT with control Q1, target Q2.',
+      'Alice: press CNOT with control Q0, target Q1, then H on qubit 0.',
+      'Bob’s corrections: press CNOT with control Q1, target Q2. Then H on qubit 2, CNOT with control Q0, target Q2, and H on qubit 2.',
+      'Compare qubit 2’s Bloch sphere with where qubit 0 started.'
+    ],
+    ops: [
+      ['gate', 'H', 1], ['cnot', 1, 2],
+      ['cnot', 0, 1], ['gate', 'H', 0],
+      ['cnot', 1, 2], ...CZ(0, 2)
+    ],
+    predict: {
+      question: 'After the protocol, where does qubit 2’s Bloch vector point?',
+      options: ['Where qubit 0’s pointed at the start', 'At the north pole, |0⟩', 'At the centre, because it’s entangled'],
+      answer: 0
+    },
+    result: 'Qubit 2 now holds exactly the state qubit 0 started with, and qubit 0 no longer does (it points along +x): the state moved, it wasn’t copied. Before Bob’s corrections, qubit 2’s vector had length 0, so no information arrived until the corrections. In the real protocol Alice measures qubits 0 and 1 and sends Bob two classical bits that choose his corrections. Here the corrections are controlled gates instead, which gives the same result (the deferred measurement principle).',
+    checks: [
+      { type: 'bloch', qubit: 2, x: 0, y: -r, z: r },
+      { type: 'bloch', qubit: 0, x: 1, y: 0, z: 0 }
+    ]
   }
 ];
 

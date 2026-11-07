@@ -21,7 +21,8 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 | 1. Shared engine and tests | ✅ Done |
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
 | 3. One lesson path | ✅ Done |
-| 4. Publish, import old saved data, redirect the old sites | In progress: importing old saved data ✅, published on GitHub Pages ✅. Next: redirect the three original sites, then archive them |
+| 4. Publish, import old saved data, redirect the old sites | ✅ Done: published on GitHub Pages, old saved states imported, the three original sites redirect here |
+| 5. New content | ✅ First three algorithm lessons: Deutsch–Jozsa, Grover’s search, teleportation |
 
 ---
 
@@ -93,7 +94,7 @@ What each size shows:
 - Client-side architecture
 - GitHub Pages compatible
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard)
-- 18 guided lessons with predictions and automatic result checks
+- 21 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration
 
@@ -414,7 +415,7 @@ quantum-lab/
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js
 │   └── help.js
-├── lessons.js             # The 18 lessons, as data
+├── lessons.js             # The 21 lessons, as data
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
 ├── engine.js              # Simulation maths: pure functions, any number of qubits
@@ -523,7 +524,7 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ## Lessons
 
-One path of 18 lessons takes a learner from a single qubit to three-qubit entanglement. Each lesson:
+One path of 21 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
 
 - opens a lab with the right number of qubits, showing only the panels it needs
 - asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
@@ -535,6 +536,7 @@ One path of 18 lessons takes a learner from a single qubit to three-qubit entang
 | 1. One qubit | Bit flip · Superposition · Measurement collapse · Reversibility · Phase you can’t see · Phase you can see: interference · Complex phase: S, T and Y · Reading the Bloch sphere |
 | 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Correlation is not entanglement |
 | 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
+| 4. Quantum algorithms | Deutsch–Jozsa: one question instead of three (3 qubits) · Grover’s search: finding the marked item (2 qubits) · Quantum teleportation (3 qubits) |
 
 Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does.
 

@@ -7,7 +7,9 @@ import { LESSONS, PARTS, lessonById } from '../lessons.js';
 import { evaluateChecks } from '../lesson-checks.js';
 import { loadPredictions, recordPrediction } from '../progress.js';
 
-const SHOW_ME_DELAY_MS = 600;
+// Pause between steps in "Show me": 600 ms, shorter for long lessons so
+// the whole run takes about 6 seconds at most
+const showMeDelay = steps => Math.min(600, Math.round(6000 / Math.max(steps, 1)));
 
 // Lesson operations → circuit editor steps
 const toStep = ([kind, a, b]) =>
@@ -90,7 +92,7 @@ export const Lesson = {
           await this.$refs.lab.setCircuit(this.lesson.ops.map(toStep));
           await this.$refs.lab.runCircuit();
         } else {
-          await this.$refs.lab.runOps(this.lesson.ops, { delay: SHOW_ME_DELAY_MS });
+          await this.$refs.lab.runOps(this.lesson.ops, { delay: showMeDelay(this.lesson.ops.length) });
         }
       } finally {
         this.busy = false;

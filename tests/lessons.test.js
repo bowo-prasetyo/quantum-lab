@@ -33,7 +33,8 @@ describe('lesson data', () => {
       lastPart = lesson.part;
       const part = PARTS.find(p => p.part === lesson.part);
       assert.ok(part, `${lesson.id}: unknown part ${lesson.part}`);
-      assert.equal(lesson.n, part.n, `${lesson.id}: n`);
+      if (part.n !== null) assert.equal(lesson.n, part.n, `${lesson.id}: n`);
+      assert.ok([1, 2, 3].includes(lesson.n), `${lesson.id}: n is 1, 2 or 3`);
     }
   });
 
