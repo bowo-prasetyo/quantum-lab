@@ -42,6 +42,18 @@ const SECTIONS = [
     ]
   },
   {
+    title: 'Algorithms',
+    items: [
+      ['Oracle', 'A black box that computes a function f, usually by flipping a qubit or a phase when f(x) = 1. Quantum algorithms are often judged by how many times they need to call it.'],
+      ['Phase kickback', 'When an oracle acts on a target qubit in the state (|0⟩ − |1⟩)/√2, the flip shows up as a sign on the input instead. This turns answers into phases that interference can read.'],
+      ['Deutsch–Jozsa', 'Decides whether a function is constant or balanced with a single oracle call. Afterwards the input qubits read all zeros only if f is constant.'],
+      ['Grover’s search', 'Finds a marked item among N in about √N rounds. Each round marks the item with a sign flip (oracle) and then reflects all amplitudes about their average (diffusion). For four items, one round is enough.'],
+      ['Controlled-Z (CZ)', 'Flips the sign of |11⟩ only. The lab builds it as H, CNOT, H on the target qubit.'],
+      ['Teleportation', 'Moves a qubit’s state to another qubit using a shared Bell pair and two classical bits. The original is destroyed in the process, so the state is never copied (the no-cloning theorem).'],
+      ['Deferred measurement', 'A measurement whose result controls a later gate can be replaced by a controlled gate, with the measurement moved to the end. The lab’s teleportation lesson uses this.']
+    ]
+  },
+  {
     title: 'The views in the lab',
     items: [
       ['Amplitude table', 'Each basis state’s amplitude, probability and phase. Zero rows are greyed out.'],

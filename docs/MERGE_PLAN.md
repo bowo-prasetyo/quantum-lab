@@ -1,6 +1,6 @@
 # Merge Plan: One Quantum Lab from Three Simulators
 
-> Status: **agreed** (all five recommendations accepted). It follows [the product vision](VISION.md). Phases 1–3 are done; Phase 4 is next.
+> Status: **agreed** (all five recommendations accepted). It follows [the product vision](VISION.md). Phases 1–4 are done, and Phase 5 has started.
 
 ## Summary
 
@@ -135,6 +135,14 @@ Each phase ends with the live apps still working.
 ### Phase 5: New content (after the merge)
 
 Candidates, each as its own lesson: quantum teleportation (3 qubits), the Deutsch–Jozsa algorithm, and Grover's search on 2 qubits.
+
+**Done:** all three, as Part 4 of the lesson path ("Quantum algorithms"):
+
+- Deutsch–Jozsa with two input qubits and an XOR oracle
+- Grover's search for |11⟩ among four items
+- teleportation in its deferred-measurement form, because the lab measures all qubits at once
+
+Each is checked by the unit and browser tests like every other lesson.
 
 ## Feature parity checklist
 
