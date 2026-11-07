@@ -8,6 +8,8 @@ Users can explore quantum gates, superposition, phase, entanglement, density mat
 
 The lab is fully client-side and deployable on GitHub Pages.
 
+**Live:** https://bowo-prasetyo.github.io/quantum-lab/
+
 It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/quantum-1qubit), [2 qubits](https://github.com/bowo-prasetyo/quantum-2qubits) and [3 qubits](https://github.com/bowo-prasetyo/quantum-3qubits), following the [merge plan](docs/MERGE_PLAN.md).
 
 ---
@@ -19,7 +21,7 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 | 1. Shared engine and tests | ✅ Done |
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
 | 3. One lesson path | ✅ Done |
-| 4. Publish, import old saved data, redirect the old sites | In progress: importing old saved data ✅. Next: publish on GitHub Pages, then redirect the three original sites |
+| 4. Publish, import old saved data, redirect the old sites | In progress: importing old saved data ✅, published on GitHub Pages ✅. Next: redirect the three original sites, then archive them |
 
 ---
 
@@ -393,6 +395,7 @@ To upgrade a library:
 ```text
 quantum-lab/
 ├── index.html
+├── .nojekyll              # Tells GitHub Pages to serve the files as they are
 ├── app.js                 # Creates the Vue app
 ├── router.js              # Routes: #/lab/:n, #/concepts, #/manual
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
