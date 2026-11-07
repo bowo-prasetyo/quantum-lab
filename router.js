@@ -1,12 +1,17 @@
 // Routes:
 //   #/lab/1, #/lab/2, #/lab/3   the lab for that many qubits
+//   #/lessons                   the lesson path
+//   #/lessons/:id               one lesson
 //   #/concepts                  Quantum Concepts
-//   #/manual                    User Manual
-// Anything else goes to the 1-qubit lab, the start of the learning path.
+//   #/help                      how to use the lab
+//   #/manual                    old User Manual address → the lessons
+// Anything else goes to the 1-qubit lab.
 
 import { Lab } from './lab.js';
+import { Lessons } from './pages/lessons.js';
+import { Lesson } from './pages/lesson.js';
 import { Concepts } from './pages/concepts.js';
-import { Manual } from './pages/manual.js';
+import { Help } from './pages/help.js';
 
 export const router = VueRouter.createRouter({
   history: VueRouter.createWebHashHistory(),
@@ -17,8 +22,11 @@ export const router = VueRouter.createRouter({
       component: Lab,
       props: route => ({ n: Number(route.params.n) })
     },
+    { path: '/lessons', component: Lessons },
+    { path: '/lessons/:id', component: Lesson, props: true },
     { path: '/concepts', component: Concepts },
-    { path: '/manual', component: Manual },
+    { path: '/help', component: Help },
+    { path: '/manual', redirect: '/lessons' },
     { path: '/:pathMatch(.*)*', redirect: '/lab/1' }
   ],
   scrollBehavior: () => ({ top: 0 })

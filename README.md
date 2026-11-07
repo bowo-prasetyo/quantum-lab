@@ -18,7 +18,7 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 |---|---|
 | 1. Shared engine and tests | ✅ Done |
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
-| 3. One lesson path | Next. Until then, the User Manual and Concepts pages describe the 3-qubit lab |
+| 3. One lesson path | ✅ Done |
 | 4. Publish, import old saved data, redirect the old sites | Planned. The lab isn't published yet; the three original sites stay live until then |
 
 ---
@@ -32,8 +32,10 @@ The address chooses the size:
 | `#/lab/1` (also the start page) | 1 qubit |
 | `#/lab/2` | 2 qubits |
 | `#/lab/3` | 3 qubits |
-| `#/concepts` | Quantum Concepts |
-| `#/manual` | User Manual |
+| `#/lessons` | The lesson path (`#/manual`, the old User Manual address, opens it too) |
+| `#/lessons/<id>` | One lesson, e.g. `#/lessons/bell-pair` |
+| `#/concepts` | Quantum Concepts, for every size |
+| `#/help` | How to use the lab's controls |
 
 What each size shows:
 
@@ -89,7 +91,7 @@ What each size shows:
 - Client-side architecture
 - GitHub Pages compatible
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard)
-- Educational user manual
+- 18 guided lessons with predictions and automatic result checks
 - Quantum concepts reference
 - Automatic state restoration
 
@@ -371,7 +373,7 @@ To upgrade a library:
    ```
 
 3. Replace the `integrity` value with `sha384-` followed by that hash
-4. Test the simulator and the User Manual before publishing
+4. Run the tests (`npm test` and `npm run test:browser`) before publishing
 
 ### Browser APIs
 
@@ -405,15 +407,23 @@ quantum-lab/
 │   ├── cube-3d.js         # WebGL view (3 qubits)
 │   └── circuit-editor.js  # Tap, drag (mouse or touch) or keyboard
 ├── pages/
+│   ├── lessons.js         # Lesson list
+│   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js
-│   └── manual.js
+│   └── help.js
+├── lessons.js             # The 18 lessons, as data
+├── lesson-checks.js       # Checks a state against a lesson's expected result
+├── progress.js            # Prediction tally (browser only)
 ├── engine.js              # Simulation maths: pure functions, any number of qubits
 ├── worker.js              # Background worker: runs engine.js gates and measurement
 ├── colors.js              # Phase → colour, shared by the views
 ├── db.js                  # Saved state per lab size (IndexedDB)
 ├── styles.css
 ├── tests/
-│   └── engine.test.js     # Unit tests for engine.js
+│   ├── engine.test.js     # Unit tests for engine.js
+│   ├── lessons.test.js    # Every lesson's result, checked with the engine
+│   └── browser/
+│       └── lessons.browser.test.js  # Every lesson, checked in a real browser
 ├── package.json           # Only configures the tests; the app has no build step
 ├── docs/
 └── README.md
@@ -423,22 +433,32 @@ quantum-lab/
 
 ## Running Tests
 
-The simulation engine has unit tests that use Node's built-in test runner, so there is nothing to install. With Node.js 20 or newer:
+**Unit tests** use Node's built-in test runner, so there is nothing to install. With Node.js 22 or newer:
 
 ```bash
 npm test
 ```
 
-The tests cover:
+They cover:
 
-- gate matrices and identities
-- CNOT on every pair of qubits
-- Bell and GHZ states
-- normalization
-- measurement statistics
-- density matrices, reduced states, Bloch vectors and correlations
+- the engine: gate matrices and identities, CNOT on every pair of qubits, Bell and GHZ states, normalization, measurement statistics, density matrices, reduced states, Bloch vectors and correlations
+- every lesson: its data is complete, its prediction answer is valid, and running Set up then its steps gives the result it promises
 
-GitHub Actions runs them on every pull request.
+**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. They need Playwright and network access (Vue loads from the CDN):
+
+```bash
+npm install
+```
+
+```bash
+npx playwright install chromium
+```
+
+```bash
+npm run test:browser
+```
+
+GitHub Actions runs both on every pull request.
 
 ---
 
@@ -488,28 +508,22 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ---
 
-## Educational Use Cases
+## Lessons
 
-The included User Manual, written for the 3-qubit lab, demonstrates:
+One path of 18 lessons takes a learner from a single qubit to three-qubit entanglement. Each lesson:
 
-1. Classical bit flip
-2. Quantum superposition
-3. Quantum measurement collapse
-4. Double Hadamard reversibility
-5. Quantum phase rotation
-6. Bell state creation
-7. Controlled operations
-8. Probability visualization
-9. GHZ state creation
-10. Bloch sphere analysis
-11. Density matrix visualization
-12. Correlation graph analysis
-13. Entanglement and mixed states
-14. WebGL quantum state visualization
-15. Quantum phase visualization
-16. 3D camera exploration
-17. Circuit editor
-18. Session persistence
+- opens a lab with the right number of qubits, showing only the panels it needs
+- asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
+- lists the steps, with **Set up again**, **Show me** (runs the steps) and **Check my result** buttons
+- explains what happened
+
+| Part | Lessons |
+|---|---|
+| 1. One qubit | Bit flip · Superposition · Measurement collapse · Reversibility · Phase you can’t see · Phase you can see: interference · Complex phase: S, T and Y · Reading the Bloch sphere |
+| 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Correlation is not entanglement |
+| 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
+
+Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does.
 
 ---
 
