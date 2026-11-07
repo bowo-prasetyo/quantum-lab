@@ -16,6 +16,7 @@ import { Cube3D } from './components/cube-3d.js';
 import { CircuitEditor } from './components/circuit-editor.js';
 
 const STEP_DELAY_MS = 500; // pause between circuit steps so changes are visible
+const HISTORY_LIMIT = 100; // undo steps kept (this session only, not saved)
 
 // Two columns from this width up (keep in step with "Workbench" in styles.css)
 const WIDE_QUERY = '(min-width: 1000px)';
@@ -68,6 +69,9 @@ export const Lab = {
       running: false,
       importedFrom: null,  // name of the old simulator a state was brought over from
       narrow: !window.matchMedia(WIDE_QUERY).matches,
+      // Circuit steps applied so far by Run or Step, or null if not stepping
+      stepIndex: null,
+      historyLength: 0,    // undo steps available (the history itself isn't reactive)
       activeView: 'table'  // the view tab shown on narrow screens
     };
   },
@@ -110,6 +114,9 @@ export const Lab = {
             <gate-panel
               v-if="show('gates')"
               :n="n"
+              :disabled="running"
+              :can-undo="historyLength > 0"
+              @undo="undo"
               @gate="applyGate"
               @cnot="applyCNOT"
               @cz="applyCZ"
@@ -125,9 +132,15 @@ export const Lab = {
               :n="n"
               :circuit="circuit"
               :running="running"
+              :applied="stepIndex"
+              :show-undo="!show('gates')"
+              :can-undo="historyLength > 0"
               @add="addStep"
               @remove="removeStep"
+              @clear="clearCircuit"
               @run="runCircuit"
+              @step="stepCircuit"
+              @undo="undo"
             />
           </div>
         </div>
@@ -198,6 +211,10 @@ export const Lab = {
   },
 
   created() {
+    // Undo history: snapshots taken before each action (see remember())
+    this.history = [];
+    window.addEventListener('keydown', this.onKeydown);
+
     this.wideQuery = window.matchMedia(WIDE_QUERY);
     this.onWideChange = e => { this.narrow = !e.matches; };
     this.wideQuery.addEventListener('change', this.onWideChange);
@@ -247,6 +264,7 @@ export const Lab = {
   beforeUnmount() {
     this.worker.terminate();
     this.wideQuery.removeEventListener('change', this.onWideChange);
+    window.removeEventListener('keydown', this.onKeydown);
   },
 
   methods: {
@@ -338,28 +356,86 @@ export const Lab = {
       this.bits = {};
     },
 
+    // ----- Undo -----
+
+    /** Saves the current state, circuit and step position for Undo. */
+    remember() {
+      this.history.push({
+        re: this.stateRe,          // state arrays are replaced, never changed in place
+        im: this.stateIm,
+        measurement: this.measurement,
+        bits: { ...this.bits },
+        circuit: this.circuit.map(step => ({ ...step })),
+        stepIndex: this.stepIndex
+      });
+      if (this.history.length > HISTORY_LIMIT) this.history.shift();
+      this.historyLength = this.history.length;
+    },
+
+    forgetHistory() {
+      this.history = [];
+      this.historyLength = 0;
+    },
+
+    /** Goes back to before the last action: a gate, a measurement, a circuit edit or a run. */
+    undo() {
+      return this.enqueue(async () => {
+        const last = this.history.pop();
+        this.historyLength = this.history.length;
+        if (!last) return;
+        this.stateRe = last.re;
+        this.stateIm = last.im;
+        this.measurement = last.measurement;
+        this.bits = last.bits;
+        this.circuit.splice(0, this.circuit.length, ...last.circuit);
+        this.stepIndex = last.stepIndex;
+        await this.save();
+      });
+    },
+
+    // Ctrl+Z (Cmd+Z on a Mac) undoes, except while typing in a form field
+    onKeydown(e) {
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'z') return;
+      if (e.target.closest?.('input, select, textarea, [contenteditable]')) return;
+      if (this.running || !this.historyLength) return;
+      e.preventDefault();
+      this.undo();
+    },
+
+    // ----- Actions from the gate panel -----
+
+    // Runs a learner's action through the queue, remembering the state
+    // before it for Undo. Any action ends step-by-step play of the circuit.
+    act(task) {
+      return this.enqueue(async () => {
+        this.remember();
+        this.stepIndex = null;
+        await task();
+      });
+    },
+
     applyGate(gate, targetQubit) {
-      return this.enqueue(() => this.runOnWorker({ type: 'gate', gate, targetQubit }));
+      return this.act(() => this.runOnWorker({ type: 'gate', gate, targetQubit }));
     },
 
     applyCNOT(control, target) {
-      return this.enqueue(() => this.runOnWorker({ type: 'cnot', control, target }));
+      return this.act(() => this.runOnWorker({ type: 'cnot', control, target }));
     },
 
     applyCZ(control, target) {
-      return this.enqueue(() => this.runOnWorker({ type: 'cz', control, target }));
+      return this.act(() => this.runOnWorker({ type: 'cz', control, target }));
     },
 
     measure() {
-      return this.enqueue(() => this.runOnWorker({ type: 'measure' }));
+      return this.act(() => this.runOnWorker({ type: 'measure' }));
     },
 
     measureQubit(qubit) {
-      return this.enqueue(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }));
+      return this.act(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }));
     },
 
     reset() {
-      return this.enqueue(async () => {
+      return this.act(async () => {
         this.resetState();
         await this.save();
       });
@@ -367,11 +443,11 @@ export const Lab = {
 
     // Presets start from |0…0⟩ so they always give the advertised state.
     createBellState() {
-      return this.enqueue(() => this.bellSteps());
+      return this.act(() => this.bellSteps());
     },
 
     createGHZState() {
-      return this.enqueue(() => this.ghzSteps());
+      return this.act(() => this.ghzSteps());
     },
 
     // Preset sequences; call only from inside a queued task
@@ -388,30 +464,104 @@ export const Lab = {
       await this.runOnWorker({ type: 'cnot', control: 1, target: 2 });
     },
 
+    // ----- Circuit editor -----
+    // Edits are applied at once (not queued) so the list updates as the
+    // learner taps; each can be undone.
+
     addStep(step) {
+      this.remember();
+      this.stepIndex = null;
       this.circuit.push(step);
       this.save();
     },
 
     removeStep(index) {
+      this.remember();
+      this.stepIndex = null;
       this.circuit.splice(index, 1);
       this.save();
     },
+
+    clearCircuit() {
+      if (!this.circuit.length) return;
+      this.remember();
+      this.stepIndex = null;
+      this.circuit.splice(0);
+      this.save();
+    },
+
+    /**
+     * Plays every step, half a second apart, highlighting each as it is
+     * applied. Starts from |0…0⟩ unless fromZero is false, so running the
+     * same circuit twice gives the same result. One Undo reverts the run.
+     */
+    runCircuit({ fromZero = true } = {}) {
+      return this.enqueue(async () => {
+        if (!this.circuit.length) return;
+        this.remember();
+        this.running = true;
+        try {
+          if (fromZero) this.resetState();
+          this.stepIndex = 0;
+          const steps = [...this.circuit];
+          for (let i = 0; i < steps.length; i++) {
+            if (i) await new Promise(r => setTimeout(r, STEP_DELAY_MS));
+            await this.runOnWorker(stepToMessage(steps[i]));
+            this.stepIndex = i + 1;
+          }
+        } finally {
+          this.running = false;
+        }
+        await this.save();
+      });
+    },
+
+    /**
+     * Applies the next step. The first press (or the first after the last
+     * step, or after any other action) starts again, from |0…0⟩ unless
+     * fromZero is false. Each step can be undone.
+     */
+    stepCircuit({ fromZero = true } = {}) {
+      return this.enqueue(async () => {
+        if (!this.circuit.length) return;
+        this.remember();
+        if (this.stepIndex === null || this.stepIndex >= this.circuit.length) {
+          if (fromZero) this.resetState();
+          this.stepIndex = 0;
+        }
+        await this.runOnWorker(stepToMessage(this.circuit[this.stepIndex]));
+        this.stepIndex++;
+        await this.save();
+      });
+    },
+
+    // ----- Lessons -----
 
     /**
      * Runs lesson operations (see lessons.js) through the queue:
      * ['reset'], ['gate', name, q], ['cnot', c, t], ['cz', c, t], ['measure'],
      * ['measureQubit', q], ['bell'], ['ghz'], and ['if', q, op], which runs op
      * only if the last measurement of qubit q gave 1.
-     * `delay` pauses between steps so the learner can follow along.
+     * `delay` pauses between steps so the learner can follow along; the
+     * controls are held meanwhile, as during a circuit run.
      * Clears the circuit editor first if `clearCircuit` is set.
+     * Operations that start with a reset (Set up, Show me) begin afresh,
+     * so Undo can't step back to before them.
      */
     runOps(ops, { delay = 0, clearCircuit = false } = {}) {
       return this.enqueue(async () => {
+        if (ops[0]?.[0] === 'reset') this.forgetHistory();
+        else this.remember();
+        this.stepIndex = null;
         if (clearCircuit) this.circuit.splice(0);
-        for (const op of ops) {
-          await this.runOp(op);
-          if (delay) await new Promise(r => setTimeout(r, delay));
+        this.running = delay > 0;
+        try {
+          for (const op of ops) {
+            await this.runOp(op);
+            if (delay) await new Promise(r => setTimeout(r, delay));
+          }
+        } finally {
+          this.running = false;
         }
         await this.save();
       });
@@ -442,21 +592,6 @@ export const Lab = {
     /** Snapshot for checking a lesson result. */
     getState() {
       return { re: this.stateRe, im: this.stateIm, n: this.n, measured: this.measurement, bits: { ...this.bits } };
-    },
-
-    // Applies the circuit's steps in order to the current state.
-    runCircuit() {
-      return this.enqueue(async () => {
-        this.running = true;
-        try {
-          for (const step of [...this.circuit]) {
-            await this.runOnWorker(stepToMessage(step));
-            await new Promise(r => setTimeout(r, STEP_DELAY_MS));
-          }
-        } finally {
-          this.running = false;
-        }
-      });
     }
   }
 };

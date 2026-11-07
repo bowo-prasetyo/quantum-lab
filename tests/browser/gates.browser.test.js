@@ -85,7 +85,7 @@ describe('CZ and single-qubit measurement', () => {
     try {
       await page.locator('.gate', { hasText: /^H$/ }).click();
       await page.waitForTimeout(300);
-      assert.deepEqual((await page.locator('.circuit-step').allInnerTexts()).map(s => s.trim()), ['H q0']);
+      assert.deepEqual((await page.locator('.circuit-step-label').allInnerTexts()).map(s => s.trim()), ['H q0']);
     } finally {
       await page.context().close();
     }
@@ -100,7 +100,7 @@ describe('CZ and single-qubit measurement', () => {
       await page.getByRole('button', { name: 'Q0', exact: true }).first().click();
       await page.locator('.gate', { hasText: /^CZ$/ }).click();                // CZ q0,q1
       await page.locator('.gate', { hasText: /^M$/ }).click();                 // M q0
-      const steps = (await page.locator('.circuit-step').allInnerTexts()).map(s => s.trim());
+      const steps = (await page.locator('.circuit-step-label').allInnerTexts()).map(s => s.trim());
       assert.deepEqual(steps, ['X q0', 'X q1', 'CZ q0,q1', 'M q0']);
       await button(page, 'Run Circuit').click();
       await page.waitForTimeout(2600);

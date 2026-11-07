@@ -43,6 +43,7 @@ export const Help = {
           <li><strong>Create Bell Pair</strong> and <strong>GHZ State</strong> always start from |0…0⟩, so they give the same state every time.</li>
           <li><strong>Measure all</strong> picks a result for every qubit at random and collapses the state to it. <strong>Reset</strong> returns to |0…0⟩.</li>
           <li>Measurement results appear as <strong>classical bits</strong> under the amplitude table. Reset clears them.</li>
+          <li><strong>Undo</strong> (or Ctrl+Z, ⌘Z on a Mac) steps back through what you did: gates, measurements, Reset and circuit edits. It can even undo a measurement, because the simulator remembers the state from before; a real quantum computer can’t.</li>
           <li>You can press buttons as fast as you like: each operation waits for the previous one.</li>
         </ul>
       </div>
@@ -53,8 +54,11 @@ export const Help = {
           <li>Choose the <strong>selected qubit</strong>. For CNOT and CZ it is the control; choose the <strong>target</strong> too.</li>
           <li><strong>M</strong> in the circuit measures the selected qubit when the circuit runs.</li>
           <li>Add a gate by tapping or clicking it, dragging it into the circuit area (mouse, finger or pen), or focusing it and pressing Enter.</li>
-          <li>Tap or click a step to remove it.</li>
-          <li><strong>Run Circuit</strong> applies the steps in order to the current state, half a second apart.</li>
+          <li>Press <strong>×</strong> on a step to remove it (with the keyboard, Tab to it and press Enter). <strong>Clear</strong> removes every step. Undo brings them back.</li>
+          <li><strong>Run Circuit</strong> applies every step in order, half a second apart, highlighting each one as it goes.</li>
+          <li><strong>Step</strong> applies one step at a time, so you can watch each gate’s effect. Press it again for the next step; after the last step, it starts again.</li>
+          <li>Run and Step start from |0…0⟩, so a circuit gives the same result every time. Untick <strong>Start from |0…0⟩</strong> to apply the circuit to the current state instead.</li>
+          <li>While a circuit runs, the gate buttons wait until it finishes.</li>
         </ul>
       </div>
 

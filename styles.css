@@ -104,6 +104,8 @@ pre {
 }
 
 .circuit-dropzone {
+  list-style: none;
+  margin-bottom: 0;
   min-height: 60px;
   border: 2px dashed #2f6fed;
   border-radius: 10px;
@@ -115,11 +117,81 @@ pre {
   background: rgba(47, 111, 237, 0.05);
 }
 
+/* A step: its label and a remove (×) button. Steps already applied by
+   Run or Step are dimmed; the one just applied is outlined. */
 .circuit-step {
-  padding: 8px 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 0 0 12px;
   background: #2f6fed;
   border-radius: 8px;
   color: white;
+}
+
+.circuit-step.done {
+  background: #1f4aa0;
+}
+
+.circuit-step.current {
+  background: #2f6fed;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.circuit-step-remove {
+  margin: 0;
+  padding: 8px 10px;
+  min-width: 36px;
+  min-height: 36px;
+  background: none;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.circuit-step-remove:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.circuit-step-remove:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: -2px;
+}
+
+.circuit-empty {
+  align-self: center;
+  color: #aaa;
+  font-size: 14px;
+}
+
+.gate[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.check-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.check-label input {
+  width: 18px;
+  height: 18px;
+}
+
+.circuit-status {
+  min-height: 1.2em;
+  margin-bottom: 0;
+}
+
+/* A fieldset used only to disable its buttons together, with no look of its own */
+.plain-fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 /* The 3D view handles its own drags and pinches, so the browser must not
