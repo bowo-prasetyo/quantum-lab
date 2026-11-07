@@ -28,9 +28,17 @@ export const Help = {
       </div>
 
       <div class="card">
+        <h2>Layout</h2>
+        <ul>
+          <li>On a wide screen, the gates and the circuit editor stay on the left while you scroll the views on the right, so you see each gate’s effect as you press it. In a lesson, the steps and <strong>Check my result</strong> are there too.</li>
+          <li>On a narrow screen, such as a phone, the views are in tabs above the gates (State, Probabilities, Bloch spheres and so on). Tap a tab, or use the arrow keys, to switch view.</li>
+        </ul>
+      </div>
+
+      <div class="card">
         <h2>Gates and buttons</h2>
         <ul>
-          <li>Each qubit has a row of gate buttons: I, H, X, Y, Z, S and T, and <strong>M</strong>, which measures just that qubit.</li>
+          <li>Each qubit (Q0, Q1, Q2) has a row of gate buttons: I, H, X, Y, Z, S and T, and <strong>M</strong>, which measures just that qubit.</li>
           <li><strong>CNOT</strong> and <strong>CZ</strong> (2 or 3 qubits): choose the control and target qubits, then press the button. For CZ, which qubit is the control doesn’t matter.</li>
           <li><strong>Create Bell Pair</strong> and <strong>GHZ State</strong> always start from |0…0⟩, so they give the same state every time.</li>
           <li><strong>Measure all</strong> picks a result for every qubit at random and collapses the state to it. <strong>Reset</strong> returns to |0…0⟩.</li>

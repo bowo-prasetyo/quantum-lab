@@ -108,7 +108,7 @@ export const Lesson = {
   },
 
   template: `
-    <div class="container">
+    <div class="container wide">
       <app-nav />
 
       <div v-if="!lesson" class="card">
@@ -117,70 +117,77 @@ export const Lesson = {
       </div>
 
       <template v-else>
-        <div class="card">
-          <p class="caption">
-            <router-link to="/lessons">Lessons</router-link>
-            · Part {{ part.part }}: {{ part.title }} · Lesson {{ index + 1 }} of {{ LESSON_COUNT }}
-          </p>
-          <h1>{{ lesson.title }}</h1>
-          <p><strong>Goal:</strong> {{ lesson.goal }}</p>
-          <p><strong>Why it matters:</strong> {{ lesson.why }}</p>
-        </div>
-
-        <div class="card predict">
-          <h2>1. Predict</h2>
-          <p>{{ lesson.predict.question }}</p>
-          <div class="options">
-            <button
-              v-for="(option, i) in lesson.predict.options"
-              :key="i"
-              class="option"
-              :class="{
-                chosen: chosen === i,
-                right: predicted && i === lesson.predict.answer,
-                wrong: predicted && chosen === i && i !== lesson.predict.answer
-              }"
-              :disabled="predicted"
-              @click="choose(i)"
-            >{{ option }}</button>
+        <div class="lesson-intro">
+          <div class="card">
+            <p class="caption">
+              <router-link to="/lessons">Lessons</router-link>
+              · Part {{ part.part }}: {{ part.title }} · Lesson {{ index + 1 }} of {{ LESSON_COUNT }}
+            </p>
+            <h1>{{ lesson.title }}</h1>
+            <p><strong>Goal:</strong> {{ lesson.goal }}</p>
+            <p><strong>Why it matters:</strong> {{ lesson.why }}</p>
           </div>
-          <p v-if="predicted" class="verdict" role="status">
-            {{ chosen === lesson.predict.answer ? '✓ Right!' : '✗ Not quite.' }}
-            Try it below to see why.
-          </p>
-          <p v-else class="caption">Pick an answer before you try it. It’s fine to guess.</p>
-        </div>
 
-        <div class="card">
-          <h2>2. Try it</h2>
-          <ol>
-            <li v-for="(step, i) in lesson.steps" :key="i">{{ step }}</li>
-          </ol>
-          <button :disabled="busy" @click="setUp">Set up again</button>
-          <button :disabled="busy || !lesson.ops.length" @click="showMe">Show me</button>
-          <button :disabled="busy" @click="check">Check my result</button>
-
-          <div v-if="checkResult" class="check-result" :class="checkResult.pass ? 'pass' : 'fail'" role="status">
-            <p v-if="checkResult.pass"><strong>✓ That’s the expected result.</strong></p>
-            <p v-else><strong>Not yet.</strong> Follow the steps from a fresh set-up, or press Show me.</p>
-            <ul>
-              <li v-for="(r, i) in checkResult.results" :key="i">{{ r.pass ? '✓' : '✗' }} {{ r.text }}</li>
-            </ul>
+          <div class="card predict">
+            <h2>1. Predict</h2>
+            <p>{{ lesson.predict.question }}</p>
+            <div class="options">
+              <button
+                v-for="(option, i) in lesson.predict.options"
+                :key="i"
+                class="option"
+                :class="{
+                  chosen: chosen === i,
+                  right: predicted && i === lesson.predict.answer,
+                  wrong: predicted && chosen === i && i !== lesson.predict.answer
+                }"
+                :disabled="predicted"
+                @click="choose(i)"
+              >{{ option }}</button>
+            </div>
+            <p v-if="predicted" class="verdict" role="status">
+              {{ chosen === lesson.predict.answer ? '✓ Right!' : '✗ Not quite.' }}
+              Try it to see why.
+            </p>
+            <p v-else class="caption">Pick an answer before you try it. It’s fine to guess.</p>
           </div>
         </div>
 
-        <div class="card" v-if="showResult">
-          <h2>3. What happened</h2>
-          <p>{{ lesson.result }}</p>
-        </div>
-
+        <!-- The steps, Check and the explanation sit in the lab's sticky
+             column next to the gates, so the learner can follow them, act
+             and see the result without scrolling. -->
         <lab
           ref="lab"
           :n="lesson.n"
           :panels="lesson.panels"
           :persist="false"
           embedded
-        />
+        >
+          <template #side>
+            <div class="card">
+              <h2>2. Try it</h2>
+              <ol>
+                <li v-for="(step, i) in lesson.steps" :key="i">{{ step }}</li>
+              </ol>
+              <button :disabled="busy" @click="setUp">Set up again</button>
+              <button :disabled="busy || !lesson.ops.length" @click="showMe">Show me</button>
+              <button :disabled="busy" @click="check">Check my result</button>
+
+              <div v-if="checkResult" class="check-result" :class="checkResult.pass ? 'pass' : 'fail'" role="status">
+                <p v-if="checkResult.pass"><strong>✓ That’s the expected result.</strong></p>
+                <p v-else><strong>Not yet.</strong> Follow the steps from a fresh set-up, or press Show me.</p>
+                <ul>
+                  <li v-for="(r, i) in checkResult.results" :key="i">{{ r.pass ? '✓' : '✗' }} {{ r.text }}</li>
+                </ul>
+              </div>
+            </div>
+
+            <div class="card" v-if="showResult">
+              <h2>3. What happened</h2>
+              <p>{{ lesson.result }}</p>
+            </div>
+          </template>
+        </lab>
 
         <div class="card lesson-nav">
           <router-link v-if="previous" :to="'/lessons/' + previous.id">← {{ previous.title }}</router-link>

@@ -2,14 +2,21 @@
 // A vector shorter than 1 means the qubit is entangled with the others.
 
 import * as engine from '../engine.js';
+import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+
+// Avoids printing "-0.00"
+const fmt = v => {
+  const s = v.toFixed(2);
+  return (Number(s) === 0 ? '0.00' : s).replace('-', '−');
+};
 
 function drawSphere(canvas, x, y, z) {
-  const ctx = canvas.getContext('2d');
-  const W = canvas.width;
-  const H = canvas.height;
+  const fit = fitCanvas(canvas, w => w);
+  if (!fit) return;
+  const { ctx, width: W, height: H } = fit;
   const cx = W / 2;
   const cy = H / 2;
-  const radius = Math.min(W, H) * 0.35;
+  const radius = Math.min(W, H) * 0.38;
   const perspective = 0.35;
 
   const project = (px, py, pz) => ({
@@ -24,13 +31,12 @@ function drawSphere(canvas, x, y, z) {
     ctx.stroke();
   };
 
-  ctx.clearRect(0, 0, W, H);
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, W, H);
 
   // Sphere outline and equator
   ctx.strokeStyle = '#666';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
   ctx.stroke();
@@ -45,44 +51,56 @@ function drawSphere(canvas, x, y, z) {
   line(project(0, 0, -1), project(0, 0, 1));
 
   // Pole labels
-  ctx.fillStyle = 'white';
+  ctx.fillStyle = '#fff';
+  ctx.font = '13px Arial, sans-serif';
+  ctx.textAlign = 'center';
   const north = project(0, 0, 1);
   const south = project(0, 0, -1);
-  ctx.fillText('|0⟩', north.x - 10, north.y - 10);
-  ctx.fillText('|1⟩', south.x - 10, south.y + 20);
+  ctx.textBaseline = 'bottom';
+  ctx.fillText('|0⟩', north.x, north.y - 4);
+  ctx.textBaseline = 'top';
+  ctx.fillText('|1⟩', south.x, south.y + 4);
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
 
   // Bloch vector
   const tip = project(x, y, z);
   ctx.strokeStyle = '#2f6fed';
-  ctx.lineWidth = 4;
+  ctx.lineWidth = 3;
   line({ x: cx, y: cy }, tip);
   ctx.fillStyle = '#2f6fed';
   ctx.beginPath();
-  ctx.arc(tip.x, tip.y, 6, 0, Math.PI * 2);
+  ctx.arc(tip.x, tip.y, 5, 0, Math.PI * 2);
   ctx.fill();
-
-  // Coordinates
-  ctx.fillStyle = '#aaa';
-  ctx.fillText(`x=${x.toFixed(2)}`, 10, 15);
-  ctx.fillText(`y=${y.toFixed(2)}`, 10, 30);
-  ctx.fillText(`z=${z.toFixed(2)}`, 10, 45);
 }
 
 export const BlochSpheres = {
+  mixins: [redrawOnResize],
+
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
     n: { type: Number, required: true }
   },
 
+  computed: {
+    vectors() {
+      return [...Array(this.n).keys()].map(q => engine.blochVector(this.re, this.im, q, this.n));
+    }
+  },
+
+  // The coordinates are text under each sphere, so they stay readable at
+  // any size and screen readers can read them.
   template: `
     <div class="card">
       <h2>{{ n === 1 ? 'Bloch Sphere' : 'Bloch Spheres' }}</h2>
       <div class="bloch-row">
-        <div v-for="q in n" :key="q">
-          <p>Qubit {{ q - 1 }}</p>
-          <canvas :ref="el => setCanvas(q - 1, el)" width="260" height="260"></canvas>
-        </div>
+        <figure v-for="(v, q) in vectors" :key="q" class="bloch-cell">
+          <figcaption>Qubit {{ q }}</figcaption>
+          <canvas :ref="el => setCanvas(q, el)" role="img"
+            :aria-label="'Bloch sphere of qubit ' + q"></canvas>
+          <p class="bloch-coords">x = {{ fmt(v.x) }} · y = {{ fmt(v.y) }} · z = {{ fmt(v.z) }}</p>
+        </figure>
       </div>
       <p v-if="n >= 2" class="caption">
         A vector shorter than 1 means that qubit is entangled with the others.
@@ -95,15 +113,15 @@ export const BlochSpheres = {
   watch: { re() { this.draw(); }, im() { this.draw(); } },
 
   methods: {
+    fmt,
+
     setCanvas(q, el) { if (el) this.canvases[q] = el; },
 
     draw() {
-      for (let q = 0; q < this.n; q++) {
+      this.vectors.forEach((v, q) => {
         const canvas = this.canvases[q];
-        if (!canvas) continue;
-        const v = engine.blochVector(this.re, this.im, q, this.n);
-        drawSphere(canvas, v.x, v.y, v.z);
-      }
+        if (canvas) drawSphere(canvas, v.x, v.y, v.z);
+      });
     }
   }
 };

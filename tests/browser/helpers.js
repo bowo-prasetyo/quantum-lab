@@ -12,7 +12,9 @@ const TYPES = {
   '.html': 'text/html',
   '.js': 'text/javascript',
   '.css': 'text/css',
-  '.json': 'application/json'
+  '.json': 'application/json',
+  '.svg': 'image/svg+xml',
+  '.png': 'image/png'
 };
 
 /** Starts the server and browser. Returns { base, browser, close }. */

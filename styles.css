@@ -9,7 +9,14 @@ body {
   max-width: 900px;
   margin: auto;
   padding: 20px;
-  overflow-x: auto;
+  /* clip, not auto: a scrolling container would stop the workbench's
+     controls column from sticking (position: sticky) */
+  overflow-x: clip;
+}
+
+/* The lab and lesson pages use the whole width for the workbench */
+.container.wide {
+  max-width: 1280px;
 }
 
 .card {
@@ -33,31 +40,39 @@ button:hover {
   opacity: 0.9;
 }
 
-/* Canvases keep their own width/height ratio and shrink on narrow screens */
+/* Canvases fill their card's width. Their drawing code sets the height and
+   the pixel size to match (components/canvas-fit.js), so they stay sharp. */
 canvas {
   display: block;
   background: #000;
   border-radius: 12px;
-  width: auto;
-  max-width: 100%;
-  height: auto;
+  width: 100%;
 }
 
+/* Spheres side by side, at most 260 px each; two per row on a phone */
 .bloch-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 16px;
 }
 
-.bloch-row > div {
-  flex: 1 1 200px;
+.bloch-cell {
+  margin: 0;
+  width: 100%;
   max-width: 260px;
+  justify-self: center;
   text-align: center;
 }
 
-.bloch-row canvas {
-  width: 100%;
+.bloch-cell figcaption {
+  margin-bottom: 8px;
+}
+
+.bloch-coords {
+  margin: 6px 0 0;
+  color: #ccc;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
 }
 
 .caption {
@@ -367,4 +382,162 @@ button:disabled {
 
 .measure-button {
   background: #6b4ad6;
+}
+
+/* ---------- Gate panel ---------- */
+
+/* One row per qubit: label, seven gates and M in equal columns */
+.gate-row {
+  display: grid;
+  grid-template-columns: 2.25rem repeat(8, minmax(0, 1fr));
+  gap: 4px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.gate-row-label {
+  color: #aaa;
+  font-weight: bold;
+}
+
+.gate-row .gate-button {
+  margin: 0;
+  padding: 0;
+  min-height: 40px;
+  font-size: 15px;
+}
+
+.gate-panel .cnot-row,
+.gate-panel .action-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #333;
+}
+
+/* Buttons in equal columns, two or more per row, so none is left alone */
+.button-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.cnot-row .button-grid {
+  flex: 1 1 100%;
+}
+
+.button-grid button {
+  margin: 0;
+}
+
+/* Bigger targets for fingers */
+@media (pointer: coarse) {
+  .gate-row .gate-button {
+    min-height: 44px;
+  }
+
+  .button-grid button,
+  .view-tab {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Workbench ----------
+
+   Narrow screens: one column. The controls wrapper steps aside
+   (display: contents) so its parts can be ordered around the views:
+   a lesson's steps, then the views, then the gates and circuit editor.
+
+   Wide screens (≥ 1000 px, also WIDE_QUERY in lab.js): the controls are a
+   sticky column on the left and the views fill the right, so pressing a
+   gate and seeing its effect happen on the same screen. */
+
+.workbench {
+  display: flex;
+  flex-direction: column;
+}
+
+.workbench-controls {
+  display: contents;
+}
+
+.workbench-side { order: 0; }
+.workbench-views { order: 1; }
+.workbench-tools { order: 2; }
+
+@media (min-width: 1000px) {
+  .workbench {
+    display: grid;
+    grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+    gap: 20px;
+    align-items: start;
+  }
+
+  .workbench-controls {
+    display: block;
+    position: sticky;
+    top: 16px;
+    /* Scrolls on its own if it is taller than the window */
+    max-height: calc(100vh - 32px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border-radius: 12px;
+  }
+
+  .workbench-controls > :last-child > .card:last-child {
+    margin-bottom: 0;
+  }
+}
+
+/* Lesson: the title and the prediction side by side on wide screens, so
+   the workbench starts higher up */
+@media (min-width: 1000px) {
+  .lesson-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 20px;
+    align-items: stretch;
+  }
+}
+
+/* View tabs (narrow screens only) */
+.view-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.view-tab {
+  margin: 0;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  color: #eee;
+}
+
+.view-tab[aria-selected="true"] {
+  background: #2f6fed;
+  color: #fff;
+}
+
+.view-tab:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* Phones: less padding, so the gate rows and views get the width */
+@media (max-width: 600px) {
+  .container {
+    padding: 12px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  /* All four columns, Phase included, fit a phone's width */
+  .amp-table th,
+  .amp-table td {
+    padding: 6px 4px;
+    font-size: 14px;
+  }
 }
