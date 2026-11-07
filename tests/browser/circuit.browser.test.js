@@ -12,7 +12,11 @@ after(() => env.close());
 
 const probabilities = page => page.locator('.amp-table tbody tr td:nth-child(3)').allInnerTexts();
 const button = (page, name, nth = 0) => page.getByRole('button', { name, exact: true }).nth(nth);
-const paletteGate = (page, name) => page.locator('.gate', { hasText: new RegExp(`^${name}$`) });
+// The circuit editor's palette chip for a gate on a qubit (0 by default);
+// CNOT and CZ use the chosen control → target pair
+const paletteGate = (page, name, qubit = 0) => ['CNOT', 'CZ'].includes(name)
+  ? page.getByRole('button', { name: new RegExp(`^Add ${name}, `) })
+  : page.getByRole('button', { name: `Add ${name} on Q${qubit}`, exact: true });
 const steps = async page => (await page.locator('.circuit-step-label').allInnerTexts()).map(s => s.trim());
 const settle = page => page.waitForTimeout(300);
 

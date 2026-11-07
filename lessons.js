@@ -445,9 +445,9 @@ export const LESSONS = [
     panels: ['table', 'probabilities', 'bloch', 'editor'],
     setup: [['reset']],
     steps: [
-      'In the circuit editor, select Q0 and add H.',
-      'Keep Q0 selected, choose CNOT target Q1, and add CNOT.',
-      'Choose CNOT target Q2 and add CNOT.',
+      'In the circuit editor, add H from row Q0.',
+      'Choose control Q0 and target Q1, and add CNOT.',
+      'Choose target Q2 and add CNOT.',
       'Press Run Circuit.'
     ],
     ops: [['gate', 'H', 0], ['cnot', 0, 1], ['cnot', 0, 2]],

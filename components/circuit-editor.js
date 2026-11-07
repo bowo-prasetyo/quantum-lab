@@ -2,14 +2,31 @@
 // drag it with a mouse (native drag and drop), drag it with a finger or pen
 // (pointer events), or tap / click / press Enter on it.
 //
+// The palette is laid out like the Gates panel: one row per qubit, so H in
+// row Q1 adds "H q1". CNOT and CZ use the lab's control → target pair, chosen
+// with the same picker as in the Gates panel. Each gate is described in a
+// hint line and to screen readers (see gate-hints.js).
+//
 // Run Circuit plays every step; Step applies one step at a time. Both start
 // from |0…0⟩ unless "Start from |0…0⟩" is unticked. The lab tracks how many
 // steps have been applied (`applied`), and the editor highlights them.
 
+import { QubitPicker } from './qubit-picker.js';
+import { gateHints } from './gate-hints.js';
+
+const SINGLE_GATES = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T', 'M'];
+const PAIR_GATES = ['CNOT', 'CZ'];
+
 export const CircuitEditor = {
+  components: { QubitPicker },
+  mixins: [gateHints],
+
   props: {
     n: { type: Number, required: true },
     circuit: { type: Array, required: true },
+    // CNOT and CZ control and target (shared with the Gates panel)
+    control: { type: Number, default: 0 },
+    target: { type: Number, default: 1 },
     running: { type: Boolean, default: false },
     // Steps applied so far by Run or Step, or null if not stepping
     applied: { type: Number, default: null },
@@ -17,14 +34,15 @@ export const CircuitEditor = {
     showUndo: { type: Boolean, default: false },
     canUndo: { type: Boolean, default: false }
   },
-  emits: ['add', 'remove', 'clear', 'run', 'step', 'undo'],
+  emits: ['add', 'remove', 'clear', 'run', 'step', 'undo', 'pair'],
 
   data() {
     return {
-      selectedQubit: 0,
-      cnotTarget: this.n > 1 ? 1 : 0,
+      singleGates: SINGLE_GATES,
+      pairGates: PAIR_GATES,
+      // The palette chip being dragged with a mouse: { gate, target? }
       draggingGate: null,
-      // { gate, x, y, startX, startY, moved, over } during a touch/pen drag
+      // { spec, x, y, startX, startY, moved, over } during a touch/pen drag
       touchDrag: null,
       fromZero: true
     };
@@ -47,16 +65,8 @@ export const CircuitEditor = {
         ? `${text} All steps applied; Step starts again.`
         : text;
     },
-    paletteGates() {
-      const gates = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T'];
-      return this.n >= 2 ? [...gates, 'CNOT', 'CZ', 'M'] : [...gates, 'M'];
-    }
-  },
-
-  watch: {
-    // CNOT target must differ from the selected (control) qubit
-    selectedQubit(q) {
-      if (this.cnotTarget === q) this.cnotTarget = (q + 1) % this.n;
+    pairLabel() {
+      return `control Q${this.control}, target Q${this.target}`;
     }
   },
 
@@ -75,48 +85,69 @@ export const CircuitEditor = {
     <div class="card">
       <h2>Circuit Editor</h2>
 
-      <div class="gate-palette">
+      <!-- Palette: a row of gates per qubit, then CNOT and CZ for the chosen pair -->
+      <div
+        v-for="q in qubits"
+        :key="q"
+        class="gate-row palette-row"
+        role="group"
+        :aria-label="'Add to qubit ' + q"
+      >
+        <span class="gate-row-label" aria-hidden="true">Q{{ q }}</span>
         <div
-          v-for="g in paletteGates"
+          v-for="g in singleGates"
           :key="g"
           class="gate"
           role="button"
           tabindex="0"
-          :aria-label="'Add ' + g + ' gate'"
+          :aria-label="'Add ' + g + ' on Q' + q"
+          :aria-describedby="descId(g)"
           :aria-disabled="running ? 'true' : null"
           draggable="true"
-          @dragstart="draggingGate = g"
-          @pointerdown="onGatePointerDown($event, g)"
-          @click="onGateClick(g)"
-          @keydown.enter.prevent="addGate(g)"
-          @keydown.space.prevent="addGate(g)"
+          @dragstart="draggingGate = { gate: g, target: q }"
+          @pointerenter="showHint(g)"
+          @focus="showHint(g)"
+          @pointerdown="onGatePointerDown($event, { gate: g, target: q })"
+          @click="onGateClick({ gate: g, target: q })"
+          @keydown.enter.prevent="addGate({ gate: g, target: q })"
+          @keydown.space.prevent="addGate({ gate: g, target: q })"
         >{{ g }}</div>
       </div>
 
-      <div class="card">
-        <h3>{{ n >= 2 ? 'Selected qubit (control for CNOT and CZ)' : 'Selected qubit' }}</h3>
-        <button
-          v-for="q in qubits"
-          :key="q"
-          :class="{ selected: selectedQubit === q }"
-          :aria-pressed="selectedQubit === q"
-          @click="selectedQubit = q"
-        >Q{{ q }}</button>
-
-        <template v-if="n >= 2">
-          <h3>Target for CNOT and CZ</h3>
-          <button
-            v-for="q in qubits.filter(q => q !== selectedQubit)"
-            :key="q"
-            :class="{ selected: cnotTarget === q }"
-            :aria-pressed="cnotTarget === q"
-            @click="cnotTarget = q"
-          >Q{{ q }}</button>
-        </template>
+      <div v-if="n >= 2" class="cnot-row palette-pair">
+        <qubit-picker :n="n" :control="control" :target="target" @change="$emit('pair', $event)" />
+        <div class="palette-pair-gates">
+          <div
+            v-for="g in pairGates"
+            :key="g"
+            class="gate"
+            role="button"
+            tabindex="0"
+            :aria-label="'Add ' + g + ', ' + pairLabel"
+            :aria-describedby="descId(g)"
+            :aria-disabled="running ? 'true' : null"
+            draggable="true"
+            @dragstart="draggingGate = { gate: g }"
+            @pointerenter="showHint(g)"
+            @focus="showHint(g)"
+            @pointerdown="onGatePointerDown($event, { gate: g })"
+            @click="onGateClick({ gate: g })"
+            @keydown.enter.prevent="addGate({ gate: g })"
+            @keydown.space.prevent="addGate({ gate: g })"
+          >{{ g }}</div>
+        </div>
       </div>
 
+      <p class="gate-hint" aria-hidden="true">
+        <template v-if="hintGate"><strong>{{ hintGate }}</strong> {{ GATE_INFO[hintGate] }}</template>
+        <template v-else>Point at, focus or tap a gate to see what it does.</template>
+      </p>
+      <span v-for="(text, g) in GATE_INFO" :key="g" :id="descId(g)" class="visually-hidden">{{ text }}</span>
+
       <p class="caption">
-        Tap or drag a gate to add it to the selected qubit (M measures that qubit).
+        Tap or drag a gate to add it to the circuit: each row adds to its qubit
+        (M measures it)<template v-if="n >= 2">, and CNOT and CZ use the control
+        and target chosen above, the same pair as in the Gates panel</template>.
         Press × on a step to remove it.
       </p>
 
@@ -177,7 +208,7 @@ export const CircuitEditor = {
         v-if="touchDrag && touchDrag.moved"
         class="drag-ghost"
         :style="{ left: touchDrag.x + 'px', top: touchDrag.y + 'px' }"
-      >{{ touchDrag.gate }}</div>
+      >{{ chipLabel(touchDrag.spec) }}</div>
     </div>
   `,
 
@@ -208,11 +239,22 @@ export const CircuitEditor = {
       });
     },
 
-    addGate(gate) {
+    // A palette chip as text, e.g. 'H q1' or 'CNOT q0→q2'
+    chipLabel(spec) {
+      return this.stepLabel(this.toStep(spec));
+    },
+
+    // Palette chip { gate, target? } → circuit step
+    toStep({ gate, target }) {
+      return PAIR_GATES.includes(gate)
+        ? { gate, control: this.control, target: this.target }
+        : { gate, target };
+    },
+
+    addGate(spec) {
       if (this.running) return;
-      this.$emit('add', gate === 'CNOT' || gate === 'CZ'
-        ? { gate, control: this.selectedQubit, target: this.cnotTarget }
-        : { gate, target: this.selectedQubit });
+      this.showHint(spec.gate);
+      this.$emit('add', this.toStep(spec));
     },
 
     // Mouse: native HTML5 drag and drop
@@ -223,20 +265,20 @@ export const CircuitEditor = {
     },
 
     // Tap, click, or keyboard
-    onGateClick(gate) {
+    onGateClick(spec) {
       // A touch drag that ends near the gate can also fire a click;
       // don't add the gate twice.
       if (performance.now() - this.lastTouchDragEnd < 500) return;
-      this.addGate(gate);
+      this.addGate(spec);
     },
 
     // Touch and pen: follow the pointer and add the gate if it is released
     // over the circuit area.
-    onGatePointerDown(e, gate) {
+    onGatePointerDown(e, spec) {
       if (e.pointerType === 'mouse') return;
 
       this.touchDrag = {
-        gate,
+        spec,
         x: e.clientX,
         y: e.clientY,
         startX: e.clientX,
@@ -267,7 +309,7 @@ export const CircuitEditor = {
       if (!drag || !drag.moved) return; // a tap: the click handler adds it
 
       this.lastTouchDragEnd = performance.now();
-      if (this.isOverDropzone(e.clientX, e.clientY)) this.addGate(drag.gate);
+      if (this.isOverDropzone(e.clientX, e.clientY)) this.addGate(drag.spec);
     },
 
     stopGateDrag() {

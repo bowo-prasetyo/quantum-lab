@@ -39,7 +39,8 @@ export const Help = {
         <h2>Gates and buttons</h2>
         <ul>
           <li>Each qubit (Q0, Q1, Q2) has a row of gate buttons: I, H, X, Y, Z, S and T, and <strong>M</strong>, which measures just that qubit.</li>
-          <li><strong>CNOT</strong> and <strong>CZ</strong> (2 or 3 qubits): choose the control and target qubits, then press the button. For CZ, which qubit is the control doesn’t matter.</li>
+          <li>Point at, focus or tap a gate to see what it does, in the line under the buttons.</li>
+          <li><strong>CNOT</strong> and <strong>CZ</strong> (2 or 3 qubits): choose the <strong>control</strong> and <strong>target</strong> qubits (the target can’t be the control), then press the button. For CZ, which qubit is the control doesn’t matter. The circuit editor shares the same choice.</li>
           <li><strong>Create Bell Pair</strong> and <strong>GHZ State</strong> always start from |0…0⟩, so they give the same state every time.</li>
           <li><strong>Measure all</strong> picks a result for every qubit at random and collapses the state to it. <strong>Reset</strong> returns to |0…0⟩.</li>
           <li>Measurement results appear as <strong>classical bits</strong> under the amplitude table. Reset clears them.</li>
@@ -51,8 +52,8 @@ export const Help = {
       <div class="card">
         <h2>Circuit editor</h2>
         <ul>
-          <li>Choose the <strong>selected qubit</strong>. For CNOT and CZ it is the control; choose the <strong>target</strong> too.</li>
-          <li><strong>M</strong> in the circuit measures the selected qubit when the circuit runs.</li>
+          <li>The gates are laid out like the Gates panel: one row per qubit. <strong>H</strong> in row Q1 adds “H q1”; <strong>M</strong> in a row measures that qubit when the circuit runs.</li>
+          <li><strong>CNOT</strong> and <strong>CZ</strong> use the control and target chosen next to them, the same choice as in the Gates panel.</li>
           <li>Add a gate by tapping or clicking it, dragging it into the circuit area (mouse, finger or pen), or focusing it and pressing Enter.</li>
           <li>Press <strong>×</strong> on a step to remove it (with the keyboard, Tab to it and press Enter). <strong>Clear</strong> removes every step. Undo brings them back.</li>
           <li><strong>Run Circuit</strong> applies every step in order, half a second apart, highlighting each one as it goes.</li>

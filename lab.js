@@ -71,6 +71,9 @@ export const Lab = {
       narrow: !window.matchMedia(WIDE_QUERY).matches,
       // Circuit steps applied so far by Run or Step, or null if not stepping
       stepIndex: null,
+      // CNOT and CZ control → target, shared by the Gates panel and the
+      // circuit editor so both show the same choice
+      pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
       activeView: 'table'  // the view tab shown on narrow screens
     };
@@ -116,6 +119,9 @@ export const Lab = {
               :n="n"
               :disabled="running"
               :can-undo="historyLength > 0"
+              :control="pair.control"
+              :target="pair.target"
+              @pair="pair = $event"
               @undo="undo"
               @gate="applyGate"
               @cnot="applyCNOT"
@@ -133,6 +139,9 @@ export const Lab = {
               :circuit="circuit"
               :running="running"
               :applied="stepIndex"
+              :control="pair.control"
+              :target="pair.target"
+              @pair="pair = $event"
               :show-undo="!show('gates')"
               :can-undo="historyLength > 0"
               @add="addStep"
