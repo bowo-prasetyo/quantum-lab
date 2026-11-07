@@ -5,10 +5,10 @@
 // under 'quantum-db', 'quantum-db-2' and 'quantum-db-3'.
 
 import { isValidState } from './engine.js';
+import { isValidStep, readOldLab } from './import-old.js';
 
 const DB_NAME = 'quantum-lab';
 const STORE = 'labs';
-const GATE_NAMES = ['I', 'H', 'X', 'Y', 'Z', 'S', 'T'];
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -19,17 +19,6 @@ function openDB() {
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);
   });
-}
-
-const isQubit = (q, n) => Number.isInteger(q) && q >= 0 && q < n;
-
-function isValidStep(step, n) {
-  if (!step || typeof step !== 'object') return false;
-  if (step.gate === 'CNOT') {
-    return n >= 2 && isQubit(step.control, n) && isQubit(step.target, n) &&
-      step.control !== step.target;
-  }
-  return GATE_NAMES.includes(step.gate) && isQubit(step.target, n);
 }
 
 export async function saveLab(n, re, im, circuit) {
@@ -51,8 +40,26 @@ export async function saveLab(n, re, im, circuit) {
  * Returns { re, im, circuit } for an n-qubit lab, or null if nothing valid
  * is saved. Invalid circuit steps are dropped; an invalid state discards
  * the whole record.
+ *
+ * If this size has no record at all, the matching original simulator's
+ * saved state is imported once (see import-old.js): it is saved here, so
+ * later loads use the lab's own copy. The result then also has
+ * `importedFrom`, the old simulator's name.
  */
 export async function loadLab(n) {
+  const own = await loadOwn(n);
+  if (own !== undefined) return own;
+
+  const old = await readOldLab(n);
+  if (!old) return null;
+
+  await saveLab(n, old.re, old.im, old.circuit);
+  return { re: old.re, im: old.im, circuit: old.circuit, importedFrom: old.source };
+}
+
+// The lab's own record: the parsed record, null if it exists but is
+// invalid, or undefined if this size was never saved.
+async function loadOwn(n) {
   const db = await openDB();
   const record = await new Promise((resolve, reject) => {
     const req = db.transaction(STORE, 'readonly').objectStore(STORE).get(`lab-${n}`);
@@ -60,7 +67,8 @@ export async function loadLab(n) {
     req.onerror = () => reject(req.error);
   });
 
-  if (!record || !isValidState(record.re, record.im, n)) return null;
+  if (!record) return undefined;
+  if (!isValidState(record.re, record.im, n)) return null;
 
   return {
     re: Float64Array.from(record.re),
