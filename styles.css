@@ -977,3 +977,185 @@ button:disabled {
     font-size: 14px;
   }
 }
+
+/* ---------- Interference, Shots and Entanglement views ---------- */
+
+.interference-step {
+  margin-bottom: 4px;
+}
+
+.interference-rows,
+.shots-rows,
+.entropy-rows {
+  list-style: none;
+  margin: 12px 0;
+  padding: 0;
+}
+
+.interference-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border-faint);
+}
+
+.interference-row svg {
+  flex: none;
+  overflow: visible;
+}
+
+.phasor-ring {
+  fill: none;
+  stroke: var(--border);
+}
+
+.phasor-axis {
+  stroke: var(--border-faint);
+}
+
+.phasor-sum {
+  stroke: var(--text);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.phasor-tip {
+  fill: var(--text);
+}
+
+.interference-text p {
+  margin: 2px 0;
+}
+
+.interference-sum,
+.interference-prob {
+  color: var(--text-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* One grid for the whole list, so every bar starts and ends in line */
+.shots-rows,
+.entropy-rows {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.shots-row,
+.entropy-row {
+  display: contents;
+}
+
+.shots-row.zero > * {
+  color: var(--text-dim);
+}
+
+.shots-label,
+.entropy-label {
+  min-width: 3.5em;
+}
+
+.shots-track,
+.entropy-track {
+  position: relative;
+  height: 14px;
+  min-width: 60px;
+  border-radius: 4px;
+  background: var(--border-faint);
+}
+
+.shots-bar,
+.entropy-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+  background: var(--canvas-bar);
+}
+
+.entropy-bar {
+  background: var(--canvas-vector);
+}
+
+/* The exact probability: a line across the bar */
+.shots-expected {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--text-strong);
+}
+
+.shots-count,
+.entropy-value {
+  text-align: right;
+  font-size: 14px;
+}
+
+.shots-detail,
+.entropy-word {
+  color: var(--text-muted);
+}
+
+.shots-summary {
+  color: var(--text-soft);
+  font-size: 14px;
+}
+
+.mi-graph {
+  display: block;
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.mi-edge {
+  stroke: var(--canvas-bar);
+  stroke-linecap: round;
+}
+
+.mi-label {
+  fill: var(--text);
+  font-size: 10px;
+}
+
+.mi-node {
+  fill: var(--canvas-vector);
+}
+
+.mi-node-label {
+  fill: #fff;
+  font-size: 10px;
+}
+
+/* On a phone, the counts go under the bar */
+@media (max-width: 480px) {
+  .shots-rows {
+    grid-template-columns: auto 1fr;
+    row-gap: 2px;
+  }
+
+  .shots-count {
+    grid-column: 1 / -1;
+    margin-bottom: 6px;
+    text-align: left;
+  }
+}
+
+.interference-details {
+  margin-top: 8px;
+}
+
+.interference-details summary {
+  cursor: pointer;
+  color: var(--link);
+}
+
+.interference-details .interference-row {
+  padding: 4px 0;
+  font-variant-numeric: tabular-nums;
+}

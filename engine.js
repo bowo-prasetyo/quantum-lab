@@ -143,20 +143,15 @@ export function probabilities(re, im) {
 }
 
 /**
- * Measures all qubits. Picks a basis state with probability |amplitude|²
- * (normalizing first, so a slightly unnormalized state still works) and
- * collapses to it. `random` returns a number in [0, 1); pass a seeded
- * generator for repeatable results.
+ * The basis index a uniform random number r in [0, 1) selects, each index
+ * i being chosen with probability probs[i] / (sum of probs).
+ * Strict < so that an outcome with probability 0 can never be picked
+ * (r can be exactly 0). If rounding leaves the running total a hair below
+ * 1 and r falls in that gap, the last outcome that is actually possible is
+ * kept rather than falling back to index 0.
  */
-export function measure(re, im, n, random = Math.random) {
-  const probs = probabilities(re, im);
+function pickOutcome(probs, r) {
   const total = probs.reduce((sum, p) => sum + p, 0);
-  const r = random();
-
-  // Strict < so that an outcome with probability 0 can never be picked
-  // (r can be exactly 0). If rounding leaves the running total a hair
-  // below 1 and r falls in that gap, keep the last outcome that is
-  // actually possible rather than falling back to index 0.
   let cumulative = 0;
   let index = -1;
 
@@ -166,7 +161,18 @@ export function measure(re, im, n, random = Math.random) {
     cumulative += probs[i] / total;
     if (r < cumulative) break;
   }
-  if (index < 0) index = 0;
+  return index < 0 ? 0 : index;
+}
+
+/**
+ * Measures all qubits. Picks a basis state with probability |amplitude|²
+ * (normalizing first, so a slightly unnormalized state still works) and
+ * collapses to it. `random` returns a number in [0, 1); pass a seeded
+ * generator for repeatable results.
+ */
+export function measure(re, im, n, random = Math.random) {
+  const probs = probabilities(re, im);
+  const index = pickOutcome(probs, random());
 
   const collapsedRe = new Float64Array(re.length);
   collapsedRe[index] = 1;
@@ -338,4 +344,116 @@ export function isValidState(re, im, n, tolerance = 1e-6) {
   }
 
   return Math.abs(total - 1) <= tolerance;
+}
+
+/**
+ * Repeats "prepare this state, measure every qubit" `shots` times without
+ * changing the state, as a real quantum computer does to estimate
+ * probabilities. Returns how often each basis state came up: an array of
+ * length 2^n. `random` as for measure().
+ */
+export function sampleCounts(re, im, shots, random = Math.random) {
+  if (!Number.isInteger(shots) || shots < 0) throw new RangeError(`shots must be a whole number, got ${shots}`);
+  const probs = probabilities(re, im);
+  const counts = new Array(probs.length).fill(0);
+  for (let k = 0; k < shots; k++) counts[pickOutcome(probs, random())]++;
+  return counts;
+}
+
+/**
+ * How the amplitudes combine in one step: for every output basis state j,
+ * the paths that lead to it from the state before the step, i.e. the terms
+ * U[j][i]·ψi of the sum ψ'j = Σi U[j][i]·ψi.
+ *
+ * `apply(re, im)` performs the step (any gate, CNOT or CZ) and returns
+ * { re, im }; it is run on each basis state to read off U column by column.
+ *
+ * Returns one entry per output index, in basis order:
+ *   { index, paths: [{ from, re, im }], re, im, probability, without, kind }
+ *   re, im       the output amplitude (the sum of its paths)
+ *   probability  |sum|², what is measured
+ *   without      Σ|path|², what the probability would be if the paths did
+ *                not interfere (added as probabilities, not amplitudes)
+ *   kind         'none' (no path), 'single' (one path: nothing to interfere),
+ *                'constructive' (probability > without), 'destructive'
+ *                (probability < without, but not 0), 'cancel' (the paths
+ *                cancel completely), or 'neutral' (several paths whose
+ *                interference adds nothing, e.g. 90° apart)
+ * Paths smaller than 1e-12 are left out.
+ */
+export function amplitudePaths(re, im, apply, n) {
+  const size = 1 << n;
+  const EPS = 1e-12;
+  const outputs = Array.from({ length: size }, (_, index) => ({ index, paths: [] }));
+
+  for (let i = 0; i < size; i++) {
+    if (re[i] * re[i] + im[i] * im[i] < EPS * EPS) continue;
+    const basisRe = new Float64Array(size);
+    basisRe[i] = 1;
+    const column = apply(basisRe, new Float64Array(size));
+    for (let j = 0; j < size; j++) {
+      // U[j][i] · ψi
+      const pr = column.re[j] * re[i] - column.im[j] * im[i];
+      const pi = column.re[j] * im[i] + column.im[j] * re[i];
+      if (pr * pr + pi * pi >= EPS * EPS) outputs[j].paths.push({ from: i, re: pr, im: pi });
+    }
+  }
+
+  const TOL = 1e-9;
+  for (const out of outputs) {
+    out.re = out.paths.reduce((s, p) => s + p.re, 0);
+    out.im = out.paths.reduce((s, p) => s + p.im, 0);
+    out.probability = out.re * out.re + out.im * out.im;
+    out.without = out.paths.reduce((s, p) => s + p.re * p.re + p.im * p.im, 0);
+    if (out.paths.length === 0) out.kind = 'none';
+    else if (out.paths.length === 1) out.kind = 'single';
+    else if (out.probability < TOL) out.kind = 'cancel';
+    else if (out.probability > out.without + TOL) out.kind = 'constructive';
+    else if (out.probability < out.without - TOL) out.kind = 'destructive';
+    else out.kind = 'neutral';
+  }
+
+  return outputs;
+}
+
+/**
+ * Entanglement entropy of one qubit, in bits: the von Neumann entropy
+ * S = −Σ λ log₂ λ of its reduced density matrix, whose eigenvalues are
+ * (1 ± r)/2 for a Bloch vector of length r.
+ * For a pure overall state (always the case in this lab) it is 0 exactly
+ * when the qubit is not entangled with the others, and 1 when it is
+ * maximally entangled (as in a Bell pair or GHZ state).
+ */
+export function entanglementEntropy(re, im, qubit, n) {
+  const { x, y, z } = blochVector(re, im, qubit, n);
+  const r = Math.min(1, Math.hypot(x, y, z));
+  return binaryEntropy((1 - r) / 2);
+}
+
+// −p log₂ p − (1 − p) log₂ (1 − p), with 0 log 0 = 0
+function binaryEntropy(p) {
+  const h = q => (q > 0 ? -q * Math.log2(q) : 0);
+  return h(p) + h(1 - p);
+}
+
+/**
+ * Quantum mutual information of two qubits, in bits:
+ * I(A:B) = S(A) + S(B) − S(AB). It is 0 exactly when the two qubits'
+ * results are unrelated in every measurement basis, and at most 2.
+ * It counts every kind of link (classical and quantum), so it is not a
+ * test of entanglement on its own.
+ *
+ * Assumes the overall state is pure, as it always is in this lab: then
+ * S(AB) equals the entropy of the remaining qubits, which is 0 for n = 2
+ * and the third qubit's entropy for n = 3. Supports n = 2 and 3.
+ */
+export function mutualInformation(re, im, q1, q2, n) {
+  checkQubit(q1, n, 'q1');
+  checkQubit(q2, n, 'q2');
+  if (q1 === q2) throw new RangeError('q1 and q2 must differ');
+  if (n !== 2 && n !== 3) throw new RangeError(`mutualInformation supports 2 or 3 qubits, got ${n}`);
+
+  const rest = n === 3 ? entanglementEntropy(re, im, 3 - q1 - q2, n) : 0;
+  const value = entanglementEntropy(re, im, q1, n) + entanglementEntropy(re, im, q2, n) - rest;
+  return Math.max(0, value);
 }
