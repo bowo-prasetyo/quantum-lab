@@ -82,7 +82,7 @@ describe('Workbench layout', () => {
       const tabs = page.getByRole('tab');
       assert.deepEqual(
         await tabs.allInnerTexts(),
-        ['State', 'Probabilities', 'Bloch spheres', 'Density matrix', 'Correlations', '3D']
+        ['State', 'Probabilities', 'Shots', 'Bloch spheres', 'Interference', 'Density matrix', 'Correlations', 'Entanglement', '3D']
       );
       assert.equal(await page.getByRole('tab', { selected: true }).innerText(), 'State');
       assert.equal(await heading(page, 'Quantum State').count(), 1);
@@ -97,11 +97,11 @@ describe('Workbench layout', () => {
       assert.equal(await page.locator('.bloch-row canvas').count(), 3);
       assert.ok(await page.locator('.bloch-row').isVisible());
       await page.keyboard.press('ArrowRight');
-      assert.equal(await page.getByRole('tab', { selected: true }).innerText(), 'Density matrix');
-      assert.ok(await heading(page, 'Density Matrix').isVisible());
+      assert.equal(await page.getByRole('tab', { selected: true }).innerText(), 'Interference');
+      assert.ok(await heading(page, 'Interference').isVisible());
       assert.equal(
         await page.evaluate(() => document.activeElement.textContent.trim()),
-        'Density matrix',
+        'Interference',
         'focus follows the selected tab'
       );
 

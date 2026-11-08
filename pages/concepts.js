@@ -39,6 +39,8 @@ const SECTIONS = [
       ['Bell pair', '(|00⟩ + |11⟩)/√2, made by H on qubit 0 then CNOT from qubit 0 to qubit 1. Each qubit alone is random, but the two always match.'],
       ['GHZ state', '(|000⟩ + |111⟩)/√2: all three qubits entangled, always agreeing. Made by H, then CNOT 0→1, then CNOT 1→2.'],
       ['Reduced state', 'The state of one qubit on its own, found by “tracing out” the others (a partial trace). The Bloch spheres show reduced states.'],
+      ['Entanglement entropy', 'How entangled one qubit is with the rest: the von Neumann entropy of its reduced state, from 0 (not entangled) to 1 bit (maximally entangled, as in a Bell pair). For a whole register in a pure state, it is 0 exactly when the qubit can be split off.'],
+      ['Mutual information', 'How much two qubits’ results tell about each other, in any basis: I = S(A) + S(B) − S(AB), from 0 to 2 bits. It counts classical and quantum links together, so it is a sign of correlation, not proof of entanglement between that pair.'],
       ['Mixed state', 'A state that can’t be written as a single ket, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. In this lab the whole register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others.'],
       ['Correlation is not entanglement', 'Bits that always agree can be entangled (a Bell pair) or simply classical (|00⟩). The correlation graph shows agreement; the Bloch spheres show entanglement.']
     ]
@@ -60,9 +62,12 @@ const SECTIONS = [
     items: [
       ['Amplitude table', 'Each basis state’s amplitude, probability and phase. Zero rows are greyed out.'],
       ['Probability chart', 'One bar per basis state: the chance of measuring it.'],
+      ['Shots', 'Runs the current state many times (100 or 1000 shots), measuring every qubit each time, and counts the results, as a real quantum computer does. Each bar is a count; the line on it is the exact probability. The state in the lab doesn’t change.'],
+      ['Interference view', 'How the last gate combined the amplitudes. Each new amplitude is a sum of paths from the old ones, drawn as arrows head to tail (colour shows phase). Arrows the same way add up (constructive), opposite ones cancel (destructive). It also gives the probability the outcome would have if the paths did not interfere.'],
       ['Bloch sphere', 'One per qubit. North pole |0⟩, south pole |1⟩, the equator is a 50/50 superposition, and the angle around is the phase. A vector of length 1 is a pure state; shorter means the qubit is entangled with the others.'],
       ['Density matrix', 'ρ = |ψ⟩⟨ψ|. The diagonal holds the probabilities; off-diagonal squares show coherence, the sign of a real superposition rather than a random mix. Square area shows size and colour shows phase.'],
       ['Correlation graph', 'For each pair of qubits, |⟨ZᵢZⱼ⟩|: 1.00 when their measured bits always agree (or always disagree), 0.00 when they agree and disagree equally often. It is not a measure of entanglement: |00⟩ shows 1.00 with nothing entangled, and a Bell pair with an extra H on one qubit is fully entangled yet shows 0.00.'],
+      ['Entanglement view', 'Says which qubits are entangled with which. Entanglement entropy S, per qubit, runs from 0 (a state of its own) to 1 bit (maximally entangled). Mutual information I, per pair, runs from 0 (results unrelated in every basis) to 2 bits; it counts every kind of link, so it is 1 between any two qubits of a GHZ state.'],
       ['3D view', 'Three qubits only: the 8 basis states at the corners of a cube, sized by probability and coloured by phase.'],
       ['Circuit', 'A sequence of gates applied in order. Build one in the circuit editor and run it.']
     ]

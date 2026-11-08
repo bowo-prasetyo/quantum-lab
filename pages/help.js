@@ -26,9 +26,9 @@ export const Help = {
           at the top. Each size keeps its own state and circuit.
         </p>
         <p>
-          The lab starts with the views every lesson uses: the Quantum State table,
-          the probabilities and the Bloch spheres. <strong>Show advanced views</strong>,
-          under them, adds the density matrix, correlations and the 3D view. They
+          The lab starts with the Quantum State table, the probabilities, shots,
+          the Bloch spheres and interference. <strong>Show advanced views</strong>,
+          under them, adds the density matrix, correlations, entanglement and the 3D view. They
           are already on if you have reached Part 3 of the lessons, and the lab
           remembers your choice. Lessons show whichever views they need.
         </p>
@@ -86,6 +86,7 @@ export const Help = {
         <h2>Reading the views without colour, and with a screen reader</h2>
         <ul>
           <li>Point at, tap, or focus the <strong>density matrix</strong> and use the arrow keys: the square you are on is outlined and its exact size and phase appear under it.</li>
+          <li>The <strong>Shots</strong>, <strong>Interference</strong> and <strong>Entanglement</strong> views give every number they draw as text beside the drawing.</li>
           <li>Point at or tap a corner of the <strong>3D view</strong> to read its probability and phase. With the keyboard, focus it and use the arrow keys to rotate it, and + and − to zoom.</li>
           <li>With a screen reader, every action is followed by a short summary of what it did and the possible outcomes, such as “H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%.” The charts have text descriptions, and the Quantum State table holds every number.</li>
           <li>The lab adds no animation of its own, and a circuit run or Show me changes the views in steps half a second apart, so you can follow along.</li>

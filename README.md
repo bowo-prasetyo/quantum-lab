@@ -55,9 +55,12 @@ What each size shows:
 | Reset | ✓ | ✓ | ✓ |
 | Amplitude table (amplitude, probability, phase) | ✓ | ✓ | ✓ |
 | Probability chart | 2 bars | 4 bars | 8 bars |
+| Shots: counts from 100 or 1000 runs, beside the exact probabilities | ✓ | ✓ | ✓ |
+| Interference: the paths into each amplitude after the last gate | ✓ | ✓ | ✓ |
 | Bloch sphere per qubit | 1 | 2 | 3 |
 | Density matrix (advanced view) | 2×2 | 4×4 | 8×8 |
 | Correlation graph (advanced view) | — | 1 edge | 3 edges |
+| Entanglement: entropy per qubit, mutual information per pair (advanced view) | — | ✓ | ✓ |
 | 3D basis-state cube (advanced view) | — | — | ✓ |
 | Circuit editor (tap, drag or keyboard) | ✓ | ✓ | ✓ |
 

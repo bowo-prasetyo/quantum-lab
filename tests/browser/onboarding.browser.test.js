@@ -80,21 +80,21 @@ describe('Welcome', () => {
 describe('Advanced views', () => {
   test('start hidden in the free lab, are one switch away, and the choice is remembered', () =>
     withPage('#/lab/3', async page => {
-      for (const h of ['Quantum State', 'Probabilities', 'Bloch Spheres']) {
+      for (const h of ['Quantum State', 'Probabilities', 'Shots', 'Bloch Spheres', 'Interference']) {
         assert.equal(await heading(page, h).count(), 1, h);
       }
-      for (const h of ['Density Matrix', 'Correlation Graph', '3D View']) {
+      for (const h of ['Density Matrix', 'Correlation Graph', 'Entanglement', '3D View']) {
         assert.equal(await heading(page, h).count(), 0, `${h} hidden`);
       }
       assert.match(
         await page.locator('.advanced-toggle').innerText(),
-        /The density matrix, correlations and the 3D view/
+        /The density matrix, correlations, entanglement and the 3D view/
       );
 
       const toggle = page.getByRole('button', { name: 'Show advanced views' });
       assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
       await toggle.click();
-      for (const h of ['Density Matrix', 'Correlation Graph', '3D View']) {
+      for (const h of ['Density Matrix', 'Correlation Graph', 'Entanglement', '3D View']) {
         assert.equal(await heading(page, h).count(), 1, `${h} shown`);
       }
       await page.reload();

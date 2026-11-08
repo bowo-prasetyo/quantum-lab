@@ -22,7 +22,7 @@
 //             ['if', qubit, operation]: only if that qubit's last measurement gave 1
 // Basis labels use qubit 0 as the left digit: |10⟩ means qubit 0 is 1.
 
-export const PANELS = ['gates', 'table', 'probabilities', 'bloch', 'density', 'correlation', 'cube', 'editor'];
+export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'correlation', 'entanglement', 'cube', 'editor'];
 
 // n: the number of qubits every lesson in the part uses (null if it varies)
 export const PARTS = [
@@ -67,16 +67,16 @@ export const LESSONS = [
     title: 'Superposition',
     goal: 'Use the H gate to put a qubit into an equal superposition of |0⟩ and |1⟩.',
     why: 'Superposition is the starting point of almost every quantum algorithm.',
-    panels: BASIC,
+    panels: [...BASIC, 'shots'],
     setup: [['reset']],
-    steps: ['Press H on qubit 0.', 'Look at the probabilities and the Bloch sphere.'],
+    steps: ['Press H on qubit 0.', 'Look at the probabilities and the Bloch sphere.', 'In the Shots view, press Run 100 shots a few times.'],
     ops: [['gate', 'H', 0]],
     predict: {
       question: 'After H, what are the chances of measuring |0⟩ and |1⟩?',
       options: ['100% |0⟩', '100% |1⟩', '50% each'],
       answer: 2
     },
-    result: 'H gives both amplitudes the value 0.707, so each outcome has probability 0.707² = 50%. The Bloch vector now points along +x, on the equator.',
+    result: 'H gives both amplitudes the value 0.707, so each outcome has probability 0.707² = 50%. The Bloch vector now points along +x, on the equator. Each shot gives 0 or 1 at random, so 100 shots give roughly 50 of each, never exactly the same twice.',
     checks: [
       { type: 'probs', values: { '|0⟩': 0.5, '|1⟩': 0.5 } },
       { type: 'bloch', qubit: 0, x: 1, y: 0, z: 0 }
@@ -154,16 +154,16 @@ export const LESSONS = [
     title: 'Phase you can see: interference',
     goal: 'See phase become visible when amplitudes combine.',
     why: 'Interference is how quantum algorithms make wrong answers cancel out and right answers add up.',
-    panels: BASIC,
+    panels: [...BASIC, 'interference'],
     setup: [['reset']],
-    steps: ['Press H on qubit 0.', 'Press Z on qubit 0.', 'Press H on qubit 0.'],
+    steps: ['Press H on qubit 0.', 'Press Z on qubit 0.', 'Press H on qubit 0.', 'Look at the Interference view: it shows the two paths into each outcome of the last H.'],
     ops: [['gate', 'H', 0], ['gate', 'Z', 0], ['gate', 'H', 0]],
     predict: {
       question: 'H then H gives |0⟩. What does H, Z, H give?',
       options: ['Always |0⟩', 'Always |1⟩', '50/50'],
       answer: 1
     },
-    result: 'The last H combines the two amplitudes. Without Z, the paths to |1⟩ cancel and you get |0⟩. Z flips one sign, so now the paths to |0⟩ cancel instead, and the result is always |1⟩. The invisible phase decided the outcome.',
+    result: 'The last H combines the two amplitudes. Without Z, the paths to |1⟩ cancel and you get |0⟩. Z flips one sign, so now the paths to |0⟩ cancel instead, and the result is always |1⟩. The invisible phase decided the outcome. The Interference view draws it: the two arrows into |0⟩ point opposite ways and cancel, the two into |1⟩ point the same way and add up.',
     checks: [{ type: 'probs', values: { '|1⟩': 1 } }]
   },
   {
@@ -322,7 +322,7 @@ export const LESSONS = [
     title: 'Correlation is not entanglement',
     goal: 'Learn what the correlation graph measures, and why it is not entanglement.',
     why: 'Matching results can come from entanglement or from plain classical agreement. Telling them apart is a key skill.',
-    panels: [...BASIC, 'correlation'],
+    panels: [...BASIC, 'correlation', 'entanglement'],
     setup: [['reset']],
     steps: ['After Set up, the state is |00⟩. Look at the correlation graph and the Bloch spheres.', 'Then press Create Bell Pair and compare.'],
     ops: [],
@@ -331,7 +331,7 @@ export const LESSONS = [
       options: ['0.00: the bits agree as often as not', '1.00: the bits always agree', 'Nothing: there is no entanglement'],
       answer: 1
     },
-    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. It works the other way too: a Bell pair with an extra H on qubit 1 is still fully entangled, yet the graph shows 0.00. Use the Bloch spheres, not the graph, to spot entanglement.',
+    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. It works the other way too: a Bell pair with an extra H on qubit 1 is still fully entangled, yet the graph shows 0.00. Use the Bloch spheres or the Entanglement view, not the correlation graph, to spot entanglement: the Entanglement view says “No entanglement” for |00⟩ and “maximally entangled” for both Bell pairs.',
     checks: [
       { type: 'zz', q1: 0, q2: 1, value: 1 },
       { type: 'blochLength', qubit: 0, value: 1 },
@@ -396,7 +396,7 @@ export const LESSONS = [
     title: 'Reduced states and mixedness',
     goal: 'See that entanglement affects only the qubits involved.',
     why: 'In larger systems you need to know which qubits are entangled with which.',
-    panels: BASIC,
+    panels: [...BASIC, 'entanglement'],
     setup: [['reset']],
     steps: ['Press Create Bell Pair (this entangles qubits 0 and 1).', 'Press H on qubit 2.'],
     ops: [['bell'], ['gate', 'H', 2]],
@@ -405,7 +405,7 @@ export const LESSONS = [
       options: ['All three', 'Only qubit 2', 'None'],
       answer: 1
     },
-    result: 'Qubits 0 and 1 are entangled with each other, so their vectors shrink to the centre (mixed states). Qubit 2 is not entangled with anything: it is a pure superposition, so its vector stays on the surface at +x.',
+    result: 'Qubits 0 and 1 are entangled with each other, so their vectors shrink to the centre (mixed states). Qubit 2 is not entangled with anything: it is a pure superposition, so its vector stays on the surface at +x. The Entanglement view names it: qubits 0 and 1 are entangled with each other; qubit 2 is separate. Compare the GHZ state, where all three are entangled together.',
     checks: [
       { type: 'blochLength', qubit: 0, value: 0 },
       { type: 'blochLength', qubit: 1, value: 0 },
@@ -468,13 +468,13 @@ export const LESSONS = [
     title: 'Deutsch–Jozsa: one question instead of three',
     goal: 'Find out whether a hidden function is constant or balanced by calling it only once.',
     why: 'It extends Deutsch’s algorithm (1985), the first to beat every deterministic classical method on its problem. It runs on interference, the idea from Part 1.',
-    panels: ['gates', 'table', 'probabilities'],
+    panels: ['gates', 'table', 'probabilities', 'shots'],
     setup: [['reset'], ['gate', 'X', 2], ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'H', 2]],
     steps: [
       'A hidden function f takes two bits (qubits 0 and 1) and returns one bit. It is either constant (the same answer for every input) or balanced (0 for half the inputs, 1 for the rest). Classically, you might need 3 calls to tell which.',
       'Set up has put qubits 0 and 1 in an equal superposition of all four inputs, and qubit 2 in the state (|0⟩ − |1⟩)/√2.',
       'Call the oracle once. This one computes f(x) = x₀ XOR x₁: press CNOT with control Q0, target Q2, then CNOT with control Q1, target Q2.',
-      'Press H on qubit 0 and H on qubit 1, then look at qubits 0 and 1 (the first two digits).'
+      'Press H on qubit 0 and H on qubit 1, then look at qubits 0 and 1 (the first two digits). Run 100 shots: every one starts with 11.'
     ],
     ops: [['cnot', 0, 2], ['cnot', 1, 2], ['gate', 'H', 0], ['gate', 'H', 1]],
     predict: {
@@ -492,7 +492,7 @@ export const LESSONS = [
     title: 'Grover’s search: finding the marked item',
     goal: 'Find which of four items is marked, using one round of Grover’s search.',
     why: 'Grover’s algorithm searches N items in about √N steps instead of N. It shows how to grow the probability of the right answer.',
-    panels: ['gates', 'table', 'probabilities'],
+    panels: ['gates', 'table', 'probabilities', 'interference'],
     setup: [['reset'], ['gate', 'H', 0], ['gate', 'H', 1]],
     steps: [
       'Set up has put both qubits in an equal superposition: each of the four items |00⟩, |01⟩, |10⟩, |11⟩ is 25% likely.',

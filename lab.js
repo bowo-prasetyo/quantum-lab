@@ -13,6 +13,9 @@ import { AmplitudeTable } from './components/amplitude-table.js';
 import { DensityMatrix } from './components/density-matrix.js';
 import { CorrelationGraph } from './components/correlation-graph.js';
 import { Cube3D } from './components/cube-3d.js';
+import { ShotsHistogram } from './components/shots-histogram.js';
+import { InterferenceView } from './components/interference-view.js';
+import { EntanglementPanel } from './components/entanglement-panel.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
 import { getPref, setPref } from './prefs.js';
@@ -29,7 +32,7 @@ const WIDE_QUERY = '(min-width: 1000px)';
 // asks for them or reaches Part 3 of the lessons, where they are taught
 // (VISION: reveal advanced views as the learner progresses). Lessons show
 // whatever panels they list.
-const ADVANCED = ['density', 'correlation', 'cube'];
+const ADVANCED = ['density', 'correlation', 'entanglement', 'cube'];
 
 // Whether the learner has answered a prediction in Part 3 or later
 const reachedAdvancedLessons = () =>
@@ -39,9 +42,12 @@ const reachedAdvancedLessons = () =>
 const VIEWS = [
   { key: 'table', label: 'State' },
   { key: 'probabilities', label: 'Probabilities' },
+  { key: 'shots', label: 'Shots' },
   { key: 'bloch', label: 'Bloch spheres' },
+  { key: 'interference', label: 'Interference' },
   { key: 'density', label: 'Density matrix' },
   { key: 'correlation', label: 'Correlations' },
+  { key: 'entanglement', label: 'Entanglement' },
   { key: 'cube', label: '3D' }
 ];
 
@@ -56,7 +62,8 @@ function stepToMessage(step) {
 export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
-    DensityMatrix, CorrelationGraph, CircuitEditor,
+    DensityMatrix, CorrelationGraph, CircuitEditor, ShotsHistogram,
+    InterferenceView, EntanglementPanel,
     // Explicit tag: Vue would turn "Cube3D" into <cube3-d>
     'cube-3d': Cube3D
   },
@@ -80,6 +87,9 @@ export const Lab = {
       measurement: '-',
       // Classical bits from measurements: { qubit: 0 | 1 }
       bits: {},
+      // The last operation and the state before it, for the Interference
+      // view: { message, re, im }, or null after a reset or a load
+      lastStep: null,
       running: false,
       importedFrom: null,  // name of the old simulator a state was brought over from
       narrow: !window.matchMedia(WIDE_QUERY).matches,
@@ -90,7 +100,7 @@ export const Lab = {
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
       announcement: '',    // last screen-reader announcement
-      // Free lab only: show the density matrix, correlations and 3D view
+      // Free lab only: show the density matrix, correlations, entanglement and 3D view
       showAdvanced: getPref('advanced-views', null) ?? reachedAdvancedLessons(),
       // First visit: offer the lessons (set once nothing saved is found)
       welcome: false,
@@ -223,14 +233,23 @@ export const Lab = {
           <section v-if="show('probabilities')" v-bind="viewAttrs('probabilities')">
             <probability-chart :re="stateRe" :im="stateIm" :n="n" />
           </section>
+          <section v-if="show('shots')" v-bind="viewAttrs('shots')">
+            <shots-histogram :re="stateRe" :im="stateIm" :n="n" />
+          </section>
           <section v-if="show('bloch')" v-bind="viewAttrs('bloch')">
             <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="show('interference')" v-bind="viewAttrs('interference')">
+            <interference-view :n="n" :step="lastStep" />
           </section>
           <section v-if="show('density')" v-bind="viewAttrs('density')">
             <density-matrix :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="n >= 2 && show('correlation')" v-bind="viewAttrs('correlation')">
             <correlation-graph :re="stateRe" :im="stateIm" :n="n" />
+          </section>
+          <section v-if="n >= 2 && show('entanglement')" v-bind="viewAttrs('entanglement')">
+            <entanglement-panel :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="n === 3 && show('cube')" v-bind="viewAttrs('cube')">
             <cube-3d :re="stateRe" :im="stateIm" />
@@ -254,10 +273,10 @@ export const Lab = {
   `,
 
   computed: {
-    // e.g. "the density matrix, correlations and the 3D view"
+    // e.g. "the density matrix, correlations, entanglement and the 3D view"
     advancedNames() {
       const names = ['the density matrix'];
-      if (this.n >= 2) names.push('correlations');
+      if (this.n >= 2) names.push('correlations', 'entanglement');
       if (this.n === 3) names.push('the 3D view');
       const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
       return text.charAt(0).toUpperCase() + text.slice(1);
@@ -267,7 +286,7 @@ export const Lab = {
     views() {
       return VIEWS
         .filter(v => this.show(v.key))
-        .filter(v => !(v.key === 'correlation' && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
+        .filter(v => !(['correlation', 'entanglement'].includes(v.key) && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
         .map(v => ({ key: v.key, label: v.key === 'bloch' && this.n === 1 ? 'Bloch sphere' : v.label }));
     },
 
@@ -354,6 +373,8 @@ export const Lab = {
     // Sends the current state to the worker and stores the result.
     async runOnWorker(message) {
       const id = this.nextId++;
+      // Frozen: Vue needn't watch inside it, and the arrays are never changed
+      const before = Object.freeze({ message, re: this.stateRe, im: this.stateIm });
       const reply = await new Promise(resolve => {
         this.pending.set(id, resolve);
         this.worker.postMessage({
@@ -369,6 +390,7 @@ export const Lab = {
 
       this.stateRe = reply.re;
       this.stateIm = reply.im;
+      this.lastStep = before;
 
       if (reply.measured) {
         // Measuring every qubit gives every bit
@@ -441,6 +463,7 @@ export const Lab = {
       this.stateIm = im;
       this.measurement = '-';
       this.bits = {};
+      this.lastStep = null;
     },
 
     // ----- Undo -----
@@ -452,6 +475,7 @@ export const Lab = {
         im: this.stateIm,
         measurement: this.measurement,
         bits: { ...this.bits },
+        lastStep: this.lastStep,
         circuit: this.circuit.map(step => ({ ...step })),
         stepIndex: this.stepIndex
       });
@@ -474,6 +498,7 @@ export const Lab = {
         this.stateIm = last.im;
         this.measurement = last.measurement;
         this.bits = last.bits;
+        this.lastStep = last.lastStep;
         this.circuit.splice(0, this.circuit.length, ...last.circuit);
         this.stepIndex = last.stepIndex;
         await this.save();
