@@ -220,7 +220,7 @@ export const LESSONS = [
     n: 2,
     title: 'Two independent qubits',
     goal: 'See how two qubits give four basis states.',
-    why: 'Each added qubit doubles the number of basis states. That growth is the source of quantum computing’s power.',
+    why: 'Each added qubit doubles the number of basis states. That fast growth is one reason quantum computers can do things classical ones find hard.',
     panels: BASIC,
     setup: [['reset']],
     steps: ['Press H on qubit 0.', 'Press H on qubit 1.'],
@@ -261,7 +261,7 @@ export const LESSONS = [
     why: 'Entangled qubits behave as one system. This is the resource behind quantum teleportation and many algorithms.',
     panels: BASIC,
     setup: [['reset']],
-    steps: ['Press H on qubit 0.', 'Press CNOT (control Q0, target Q1).', 'Press Measure all a few times, setting up again in between.'],
+    steps: ['Press H on qubit 0.', 'Press CNOT (control Q0, target Q1).', 'Press Measure all and note the result. Then press Set up again, repeat both steps, and repeat a few more times.'],
     ops: [['gate', 'H', 0], ['cnot', 0, 1]],
     predict: {
       question: 'Which results can Measure all show?',
@@ -287,7 +287,7 @@ export const LESSONS = [
       options: ['Both along +x', 'Both at the north pole', 'Neither: they shrink to the centre'],
       answer: 2
     },
-    result: 'Each qubit on its own has no definite direction: it is in a mixed state, so its vector has length 0. The whole two-qubit state is still perfectly defined. A vector shorter than 1 means that qubit is entangled with the others.',
+    result: 'Each qubit on its own has no definite direction: it is in a mixed state (on its own, it behaves like a coin toss with no phase to speak of), so its vector has length 0. The whole two-qubit state is still perfectly defined. A vector shorter than 1 means that qubit is entangled with the others.',
     checks: [
       { type: 'blochLength', qubit: 0, value: 0 },
       { type: 'blochLength', qubit: 1, value: 0 }
@@ -329,7 +329,7 @@ export const LESSONS = [
     why: 'Matching results can come from entanglement or from plain classical agreement. Telling them apart is a key skill.',
     panels: [...BASIC, 'correlation', 'pauli', 'entanglement'],
     setup: [['reset']],
-    steps: ['After Set up, the state is |00⟩. Look at the correlation graph and the Bloch spheres.', 'Then press Create Bell Pair and compare.'],
+    steps: ['After Set up, the state is |00⟩. Look at the correlation graph and the Bloch spheres.', 'Then press Create Bell Pair and compare.', 'Look at the Entanglement and Pauli Expectations views for both states too.'],
     ops: [],
     predict: {
       question: 'The state is |00⟩. What does the correlation graph show?',
@@ -537,7 +537,7 @@ export const LESSONS = [
     steps: [
       'In the circuit editor, add H from row Q0.',
       'Choose control Q0 and target Q1, and add CNOT.',
-      'Choose target Q2 and add CNOT.',
+      'Keep control Q0, choose target Q2, and add CNOT.',
       'Press Run Circuit.'
     ],
     ops: [['gate', 'H', 0], ['cnot', 0, 1], ['cnot', 0, 2]],
@@ -561,10 +561,10 @@ export const LESSONS = [
     panels: ['gates', 'table', 'probabilities', 'shots'],
     setup: [['reset'], ['gate', 'X', 2], ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'H', 2]],
     steps: [
-      'A hidden function f takes two bits (qubits 0 and 1) and returns one bit. It is either constant (the same answer for every input) or balanced (0 for half the inputs, 1 for the rest). Classically, you might need 3 calls to tell which.',
+      'The puzzle: a hidden function f takes two bits (qubits 0 and 1) and returns one bit. It is either constant (the same answer for every input) or balanced (0 for half the inputs, 1 for the rest). Classically, you might need 3 calls to tell which. Here you need one.',
       'Set up has put qubits 0 and 1 in an equal superposition of all four inputs, and qubit 2 in the state (|0⟩ − |1⟩)/√2.',
       'Call the oracle once. This one computes f(x) = x₀ XOR x₁: press CNOT with control Q0, target Q2, then CNOT with control Q1, target Q2.',
-      'Press H on qubit 0 and H on qubit 1, then look at qubits 0 and 1 (the first two digits). Run 100 shots: every one starts with 11.'
+      'Press H on qubit 0 and H on qubit 1. Then run 100 shots and look at qubits 0 and 1: the first two digits of each result.'
     ],
     ops: [['cnot', 0, 2], ['cnot', 1, 2], ['gate', 'H', 0], ['gate', 'H', 1]],
     predict: {
@@ -572,7 +572,7 @@ export const LESSONS = [
       options: ['Always 00', 'Never 00', 'A random result each time'],
       answer: 1
     },
-    result: 'Qubits 0 and 1 always read 11, never 00. The oracle flipped the sign of the inputs where f(x) = 1 (phase kickback through qubit 2), and the final H gates turned that phase pattern into a definite answer. A constant f always gives 00; any balanced f never does. One call settles it. Try it with no CNOTs (f = 0, constant): you get 00.',
+    result: 'Qubits 0 and 1 always read 11, never 00. The oracle flipped the sign of the inputs where f(x) = 1. It did this through qubit 2: its special state turns the oracle’s bit flip into a sign on the input (phase kickback), and the final H gates turned that phase pattern into a definite answer. A constant f always gives 00; any balanced f never does. One call settles it. Try it with no CNOTs (f = 0, constant): you get 00.',
     checks: [{ type: 'probs', values: { '|110⟩': 0.5, '|111⟩': 0.5 } }]
   },
   {
@@ -587,9 +587,9 @@ export const LESSONS = [
     steps: [
       'Set up has put both qubits in an equal superposition: each of the four items |00⟩, |01⟩, |10⟩, |11⟩ is 25% likely.',
       'Oracle: mark |11⟩ by flipping its sign. Press CZ (control Q0, target Q1). Check the amplitude table: |11⟩ is now −0.5, but every probability is still 25%.',
-      'Diffusion (inversion about the mean, up to an overall sign): press H on both qubits, then X on both qubits.',
-      'Flip the sign of |11⟩ again: press CZ.',
-      'Finish the diffusion: X on both qubits, then H on both qubits.'
+      'Diffusion, part 1: press H on both qubits, then X on both qubits. (Steps 3 to 5 together reflect every amplitude about their average, which grows the marked one.)',
+      'Diffusion, part 2: flip the sign of |11⟩ again: press CZ.',
+      'Diffusion, part 3: X on both qubits, then H on both qubits.'
     ],
     ops: [
       ['cz', 0, 1],
@@ -615,7 +615,7 @@ export const LESSONS = [
     panels: ['gates', 'table', 'bloch'],
     setup: [['reset'], ['gate', 'H', 0], ['gate', 'T', 0], ['gate', 'H', 0]],
     steps: [
-      'Set up has given qubit 0 (Alice’s message) a state: its Bloch vector points to (0, −0.71, 0.71).',
+      'Set up has given qubit 0 (Alice’s message) a state: its Bloch vector points to x = 0, y = −0.71, z = 0.71, halfway between the north pole and −y.',
       'Share a Bell pair between Alice (qubit 1) and Bob (qubit 2): press H on qubit 1, then CNOT with control Q1, target Q2.',
       'Alice: press CNOT with control Q0, target Q1, then H on qubit 0.',
       'Alice measures: press M on qubit 0 and M on qubit 1. These two classical bits are what she “sends” to Bob.',

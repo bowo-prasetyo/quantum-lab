@@ -12,9 +12,10 @@ const SECTIONS = [
       ['Amplitude', 'Every basis state has a complex number called its amplitude. Its squared size, |amplitude|², is the probability of measuring that state. The probabilities always add up to 100%.'],
       ['Superposition', 'A state with more than one non-zero amplitude, such as H|0⟩ = (|0⟩ + |1⟩)/√2. It is a definite state, not ignorance about a hidden value: its phases can still interfere.'],
       ['Phase', 'The angle of an amplitude in the complex plane. Phase doesn’t change probabilities on its own, but when amplitudes are combined (for example by an H gate) it decides whether they add up or cancel.'],
-      ['Global phase', 'Multiplying every amplitude by the same unit complex number e^{iα} (turning every phase by the same angle) changes nothing any measurement can detect, so only differences in phase are physical. Hide global phase, under the Quantum State table, turns the state so its first non-zero amplitude is real and positive, which makes states that differ only by global phase look the same.'],
+      ['Global phase', 'Turning every amplitude’s phase by the same angle (multiplying them all by e^(iα)) changes nothing any measurement can detect, so only differences in phase are physical. Hide global phase, under the Quantum State table, turns the state so its first non-zero amplitude is real and positive, which makes states that differ only by global phase look the same.'],
       ['Interference', 'Amplitudes from different paths adding up (constructive) or cancelling (destructive). H then H returns |0⟩ because the paths to |1⟩ cancel; H, Z, H gives |1⟩ because Z flips one sign.'],
       ['Measurement and collapse', 'Measuring picks one basis state at random, with the probabilities given by the amplitudes. The state then collapses to that result, so measuring again gives the same answer.'],
+      ['Bloch sphere', 'A picture of one qubit’s state as an arrow (the Bloch vector) in a ball. North pole is |0⟩, south pole is |1⟩, points on the equator are 50/50 superpositions, and the angle around the equator is the phase. The lab draws one per qubit; see The views in the lab, below.'],
       ['Measuring one qubit', 'You can measure a single qubit (the M button). It gives 0 or 1, and only the amplitudes that disagree with the result are removed; the rest are rescaled. Other qubits keep their superposition, unless they were entangled with the measured one.']
     ]
   },
@@ -27,7 +28,7 @@ const SECTIONS = [
       ['Pauli-Y (Y)', 'Swaps |0⟩ and |1⟩ and adds a phase: Y|0⟩ = i|1⟩.'],
       ['Pauli-Z (Z)', 'Flips the sign (phase 180°) of |1⟩; |0⟩ is unchanged.'],
       ['Phase (S)', 'Gives |1⟩ a 90° phase. S applied twice is Z.'],
-      ['π/8 (T)', 'Gives |1⟩ a 45° phase. T applied twice is S. Important for universal quantum computing.'],
+      ['π/8 (T)', 'Gives |1⟩ a 45° phase. T applied twice is S. Together with H and CNOT, it is enough to build any quantum computation, to any accuracy you need.'],
       ['CNOT', 'A two-qubit gate: flips the target qubit when the control qubit is 1. With H, it creates entanglement. In this lab any qubit can be the control or the target.'],
       ['Controlled-Z (CZ)', 'Flips the sign of the amplitudes where both qubits are 1. It treats both qubits the same, so it doesn’t matter which is the control. It equals H, CNOT, H on the target.'],
       ['Gates as turns', 'Every single-qubit gate turns the Bloch sphere: X, Y and Z are half turns about their axes, H a half turn about the axis halfway between x and z, S a quarter turn and T an eighth of a turn about z. The Bloch spheres animate each gate as its turn.'],
@@ -43,14 +44,19 @@ const SECTIONS = [
       ['GHZ state', '(|000⟩ + |111⟩)/√2: all three qubits entangled, always agreeing. Made by H, then CNOT 0→1, then CNOT 1→2.'],
       ['Reduced state', 'The state of one qubit on its own, found by “tracing out” the others (a partial trace). The Bloch spheres show reduced states.'],
       ['Entanglement entropy', 'How entangled one qubit is with the rest: the von Neumann entropy of its reduced state, from 0 (not entangled) to 1 bit (maximally entangled, as in a Bell pair). For a whole register in a pure state, it is 0 exactly when the qubit can be split off.'],
-      ['Mutual information', 'How much two qubits’ results tell about each other, in any basis: I = S(A) + S(B) − S(AB), from 0 to 2 bits. It counts classical and quantum links together, so it is a sign of correlation, not proof of entanglement between that pair.'],
+      ['Mutual information', 'How much two qubits’ results tell about each other, in any basis: I = S(A) + S(B) − S(AB), where S is the entropy of qubit A, of qubit B and of the pair together. It runs from 0 to 2 bits. It counts classical and quantum links together, so it is a sign of correlation, not proof of entanglement between that pair.'],
+      ['Correlation is not entanglement', 'Bits that always agree can be entangled (a Bell pair) or simply classical (|00⟩). The correlation graph shows agreement; the Entanglement view and the Bloch spheres show entanglement.']
+    ]
+  },
+  {
+    title: 'Noise and real hardware',
+    items: [
+      ['Mixed state', 'A state that can’t be written as a single list of amplitudes, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. Without noise, this lab’s register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others. After noise, the register itself is mixed, and a short Bloch vector can come from noise too.'],
+      ['Purity', 'How far a state is from a random mix, shown under the density matrix as Tr ρ²: 1 for a pure state, less once noise has mixed it, down to 1/2ⁿ for a completely random one.'],
       ['Noise and decoherence', 'Real qubits are disturbed by their surroundings. Dephasing loses phase, amplitude damping loses energy (|1⟩ decays to |0⟩), and depolarizing noise makes random X, Y or Z errors. Each can be applied in the lab. Noise fades the off-diagonal (coherence) entries of the density matrix, turning a superposition into a random mix: decoherence. It is the main obstacle to building quantum computers.'],
       ['Fidelity', 'How close a state is to a target pure state |φ⟩: F = ⟨φ|ρ|φ⟩, from 1 (the same) down to 0. In a noisy run, the Timeline compares each step with the same circuit run without noise, so you can watch noise build up with the number of steps, even steps that cancel out.'],
       ['Readout error', 'Reading a qubit out can record the wrong bit even though the qubit landed on the right one: a classical error in the measurement, not in the quantum state. On real hardware a 1 is read as 0 more often (typically a few percent), because the qubit can decay while it is read.'],
-      ['Readout error mitigation', 'Undoing readout errors after the fact: with the error rates known (the confusion matrix, whose entry [r][t] is the chance of recording r when the truth is t), the recorded frequencies are multiplied by its inverse to estimate the true probabilities. No quantum error correction is needed, but the correction amplifies random scatter, so with few shots an estimate can even dip below 0.'],
-      ['Purity', 'Tr ρ², shown under the density matrix: 1 for a pure state, less once noise has mixed it, down to 1/2ⁿ for a completely random one.'],
-      ['Mixed state', 'A state that can’t be written as a single ket, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. Without noise, this lab’s register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others. After noise, the register itself is mixed, and a short Bloch vector can come from noise too.'],
-      ['Correlation is not entanglement', 'Bits that always agree can be entangled (a Bell pair) or simply classical (|00⟩). The correlation graph shows agreement; the Bloch spheres show entanglement.']
+      ['Readout error mitigation', 'Undoing readout errors after the fact. If you know how often each bit is misread, you can work backwards from the recorded counts to estimate the true probabilities (mathematically, by multiplying by the inverse of the table of error rates, called the confusion matrix). No quantum error correction is needed, but working backwards also amplifies random scatter, so with few shots an estimate can even dip below 0.']
     ]
   },
   {
@@ -72,8 +78,8 @@ const SECTIONS = [
       ['Probability chart', 'One bar per basis state: the chance of measuring it.'],
       ['Shots', 'Runs the current state many times (100 or 1000 shots), measuring every qubit each time, and counts the results, as a real quantum computer does. Each bar is a count; the line on it is the exact probability. The state in the lab doesn’t change. Tick Readout errors to record some bits wrongly, as real hardware does, and Correct for readout errors to work the counts back to estimates of the true probabilities.'],
       ['Interference view', 'How the last gate combined the amplitudes. Each new amplitude is a sum of paths from the old ones, drawn as arrows head to tail (colour shows phase). Arrows the same way add up (constructive), opposite ones cancel (destructive). It also gives the probability the outcome would have if the paths did not interfere.'],
-      ['Bloch sphere', 'One per qubit. North pole |0⟩, south pole |1⟩, the equator is a 50/50 superposition, and the angle around is the phase. A vector of length 1 is a pure state; shorter means the qubit is entangled with the others.'],
-      ['Density matrix', 'ρ = |ψ⟩⟨ψ|. The diagonal holds the probabilities; off-diagonal squares show coherence, the sign of a real superposition rather than a random mix. Square area shows size and colour shows phase.'],
+      ['Bloch sphere', 'One per qubit. North pole |0⟩, south pole |1⟩, the equator is a 50/50 superposition, and the angle around is the phase. A vector of length 1 is a pure state. A shorter one means the qubit is mixed: entangled with the others or, after noise, partly randomised.'],
+      ['Density matrix', 'A grid that describes the whole state, pure or mixed (for a pure state, ρ = |ψ⟩⟨ψ|). The diagonal holds the probabilities; off-diagonal squares show coherence, the sign of a real superposition rather than a random mix. Square area shows size and colour shows phase. Its purity is shown under it.'],
       ['Correlation graph', 'For each pair of qubits, |⟨ZᵢZⱼ⟩|: 1.00 when their measured bits always agree (or always disagree), 0.00 when they agree and disagree equally often. It is not a measure of entanglement: |00⟩ shows 1.00 with nothing entangled, and a Bell pair with an extra H on one qubit is fully entangled yet shows 0.00.'],
       ['Pauli expectations', 'The average result ⟨P⟩, from −1 to +1, of measuring each Pauli string: ⟨X⟩, ⟨Y⟩, ⟨Z⟩ for each qubit (its Bloch vector), a 3 × 3 grid such as ⟨X₀X₁⟩ for each pair, and, for three qubits, strings such as ⟨XXX⟩. If a pair’s grid is not the product of its single values, the pair is correlated. A Bell pair is correlated in every basis (XX = +1, YY = −1, ZZ = +1); a GHZ state’s three-way link shows only in ⟨XXX⟩. Measuring all of them is how experiments read out a state (state tomography).'],
       ['Entanglement view', 'Says which qubits are entangled with which. Entanglement entropy S, per qubit, runs from 0 (a state of its own) to 1 bit (maximally entangled). Mutual information I, per pair, runs from 0 (results unrelated in every basis) to 2 bits; it counts every kind of link, so it is 1 between any two qubits of a GHZ state.'],
@@ -101,7 +107,9 @@ export const Concepts = {
         <p>
           A reference for every idea used in the lab and the
           <router-link to="/lessons">lessons</router-link>.
-          The same ideas apply to 1, 2 and 3 qubits.
+          The same ideas apply to 1, 2 and 3 qubits. Sections go from the basics
+          to algorithms; each view in the lab is described at the end. For how
+          to use the controls, see <router-link to="/help">Help</router-link>.
         </p>
       </div>
 

@@ -20,6 +20,17 @@ export const Help = {
       </div>
 
       <div class="card">
+        <h2>Quick start</h2>
+        <ol>
+          <li>Open the <router-link to="/lab/1">1-qubit lab</router-link>. The qubit starts as |0⟩.</li>
+          <li>Press <strong>H</strong> on Q0. The probabilities become 50/50 and the Bloch sphere’s arrow moves to the equator.</li>
+          <li>Press <strong>Measure all</strong>. You get 0 or 1 at random, and the state collapses to it.</li>
+          <li>Press <strong>Undo</strong> to go back to before the measurement, or <strong>Reset</strong> to start again from |0⟩.</li>
+        </ol>
+        <p>Every view updates as soon as you press a gate. The sections below explain each control.</p>
+      </div>
+
+      <div class="card">
         <h2>Choosing a size</h2>
         <p>
           Use <strong>1 qubit</strong>, <strong>2 qubits</strong> or <strong>3 qubits</strong>
@@ -28,7 +39,7 @@ export const Help = {
         <p>
           The lab starts with the Quantum State table, the probabilities, shots,
           the Bloch spheres and interference. <strong>Show advanced views</strong>,
-          under them, adds the Noise panel, the density matrix, the unitary matrix, correlations, Pauli expectations, entanglement and the 3D view. They
+          below these views, adds the Noise panel, the density matrix, the unitary matrix, correlations, Pauli expectations, entanglement and the 3D view. They
           are already on if you have reached Part 3 of the lessons, and the lab
           remembers your choice. Lessons show whichever views they need.
         </p>
@@ -74,13 +85,31 @@ export const Help = {
       </div>
 
       <div class="card">
+        <h2>Lessons</h2>
+        <ol>
+          <li><strong>Predict.</strong> Pick the answer you expect before trying anything. It’s fine to guess: your first answer goes in your tally, which only you see.</li>
+          <li><strong>Try it.</strong> Follow the steps in the lab beside them. <strong>Set up again</strong> puts the lab back to the lesson’s starting state; <strong>Show me</strong> runs the steps for you, slowly; <strong>Check my result</strong> says whether the lab now shows the expected result, and what is missing if not.</li>
+          <li><strong>What happened</strong> appears once you have predicted, or once your result checks out, and explains it.</li>
+        </ol>
+        <p>Each lesson shows only the views it needs. Use the links at the bottom to go to the previous or next lesson.</p>
+      </div>
+
+      <div class="card">
+        <h2>Shots and readout errors</h2>
+        <ul>
+          <li>The <strong>Shots</strong> view runs the current state 100 or 1000 times, measuring every qubit each time, and counts the results, as a real quantum computer does. The line on each bar is the exact probability. The state in the lab doesn’t change.</li>
+          <li>Tick <strong>Readout errors</strong> and set how often a 1 is read as 0 and a 0 as 1. The counts are then what was recorded, misreads included, while the state stays as it is.</li>
+          <li>Tick <strong>Correct for readout errors</strong> to add purple bars: estimates of the true probabilities, worked back from the counts. See <router-link to="/concepts">Concepts</router-link> for why they can scatter.</li>
+        </ul>
+      </div>
+
+      <div class="card">
         <h2>Noise (advanced)</h2>
         <ul>
-          <li>Choose <strong>Dephasing</strong> (loses phase), <strong>Amplitude damping</strong> (loses energy, falling to |0⟩) or <strong>Depolarizing</strong> (random errors), set the strength, and apply it to one qubit or every qubit.</li>
+          <li>Choose <strong>Dephasing</strong> (loses phase), <strong>Amplitude damping</strong> (loses energy, falling to |0⟩) or <strong>Depolarizing</strong> (random errors), set the strength, then press <strong>Noise on Q0</strong> (or another qubit) or <strong>Every qubit</strong>.</li>
           <li>Noise makes the state <strong>mixed</strong>: a random mix that only a density matrix can describe. The density matrix (with its purity), Bloch spheres, probabilities, shots and Pauli expectations show it. The table shows probabilities but no amplitudes, and the Interference and Entanglement views pause, saying why.</li>
           <li>With advanced views on, the circuit editor has an <strong>N</strong> chip in each qubit’s row. It adds the noise chosen in the Noise panel (kind and strength, such as “Dephase 10% q1”) as a step, so noise can be part of a circuit and of its timeline. Each N step keeps the strength it was added with.</li>
-          <li>Readout errors need no advanced views: in the <strong>Shots</strong> view, tick <strong>Readout errors</strong> and set how often a 1 is read as 0 and a 0 as 1: the counts are then what was recorded, misreads included, while the state stays as it is. Tick <strong>Correct for readout errors</strong> to add purple bars: estimates of the true probabilities worked back from the counts.</li>
-          <li>Tick <strong>Noisy run</strong> in the circuit editor to run on simulated noisy hardware: Run and Step add the chosen noise to every qubit after each step. The Timeline then shows each frame’s <strong>fidelity</strong> with the same circuit run without noise, and a curve of it falling step by step. After a measurement, fidelity shows —, because there is no single noiseless state to compare with.</li>
+          <li>Tick <strong>Noisy run</strong> in the circuit editor to run on simulated noisy hardware: Run and Step add the chosen noise to every qubit after each step. The Timeline then shows each frame’s <strong>fidelity</strong> (how close it is, from 1 down to 0) to the same circuit run without noise, and a curve of it falling step by step. After a measurement, fidelity shows —, because there is no single noiseless state to compare with.</li>
           <li>Gates keep working on a mixed state. <strong>Measure all</strong> or <strong>Reset</strong> makes it pure again, and Undo steps back past noise like anything else.</li>
         </ul>
       </div>
