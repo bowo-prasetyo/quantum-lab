@@ -385,10 +385,13 @@ quantum-lab/
 ├── index.html
 ├── .nojekyll              # Tells GitHub Pages to serve the files as they are
 ├── app.js                 # Creates the Vue app
+├── i18n.js                # Translated messages and locale-aware numbers (see docs/I18N.md)
+├── locale.js              # The page's language: start language, <html lang>, Vue's $t
+├── locales/               # Messages per language: en.js, plus the pseudo-locale for testing
 ├── router.js              # Routes: #/lab/:n, #/lessons, #/lessons/:id, #/concepts, #/help (#/manual → lessons)
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
 ├── components/
-│   ├── app-nav.js         # Lab size selector, page links and theme
+│   ├── app-nav.js         # Lab size selector, page links, theme and language
 │   ├── gate-panel.js      # Gates, M per qubit, CNOT and CZ (any pair), presets, Measure all, Reset, Undo
 │   ├── gate-hints.js      # One-line description of each gate, shared by the Gates panel and the editor
 │   ├── qubit-picker.js    # Control → target picker for CNOT and CZ
@@ -432,7 +435,7 @@ quantum-lab/
 │       └── *.browser.test.js  # Every lesson, controls, layout, accessibility, import… in a real browser
 ├── package.json           # Only configures the tests; the app has no build step
 ├── brand/                 # Logo files
-├── docs/                  # Product vision and merge plan
+├── docs/                  # Product vision, merge plan and internationalization
 └── README.md
 ```
 
@@ -452,8 +455,9 @@ They cover:
 - noise and mixed states, readout errors and their mitigation, and the maths behind the Shots, Interference, Entanglement and Unitary views
 - the one-line gate descriptions and the screen-reader state descriptions: each claim is checked against the simulator
 - every lesson: its data is complete, its prediction answer is valid, and running Set up then its steps gives the result it promises
+- translation: messages, plurals, fallbacks, choosing a language, locale-aware numbers, and that every language has the same keys and placeholders as English
 
-**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also cover the controls, the circuit editor, the layout on wide and narrow screens, accessibility, themes and onboarding, and check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
+**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also cover the controls, the circuit editor, the layout on wide and narrow screens, accessibility, themes, language and onboarding, and check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
 
 ```bash
 npm install
@@ -552,6 +556,12 @@ The plan was to merge the 1-, 2- and 3-qubit simulators into one guided lab, Gla
 - [Merge plan](docs/MERGE_PLAN.md)
 
 Both have been agreed.
+
+---
+
+## Languages
+
+The app is being prepared for other languages. The groundwork is done: it picks the language from the address (`?lang=`), the learner's choice or the browser, sets `<html lang>`, and translates the top navigation and page title. English is the only language so far, so no language picker is shown. Open `index.html?lang=en-XA` to see the pseudo-locale, a test language that shows which text is translatable. How it works, how to add a language and what comes next: [docs/I18N.md](docs/I18N.md).
 
 ---
 
