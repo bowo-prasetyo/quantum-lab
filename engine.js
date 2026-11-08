@@ -457,3 +457,34 @@ export function mutualInformation(re, im, q1, q2, n) {
   const value = entanglementEntropy(re, im, q1, n) + entanglementEntropy(re, im, q2, n) - rest;
   return Math.max(0, value);
 }
+
+/**
+ * The same state with its global phase removed: every amplitude is
+ * multiplied by one unit complex number, chosen so that the first
+ * non-zero amplitude (in basis order) becomes real and positive.
+ * Multiplying a whole state by e^{iα} changes nothing any measurement can
+ * see, so this is only a choice of how to display it; relative phases,
+ * probabilities, Bloch vectors and the density matrix are unchanged.
+ * Returns { re, im, reference }: reference is the index of the amplitude
+ * made real, or -1 for an all-zero state (returned as it is).
+ */
+export function withoutGlobalPhase(re, im) {
+  let reference = -1;
+  for (let i = 0; i < re.length; i++) {
+    if (re[i] * re[i] + im[i] * im[i] > 1e-12) { reference = i; break; }
+  }
+  if (reference < 0) return { re: new Float64Array(re), im: new Float64Array(im), reference };
+
+  // Multiply by conj(ψref) / |ψref|
+  const size = Math.hypot(re[reference], im[reference]);
+  const cr = re[reference] / size;
+  const ci = -im[reference] / size;
+  const outRe = new Float64Array(re.length);
+  const outIm = new Float64Array(im.length);
+  for (let i = 0; i < re.length; i++) {
+    outRe[i] = re[i] * cr - im[i] * ci;
+    outIm[i] = re[i] * ci + im[i] * cr;
+  }
+  outIm[reference] = 0; // exactly real, not 1e-17
+  return { re: outRe, im: outIm, reference };
+}

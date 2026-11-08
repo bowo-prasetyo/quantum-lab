@@ -512,7 +512,7 @@ export const LESSONS = [
       options: ['25%, the same as guessing', '50%', '100%'],
       answer: 2
     },
-    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to size 1. (The table shows −1: this circuit builds the diffusion with an overall minus sign, a global phase that no measurement can detect.) For four items, one round finds the answer with certainty. The CZ gate flips the sign of |11⟩ only; it is the same as H, CNOT, H on the target.',
+    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to size 1. (The table shows −1: this circuit builds the diffusion with an overall minus sign, a global phase that no measurement can detect. Tick Hide global phase under the table and it reads 1.) For four items, one round finds the answer with certainty. The CZ gate flips the sign of |11⟩ only; it is the same as H, CNOT, H on the target.',
     checks: [{ type: 'probs', values: { '|11⟩': 1 } }]
   },
   {

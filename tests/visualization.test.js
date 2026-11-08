@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 
 import {
   zeroState, applyGate, applyCNOT, applyCZ,
-  sampleCounts, amplitudePaths, entanglementEntropy, mutualInformation
+  sampleCounts, amplitudePaths, entanglementEntropy, mutualInformation,
+  withoutGlobalPhase, probabilities, blochVector, densityMatrix
 } from '../engine.js';
 import { entanglementVerdict } from '../components/entanglement-panel.js';
 import { stepFromMessage, layArrows } from '../components/interference-view.js';
@@ -212,5 +213,56 @@ describe('entanglementVerdict', () => {
     assert.match(entanglementVerdict(entropies(bellPlusSpare, 3)), /qubit 2 is separate/);
     const ghz = run(3, [['H', 0], ['CNOT', 0, 1], ['CNOT', 1, 2]]);
     assert.match(entanglementVerdict(entropies(ghz, 3)), /^All three/);
+  });
+});
+
+describe('withoutGlobalPhase (Hide global phase)', () => {
+  test('makes the first non-zero amplitude real and positive, and keeps relative phases', () => {
+    // Y·X = −iZ, so this is −i·Z(|0⟩ + i|1⟩)/√2: a state with a global phase of −90°
+    const s = run(1, [['H', 0], ['S', 0], ['X', 0], ['Y', 0]]);
+    assert.ok(close(s.im[0], -Math.SQRT1_2), 'starts with a phase on |0⟩');
+    const g = withoutGlobalPhase(s.re, s.im);
+    assert.equal(g.reference, 0);
+    assert.ok(g.re[0] > 0 && g.im[0] === 0);
+    // relative phase ψ1/ψ0 is unchanged
+    const rel = (re, im) => Math.atan2(im[1] * re[0] - re[1] * im[0], re[1] * re[0] + im[1] * im[0]);
+    assert.ok(close(rel(g.re, g.im), rel(s.re, s.im)));
+  });
+
+  test('skips leading zero amplitudes', () => {
+    const s = run(2, [['X', 0], ['H', 1], ['S', 0]]); // i|1⟩(|0⟩+|1⟩)/√2
+    const g = withoutGlobalPhase(s.re, s.im);
+    assert.equal(g.reference, 2);
+    assert.ok(close(g.re[2], Math.SQRT1_2) && g.im[2] === 0);
+    assert.ok(close(g.re[3], Math.SQRT1_2) && close(g.im[3], 0));
+  });
+
+  test('turns Grover\'s −1 into 1 and changes nothing measurable', () => {
+    const s = run(2, [['H', 0], ['H', 1], ['CZ', 0, 1], ['H', 0], ['H', 1], ['X', 0], ['X', 1],
+      ['CZ', 0, 1], ['X', 0], ['X', 1], ['H', 0], ['H', 1]]);
+    assert.ok(close(s.re[3], -1));
+    const g = withoutGlobalPhase(s.re, s.im);
+    assert.ok(close(g.re[3], 1));
+
+    const t = run(3, [['H', 0], ['T', 0], ['CNOT', 0, 1], ['H', 2], ['S', 2], ['Y', 1]]);
+    const h = withoutGlobalPhase(t.re, t.im);
+    probabilities(t.re, t.im).forEach((p, i) => assert.ok(close(p, probabilities(h.re, h.im)[i])));
+    for (let q = 0; q < 3; q++) {
+      const a = blochVector(t.re, t.im, q, 3);
+      const b = blochVector(h.re, h.im, q, 3);
+      assert.ok(close(a.x, b.x) && close(a.y, b.y) && close(a.z, b.z));
+    }
+    const da = densityMatrix(t.re, t.im);
+    const db = densityMatrix(h.re, h.im);
+    da.re.forEach((v, k) => assert.ok(close(v, db.re[k]) && close(da.im[k], db.im[k])));
+  });
+
+  test('leaves its input alone; an all-zero state comes back as it is', () => {
+    const s = run(1, [['H', 0], ['Z', 0], ['X', 0]]);
+    const before = [...s.re];
+    withoutGlobalPhase(s.re, s.im);
+    assert.deepEqual([...s.re], before);
+    const zero = withoutGlobalPhase(new Float64Array(2), new Float64Array(2));
+    assert.equal(zero.reference, -1);
   });
 });

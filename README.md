@@ -53,7 +53,7 @@ What each size shows:
 | Measure one qubit (M) or all qubits; classical bits shown | ✓ | ✓ | ✓ |
 | Preset states (always start from \|0…0⟩) | — | Bell | Bell, GHZ |
 | Reset | ✓ | ✓ | ✓ |
-| Amplitude table (amplitude, probability, phase) | ✓ | ✓ | ✓ |
+| Amplitude table (amplitude, probability, phase), with a Hide global phase option | ✓ | ✓ | ✓ |
 | Probability chart | 2 bars | 4 bars | 8 bars |
 | Shots: counts from 100 or 1000 runs, beside the exact probabilities | ✓ | ✓ | ✓ |
 | Interference: the paths into each amplitude after the last gate | ✓ | ✓ | ✓ |

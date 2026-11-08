@@ -100,6 +100,8 @@ export const Lab = {
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
       announcement: '',    // last screen-reader announcement
+      // Show amplitudes with the global phase removed (table, 3D view, interference)
+      hideGlobalPhase: getPref('hide-global-phase', false),
       // Free lab only: show the density matrix, correlations, entanglement and 3D view
       showAdvanced: getPref('advanced-views', null) ?? reachedAdvancedLessons(),
       // First visit: offer the lessons (set once nothing saved is found)
@@ -228,7 +230,9 @@ export const Lab = {
           </div>
 
           <section v-if="show('table')" v-bind="viewAttrs('table')">
-            <amplitude-table :re="stateRe" :im="stateIm" :n="n" :measurement="measurement" :bits="bits" />
+            <amplitude-table :re="shown.re" :im="shown.im" :n="n" :measurement="measurement" :bits="bits"
+              :global-phase-hidden="hideGlobalPhase" :reference="shown.reference"
+              @toggle-global-phase="toggleGlobalPhase" />
           </section>
           <section v-if="show('probabilities')" v-bind="viewAttrs('probabilities')">
             <probability-chart :re="stateRe" :im="stateIm" :n="n" />
@@ -240,7 +244,7 @@ export const Lab = {
             <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="show('interference')" v-bind="viewAttrs('interference')">
-            <interference-view :n="n" :step="lastStep" />
+            <interference-view :n="n" :step="lastStep" :hide-global-phase="hideGlobalPhase" />
           </section>
           <section v-if="show('density')" v-bind="viewAttrs('density')">
             <density-matrix :re="stateRe" :im="stateIm" :n="n" />
@@ -252,7 +256,7 @@ export const Lab = {
             <entanglement-panel :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="n === 3 && show('cube')" v-bind="viewAttrs('cube')">
-            <cube-3d :re="stateRe" :im="stateIm" />
+            <cube-3d :re="shown.re" :im="shown.im" />
           </section>
 
           <!-- Free lab: the advanced views are one switch away -->
@@ -273,6 +277,15 @@ export const Lab = {
   `,
 
   computed: {
+    // The state as the views that show phase draw it: as it is, or with
+    // its global phase removed. Probabilities, Bloch spheres, the density
+    // matrix and entanglement don't depend on global phase, so they keep
+    // the state as it is.
+    shown() {
+      if (!this.hideGlobalPhase) return { re: this.stateRe, im: this.stateIm, reference: -1 };
+      return engine.withoutGlobalPhase(this.stateRe, this.stateIm);
+    },
+
     // e.g. "the density matrix, correlations, entanglement and the 3D view"
     advancedNames() {
       const names = ['the density matrix'];
@@ -408,6 +421,15 @@ export const Lab = {
     show(panel) {
       if (this.panels) return this.panels.includes(panel);
       return this.showAdvanced || !ADVANCED.includes(panel);
+    },
+
+    toggleGlobalPhase() {
+      this.hideGlobalPhase = !this.hideGlobalPhase;
+      setPref('hide-global-phase', this.hideGlobalPhase);
+      this.announcement = '';
+      this.$nextTick(() => {
+        this.announcement = this.hideGlobalPhase ? 'Global phase hidden' : 'Global phase shown';
+      });
     },
 
     toggleAdvanced() {
