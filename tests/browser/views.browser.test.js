@@ -202,3 +202,182 @@ describe('Pauli Expectations view', () => {
       }
     }));
 });
+
+describe('Unitary Matrix view', () => {
+  test('shows the last gate, the whole circuit, and explains measurements', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
+      const view = card(page, 'Unitary Matrix');
+      assert.match(await view.locator('.unitary-what').innerText(), /Apply a gate/);
+
+      await page.locator('.gate-panel').getByRole('button', { name: 'CNOT', exact: true }).click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /CNOT, control qubit 0, target qubit 1, on all 2 qubits/);
+      const rows = view.locator('tbody tr');
+      assert.deepEqual(
+        await Promise.all([0, 1, 2, 3].map(i => rows.nth(i).locator('td').allInnerTexts())),
+        [['1', '', '', ''], ['', '1', '', ''], ['', '', '', '1'], ['', '', '1', '']]
+      );
+      assert.equal(await rows.nth(2).locator('td').nth(3).getAttribute('aria-label'), '|10⟩ from |11⟩: 1');
+
+      await button(page, 'Measure all').click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /measurement\. It is not a gate/);
+
+      // Whole circuit: empty, then H q0
+      await view.getByRole('radio', { name: 'Whole circuit' }).check();
+      assert.match(await view.locator('.unitary-what').innerText(), /circuit editor is empty/);
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /whole circuit: H q0\./);
+      assert.deepEqual(await rows.nth(2).locator('td').allInnerTexts(), ['0.71', '', '−0.71', '']);
+    }));
+});
+
+describe('Bloch sphere turns', () => {
+  test('a gate shows its axis and path, then settles; Undo draws no path', () =>
+    withLab('#/lab/1', async page => {
+      const canvas = page.locator('.bloch-row canvas').first();
+      await button(page, 'H').click();
+      await page.waitForFunction(() => document.querySelector('.bloch-row canvas').dataset.turn === 'turning',
+        null, { polling: 'raf', timeout: 2000 });
+      await page.waitForTimeout(700);
+      assert.equal(await canvas.getAttribute('data-turn'), 'done');
+      assert.match(await page.locator('.bloch-turn').innerText(),
+        /Last gate: H on qubit 0, a half turn \(180°\) about the axis halfway between x and z/);
+
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0);
+      assert.equal(await canvas.getAttribute('data-turn'), null);
+
+      // CNOT isn't a turn of one sphere
+      await page.goto(env.base + '#/lab/2');
+      await page.locator('h1').waitFor();
+      await settle(page);
+      await page.locator('.gate-panel').getByRole('button', { name: 'CNOT', exact: true }).click();
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0);
+    }));
+
+  test('with reduce motion, the vector jumps but the path is still drawn', async () => {
+    const context = await env.browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    try {
+      await page.goto(env.base + '#/lab/1');
+      await page.locator('h1').waitFor();
+      await settle(page);
+      await button(page, 'S').click();   // |0⟩ is on the z-axis: S shows nothing
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0, 'no path when the turn moves nothing');
+      await button(page, 'H').click();
+      await page.waitForTimeout(50);
+      assert.equal(await page.locator('.bloch-row canvas').first().getAttribute('data-turn'), 'done');
+      assert.equal(await page.locator('.bloch-turn').count(), 1);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+describe('Timeline', () => {
+  test('records each step of a run, and going back puts every view there', () =>
+    withLab('#/lab/2', async page => {
+      assert.equal(await page.locator('.timeline').count(), 0, 'no timeline before a run');
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await page.getByRole('button', { name: 'Add CNOT, control Q0, target Q1' }).click();
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1200);
+
+      const timeline = card(page, 'Timeline');
+      assert.deepEqual(await timeline.locator('.timeline-label').allInnerTexts(), ['Start', 'H q0', 'CNOT q0→q1']);
+      assert.equal(await timeline.locator('[aria-current="step"]').getAttribute('aria-label'),
+        'Step 2 of 2, after CNOT q0→q1: |00⟩ 50%, |11⟩ 50%');
+
+      // Back one frame: the state after H only
+      await timeline.getByRole('button', { name: '◀ Back' }).click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Step 1 of 2, after H q0: \|00⟩ 50%, \|10⟩ 50%$/);
+      assert.match(await page.locator('.amp-table').innerText(), /\|10⟩\s+0\.707/);
+
+      // The slider jumps to the start
+      await timeline.getByRole('slider').fill('0');
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Start: \|00⟩ 100%$/);
+
+      // Step carries on from here, replacing the later frames
+      await page.getByRole('button', { name: 'Step', exact: true }).click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Step 1 of 2/);
+      assert.equal(await timeline.locator('.timeline-frame').count(), 2);
+
+      // Undo goes back to the frame before; another action ends the timeline
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Start/);
+      await button(page, 'X').click();
+      await settle(page);
+      assert.equal(await page.locator('.timeline').count(), 0);
+    }));
+});
+
+describe('Noise', () => {
+  test('dephasing a Bell pair mixes it; the views follow; Measure all makes it pure', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
+      await button(page, 'Create Bell Pair').click();
+      await settle(page);
+      const noise = card(page, 'Noise');
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /Purity Tr ρ² = 1\.000: a pure state/);
+
+      await noise.getByRole('radio', { name: 'Dephasing' }).check();
+      await noise.getByRole('slider').fill('100');
+      await noise.getByRole('button', { name: 'Noise on Q0' }).click();
+      await settle(page);
+
+      assert.match(await page.locator('.mixed-notice').innerText(), /The state is mixed/);
+      assert.match(await page.locator('.amp-table').innerText(), /\|00⟩\s+—\s+50\.0%\s+—/);
+      assert.equal(await page.getByRole('checkbox', { name: 'Hide global phase' }).count(), 0);
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /Purity Tr ρ² = 0\.500: a mixed state/);
+      assert.match(await card(page, 'Entanglement').innerText(), /These measures only work for a pure state/);
+      assert.match(await card(page, 'Interference').innerText(), /The state is mixed/);
+      assert.match(await card(page, 'Unitary Matrix').locator('.unitary-what').innerText(), /Noise is not unitary/);
+      // The coherence is gone: XX is 0, but ZZ still agrees
+      const grid = card(page, 'Pauli Expectations').locator('.pauli-pair tbody tr');
+      assert.equal(await grid.nth(0).locator('td').nth(0).innerText(), '0.00');
+      assert.equal(await grid.nth(2).locator('td').nth(2).innerText(), '+1.00');
+      assert.match(await page.locator('[data-testid="announcer"]').innerText(), /Dephasing noise, 100%, on qubit 0/);
+
+      // A gate on a mixed state keeps it mixed; Measure all makes it pure
+      await button(page, 'H').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1);
+      await button(page, 'Measure all').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 0);
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /a pure state/);
+
+      // Undo returns to the mixed state; it is saved and reloaded as mixed
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1);
+      await page.reload();
+      await page.locator('h1').waitFor();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1, 'mixed state reloaded');
+    }));
+
+  test('amplitude damping at full strength resets a qubit to |0⟩', () =>
+    withLab('#/lab/1', async page => {
+      await button(page, 'Show advanced views').click();
+      await button(page, 'X').click();
+      await settle(page);
+      const noise = card(page, 'Noise');
+      await noise.getByRole('radio', { name: 'Amplitude damping' }).check();
+      await noise.getByRole('slider').fill('100');
+      await noise.getByRole('button', { name: 'Noise on Q0' }).click();
+      await settle(page);
+      assert.match(await page.locator('.amp-table').innerText(), /\|0⟩\s+—\s+100\.0%/);
+      assert.match(await page.locator('.bloch-coords').innerText(), /z = 1\.00/);
+    }));
+});

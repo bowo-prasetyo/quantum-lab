@@ -16,11 +16,14 @@ const close = (a, b) => Math.abs(a - b) <= TOLERANCE;
 const show = v => (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3);
 
 /**
- * Evaluates one check against { re, im, n, measured }.
+ * Evaluates one check against { re, im, n, measured, rho }. rho is the
+ * density matrix when noise has made the state mixed (re and im then hold
+ * amplitudes √p), else null or absent.
  * Returns { pass, text } where text says what was expected and found.
  */
-export function evaluateCheck(check, { re, im, n, measured }) {
-  const probs = engine.probabilities(re, im);
+export function evaluateCheck(check, { re, im, n, measured, rho = null }) {
+  const probs = rho ? engine.rhoProbabilities(rho) : engine.probabilities(re, im);
+  const bloch = q => (rho ? engine.rhoBlochVector(rho, q, n) : engine.blochVector(re, im, q, n));
 
   switch (check.type) {
     // Exact probabilities; basis states not listed must be 0
@@ -35,18 +38,18 @@ export function evaluateCheck(check, { re, im, n, measured }) {
 
     case 'amplitude': {
       const i = labelIndex(check.state, n);
-      const pass = close(re[i], check.re) && close(im[i], check.im);
+      const pass = !rho && close(re[i], check.re) && close(im[i], check.im);
       return { pass, text: `Amplitude of ${check.state}: ${show(check.re)} + ${show(check.im)}i (found ${show(re[i])} + ${show(im[i])}i)` };
     }
 
     case 'bloch': {
-      const v = engine.blochVector(re, im, check.qubit, n);
+      const v = bloch(check.qubit);
       const pass = close(v.x, check.x) && close(v.y, check.y) && close(v.z, check.z);
       return { pass, text: `Qubit ${check.qubit} Bloch vector (x, y, z) = (${show(check.x)}, ${show(check.y)}, ${show(check.z)}) (found (${show(v.x)}, ${show(v.y)}, ${show(v.z)}))` };
     }
 
     case 'blochLength': {
-      const v = engine.blochVector(re, im, check.qubit, n);
+      const v = bloch(check.qubit);
       const length = Math.hypot(v.x, v.y, v.z);
       return { pass: close(length, check.value), text: `Qubit ${check.qubit} Bloch vector length ${show(check.value)} (found ${show(length)})` };
     }
@@ -57,10 +60,16 @@ export function evaluateCheck(check, { re, im, n, measured }) {
     }
 
     case 'density': {
-      const rho = engine.densityMatrix(re, im);
-      const k = check.i * rho.size + check.j;
-      const value = Math.hypot(rho.re[k], rho.im[k]);
+      const matrix = rho ?? engine.densityMatrix(re, im);
+      const k = check.i * matrix.size + check.j;
+      const value = Math.hypot(matrix.re[k], matrix.im[k]);
       return { pass: close(value, check.abs), text: `Density matrix |ρ[${check.i}][${check.j}]| = ${show(check.abs)} (found ${show(value)})` };
+    }
+
+    // Purity Tr ρ²: 1 for a pure state, less once noise has mixed it
+    case 'purity': {
+      const value = rho ? engine.purity(rho) : 1;
+      return { pass: close(value, check.value), text: `Purity Tr ρ² = ${show(check.value)} (found ${show(value)})` };
     }
 
     // All the probability is on these basis states (any split between them)
@@ -108,34 +117,51 @@ export function expandOp(op) {
 
 /**
  * Runs operations on a state with the engine (no worker, no page), the
- * same way the lab does. Returns { re, im, n, measured, bits }.
+ * same way the lab does. Returns { re, im, rho, n, measured, bits }.
  * `random` is passed to measurements.
  *
  * Operations: ['reset'], ['gate', name, q], ['cnot', c, t], ['cz', c, t],
- * ['measure'], ['measureQubit', q], ['bell'], ['ghz'], and ['if', q, op],
- * which runs op only if the last measurement of qubit q gave 1.
+ * ['measure'], ['measureQubit', q], ['bell'], ['ghz'],
+ * ['noise', channel, q, strength] (makes the state mixed), and
+ * ['if', q, op], which runs op only if the last measurement of qubit q gave 1.
  */
 export function runOps(ops, n, start = null, random = Math.random) {
-  const fresh = () => ({ ...engine.zeroState(n), measured: '-', bits: {} });
-  let state = start ? { bits: {}, ...start } : fresh();
+  const fresh = () => ({ ...engine.zeroState(n), rho: null, measured: '-', bits: {} });
+  let state = start ? { bits: {}, rho: null, ...start } : fresh();
+
+  // A unitary step, on the state vector or (once mixed) the density matrix
+  const unitary = step => {
+    if (!state.rho) return { ...state, ...step(state.re, state.im) };
+    const rho = engine.applyToRho(state.rho, step);
+    return { ...state, ...engine.probabilityAmplitudes(rho), rho };
+  };
 
   const apply = op => {
-    const [kind, a, b] = op;
+    const [kind, a, b, c] = op;
     if (kind === 'reset') {
       state = fresh();
     } else if (kind === 'gate') {
-      state = { ...state, ...engine.applyGate(state.re, state.im, a, b, n) };
+      state = unitary((re, im) => engine.applyGate(re, im, a, b, n));
     } else if (kind === 'cnot') {
-      state = { ...state, ...engine.applyCNOT(state.re, state.im, a, b, n) };
+      state = unitary((re, im) => engine.applyCNOT(re, im, a, b, n));
     } else if (kind === 'cz') {
-      state = { ...state, ...engine.applyCZ(state.re, state.im, a, b, n) };
+      state = unitary((re, im) => engine.applyCZ(re, im, a, b, n));
+    } else if (kind === 'noise') {
+      const rho = engine.applyNoise(state.rho ?? engine.densityMatrix(state.re, state.im), a, b, c, n);
+      state = { ...state, ...engine.probabilityAmplitudes(rho), rho };
     } else if (kind === 'measure') {
-      const m = engine.measure(state.re, state.im, n, random);
+      const m = state.rho ? engine.rhoMeasure(state.rho, n, random) : engine.measure(state.re, state.im, n, random);
       const bits = Object.fromEntries([...m.label.replace(/[|⟩]/g, '')].map((d, q) => [q, Number(d)]));
-      state = { re: m.re, im: m.im, measured: m.label, bits };
+      state = { re: m.re, im: m.im, rho: null, measured: m.label, bits };
     } else if (kind === 'measureQubit') {
-      const m = engine.measureQubit(state.re, state.im, a, n, random);
-      state = { re: m.re, im: m.im, measured: `qubit ${a} gave ${m.bit}`, bits: { ...state.bits, [a]: m.bit } };
+      const bits = bit => ({ measured: `qubit ${a} gave ${bit}`, bits: { ...state.bits, [a]: bit } });
+      if (state.rho) {
+        const m = engine.rhoMeasureQubit(state.rho, a, n, random);
+        state = { ...engine.probabilityAmplitudes(m.rho), rho: m.rho, ...bits(m.bit) };
+      } else {
+        const m = engine.measureQubit(state.re, state.im, a, n, random);
+        state = { re: m.re, im: m.im, rho: null, ...bits(m.bit) };
+      }
     } else if (kind === 'if') {
       if (state.bits[a] === 1) expandOp(b).forEach(apply);
     } else {
@@ -145,5 +171,5 @@ export function runOps(ops, n, start = null, random = Math.random) {
 
   ops.flatMap(expandOp).forEach(apply);
 
-  return { re: state.re, im: state.im, n, measured: state.measured, bits: state.bits };
+  return { re: state.re, im: state.im, rho: state.rho, n, measured: state.measured, bits: state.bits };
 }

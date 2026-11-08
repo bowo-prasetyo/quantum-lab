@@ -17,6 +17,9 @@ import { ShotsHistogram } from './components/shots-histogram.js';
 import { InterferenceView } from './components/interference-view.js';
 import { EntanglementPanel } from './components/entanglement-panel.js';
 import { PauliPanel } from './components/pauli-panel.js';
+import { UnitaryView } from './components/unitary-view.js';
+import { CircuitTimeline } from './components/circuit-timeline.js';
+import { NoisePanel } from './components/noise-panel.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
 import { getPref, setPref } from './prefs.js';
@@ -33,7 +36,7 @@ const WIDE_QUERY = '(min-width: 1000px)';
 // asks for them or reaches Part 3 of the lessons, where they are taught
 // (VISION: reveal advanced views as the learner progresses). Lessons show
 // whatever panels they list.
-const ADVANCED = ['density', 'correlation', 'pauli', 'entanglement', 'cube'];
+const ADVANCED = ['noise', 'density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube'];
 
 // Whether the learner has answered a prediction in Part 3 or later
 const reachedAdvancedLessons = () =>
@@ -47,6 +50,7 @@ const VIEWS = [
   { key: 'bloch', label: 'Bloch spheres' },
   { key: 'interference', label: 'Interference' },
   { key: 'density', label: 'Density matrix' },
+  { key: 'unitary', label: 'Unitary' },
   { key: 'correlation', label: 'Correlations' },
   { key: 'pauli', label: 'Pauli' },
   { key: 'entanglement', label: 'Entanglement' },
@@ -65,7 +69,7 @@ export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
     DensityMatrix, CorrelationGraph, CircuitEditor, ShotsHistogram,
-    InterferenceView, EntanglementPanel, PauliPanel,
+    InterferenceView, EntanglementPanel, PauliPanel, UnitaryView, CircuitTimeline, NoisePanel,
     // Explicit tag: Vue would turn "Cube3D" into <cube3-d>
     'cube-3d': Cube3D
   },
@@ -85,6 +89,11 @@ export const Lab = {
     return {
       stateRe: re,
       stateIm: im,
+      // After noise the state is mixed: its density matrix { re, im, size }
+      // (frozen, so Vue leaves it alone), and stateRe/stateIm hold amplitudes
+      // √p with the same probabilities (engine.probabilityAmplitudes) for the
+      // views that only read probabilities. null while the state is pure.
+      stateRho: null,
       circuit: [],
       measurement: '-',
       // Classical bits from measurements: { qubit: 0 | 1 }
@@ -92,11 +101,15 @@ export const Lab = {
       // The last operation and the state before it, for the Interference
       // view: { message, re, im }, or null after a reset or a load
       lastStep: null,
+      stepSerial: 0,       // counts steps applied, so views can tell a new step from Undo
       running: false,
       importedFrom: null,  // name of the old simulator a state was brought over from
       narrow: !window.matchMedia(WIDE_QUERY).matches,
       // Circuit steps applied so far by Run or Step, or null if not stepping
       stepIndex: null,
+      // The states the last run went through: frame k is the state after
+      // k steps (see snapshot()). Emptied by any other action or an edit.
+      frames: [],
       // CNOT and CZ control → target, shared by the Gates panel and the
       // circuit editor so both show the same choice
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
@@ -189,6 +202,14 @@ export const Lab = {
               @reset="reset"
             />
 
+            <noise-panel
+              v-if="show('noise')"
+              :n="n"
+              :disabled="running"
+              :mixed="!!stateRho"
+              @noise="applyNoise"
+            />
+
             <circuit-editor
               v-if="show('editor')"
               :n="n"
@@ -206,6 +227,16 @@ export const Lab = {
               @run="runCircuit"
               @step="stepCircuit"
               @undo="undo"
+            />
+
+            <circuit-timeline
+              v-if="show('editor') && frames.length > 1"
+              :n="n"
+              :frames="frames"
+              :circuit="circuit"
+              :at="stepIndex"
+              :running="running"
+              @go="goToFrame"
             />
           </div>
         </div>
@@ -232,7 +263,7 @@ export const Lab = {
           </div>
 
           <section v-if="show('table')" v-bind="viewAttrs('table')">
-            <amplitude-table :re="shown.re" :im="shown.im" :n="n" :measurement="measurement" :bits="bits"
+            <amplitude-table :re="shown.re" :im="shown.im" :n="n" :measurement="measurement" :bits="bits" :mixed="!!stateRho"
               :global-phase-hidden="hideGlobalPhase" :reference="shown.reference"
               @toggle-global-phase="toggleGlobalPhase" />
           </section>
@@ -243,25 +274,28 @@ export const Lab = {
             <shots-histogram :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="show('bloch')" v-bind="viewAttrs('bloch')">
-            <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
+            <bloch-spheres :re="stateRe" :im="stateIm" :rho="stateRho" :n="n" :step="lastStep" :step-id="stepSerial" />
           </section>
           <section v-if="show('interference')" v-bind="viewAttrs('interference')">
-            <interference-view :n="n" :step="lastStep" :hide-global-phase="hideGlobalPhase" />
+            <interference-view :n="n" :step="lastStep" :hide-global-phase="hideGlobalPhase" :mixed="!!stateRho" />
           </section>
           <section v-if="show('density')" v-bind="viewAttrs('density')">
-            <density-matrix :re="stateRe" :im="stateIm" :n="n" />
+            <density-matrix :re="stateRe" :im="stateIm" :rho="stateRho" :n="n" />
+          </section>
+          <section v-if="show('unitary')" v-bind="viewAttrs('unitary')">
+            <unitary-view :n="n" :step="lastStep" :circuit="circuit" />
           </section>
           <section v-if="n >= 2 && show('correlation')" v-bind="viewAttrs('correlation')">
             <correlation-graph :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="n >= 2 && show('pauli')" v-bind="viewAttrs('pauli')">
-            <pauli-panel :re="stateRe" :im="stateIm" :n="n" />
+            <pauli-panel :re="stateRe" :im="stateIm" :rho="stateRho" :n="n" />
           </section>
           <section v-if="n >= 2 && show('entanglement')" v-bind="viewAttrs('entanglement')">
-            <entanglement-panel :re="stateRe" :im="stateIm" :n="n" />
+            <entanglement-panel :re="stateRe" :im="stateIm" :n="n" :mixed="!!stateRho" />
           </section>
           <section v-if="n === 3 && show('cube')" v-bind="viewAttrs('cube')">
-            <cube-3d :re="shown.re" :im="shown.im" />
+            <cube-3d :re="shown.re" :im="shown.im" :mixed="!!stateRho" />
           </section>
 
           <!-- Free lab: the advanced views are one switch away -->
@@ -293,7 +327,7 @@ export const Lab = {
 
     // e.g. "the density matrix, correlations, entanglement and the 3D view"
     advancedNames() {
-      const names = ['the density matrix'];
+      const names = ['noise', 'the density matrix', 'the unitary matrix'];
       if (this.n >= 2) names.push('correlations', 'Pauli expectations', 'entanglement');
       if (this.n === 3) names.push('the 3D view');
       const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
@@ -362,6 +396,7 @@ export const Lab = {
         if (saved) {
           this.stateRe = saved.re;
           this.stateIm = saved.im;
+          this.stateRho = saved.rho ? Object.freeze(saved.rho) : null;
           this.circuit = saved.circuit;
           if (saved.importedFrom) this.importedFrom = saved.importedFrom;
         }
@@ -392,7 +427,7 @@ export const Lab = {
     async runOnWorker(message) {
       const id = this.nextId++;
       // Frozen: Vue needn't watch inside it, and the arrays are never changed
-      const before = Object.freeze({ message, re: this.stateRe, im: this.stateIm });
+      const before = Object.freeze({ message, re: this.stateRe, im: this.stateIm, rho: this.stateRho });
       const reply = await new Promise(resolve => {
         this.pending.set(id, resolve);
         this.worker.postMessage({
@@ -400,7 +435,8 @@ export const Lab = {
           id,
           qubitCount: this.n,
           re: this.stateRe,
-          im: this.stateIm
+          im: this.stateIm,
+          rho: this.stateRho
         });
       });
 
@@ -408,7 +444,9 @@ export const Lab = {
 
       this.stateRe = reply.re;
       this.stateIm = reply.im;
+      this.stateRho = reply.rho ? Object.freeze(reply.rho) : null;
       this.lastStep = before;
+      this.stepSerial++;
 
       if (reply.measured) {
         // Measuring every qubit gives every bit
@@ -478,7 +516,7 @@ export const Lab = {
     async save() {
       if (!this.persist) return;
       try {
-        await saveLab(this.n, this.stateRe, this.stateIm, this.circuit);
+        await saveLab(this.n, this.stateRe, this.stateIm, this.circuit, this.stateRho);
       } catch (err) {
         console.warn('Could not save state:', err);
       }
@@ -488,6 +526,7 @@ export const Lab = {
       const { re, im } = engine.zeroState(this.n);
       this.stateRe = re;
       this.stateIm = im;
+      this.stateRho = null;
       this.measurement = '-';
       this.bits = {};
       this.lastStep = null;
@@ -500,11 +539,13 @@ export const Lab = {
       this.history.push({
         re: this.stateRe,          // state arrays are replaced, never changed in place
         im: this.stateIm,
+        rho: this.stateRho,
         measurement: this.measurement,
         bits: { ...this.bits },
         lastStep: this.lastStep,
         circuit: this.circuit.map(step => ({ ...step })),
-        stepIndex: this.stepIndex
+        stepIndex: this.stepIndex,
+        frames: this.frames        // replaced, never changed in place
       });
       if (this.history.length > HISTORY_LIMIT) this.history.shift();
       this.historyLength = this.history.length;
@@ -523,11 +564,13 @@ export const Lab = {
         if (!last) return;
         this.stateRe = last.re;
         this.stateIm = last.im;
+        this.stateRho = last.rho;
         this.measurement = last.measurement;
         this.bits = last.bits;
         this.lastStep = last.lastStep;
         this.circuit.splice(0, this.circuit.length, ...last.circuit);
         this.stepIndex = last.stepIndex;
+        this.frames = last.frames;
         await this.save();
         this.announce('Undone');
       });
@@ -571,6 +614,7 @@ export const Lab = {
       return this.enqueue(async () => {
         this.remember();
         this.stepIndex = null;
+        this.frames = [];
         await task();
         this.announce(typeof what === 'function' ? what() : what);
       });
@@ -599,6 +643,17 @@ export const Lab = {
     measureQubit(qubit) {
       return this.act(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }),
         () => `Measured qubit ${qubit}: ${this.bits[qubit]}`);
+    },
+
+    /** Noise on one qubit, or on every qubit ('all'). Makes the state mixed. */
+    applyNoise(channel, qubit, strength) {
+      const qubits = qubit === 'all' ? [...Array(this.n).keys()] : [qubit];
+      const names = { dephasing: 'Dephasing', depolarizing: 'Depolarizing', damping: 'Amplitude damping' };
+      return this.act(async () => {
+        for (const q of qubits) {
+          await this.runOnWorker({ type: 'noise', channel, targetQubit: q, strength });
+        }
+      }, `${names[channel]} noise, ${Math.round(strength * 100)}%, on ${qubit === 'all' ? 'every qubit' : 'qubit ' + qubit}`);
     },
 
     reset() {
@@ -638,6 +693,7 @@ export const Lab = {
     addStep(step) {
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       this.circuit.push(step);
       this.save();
       this.announceCircuit(`Added ${stepLabel(step)}`);
@@ -646,6 +702,7 @@ export const Lab = {
     removeStep(index) {
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       const [removed] = this.circuit.splice(index, 1);
       this.save();
       this.announceCircuit(`Removed ${stepLabel(removed)}`);
@@ -655,6 +712,7 @@ export const Lab = {
       if (!this.circuit.length) return;
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       this.circuit.splice(0);
       this.save();
       this.announceCircuit('Circuit cleared');
@@ -673,11 +731,13 @@ export const Lab = {
         try {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
+          this.frames = [this.snapshot()];
           const steps = [...this.circuit];
           for (let i = 0; i < steps.length; i++) {
             if (i) await new Promise(r => setTimeout(r, STEP_DELAY_MS));
             await this.runOnWorker(stepToMessage(steps[i]));
             this.stepIndex = i + 1;
+            this.frames = [...this.frames, this.snapshot()];
           }
         } finally {
           this.running = false;
@@ -699,12 +759,54 @@ export const Lab = {
         if (this.stepIndex === null || this.stepIndex >= this.circuit.length) {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
+          this.frames = [this.snapshot()];
         }
         const step = this.circuit[this.stepIndex];
         await this.runOnWorker(stepToMessage(step));
         this.stepIndex++;
+        // Stepping on from an earlier frame replaces the frames after it
+        this.frames = [...this.frames.slice(0, this.stepIndex), this.snapshot()];
         await this.save();
         this.announce(`Step ${this.stepIndex} of ${this.circuit.length}: ${stepLabel(step)}`);
+      });
+    },
+
+    // ----- Timeline -----
+
+    /** The current state as a timeline frame. */
+    snapshot() {
+      return Object.freeze({
+        re: this.stateRe,
+        im: this.stateIm,
+        rho: this.stateRho,
+        measurement: this.measurement,
+        bits: { ...this.bits },
+        lastStep: this.lastStep
+      });
+    },
+
+    /**
+     * Puts the lab back in frame k of the last run. Moving one frame
+     * forward replays that step's Bloch turn; other jumps don't.
+     * Can be undone.
+     */
+    goToFrame(k) {
+      return this.enqueue(async () => {
+        const frame = this.frames[k];
+        if (!frame || this.running) return;
+        const oneForward = this.stepIndex !== null && k === this.stepIndex + 1;
+        this.remember();
+        this.stateRe = frame.re;
+        this.stateIm = frame.im;
+        this.stateRho = frame.rho;
+        this.measurement = frame.measurement;
+        this.bits = { ...frame.bits };
+        this.lastStep = frame.lastStep;
+        if (oneForward) this.stepSerial++;
+        this.stepIndex = k;
+        await this.save();
+        this.announce(k === 0 ? 'Back to the start of the run'
+          : `Step ${k} of ${this.circuit.length}: ${stepLabel(this.circuit[k - 1])}`);
       });
     },
 
@@ -726,6 +828,7 @@ export const Lab = {
         if (ops[0]?.[0] === 'reset') this.forgetHistory();
         else this.remember();
         this.stepIndex = null;
+        this.frames = [];
         if (clearCircuit) this.circuit.splice(0);
         this.running = delay > 0;
         try {
@@ -742,13 +845,14 @@ export const Lab = {
     },
 
     // One lesson operation; call only from inside a queued task
-    async runOp([kind, a, b]) {
+    async runOp([kind, a, b, c]) {
       if (kind === 'reset') this.resetState();
       else if (kind === 'gate') await this.runOnWorker({ type: 'gate', gate: a, targetQubit: b });
       else if (kind === 'cnot') await this.runOnWorker({ type: 'cnot', control: a, target: b });
       else if (kind === 'cz') await this.runOnWorker({ type: 'cz', control: a, target: b });
       else if (kind === 'measure') await this.runOnWorker({ type: 'measure' });
       else if (kind === 'measureQubit') await this.runOnWorker({ type: 'measureQubit', targetQubit: a });
+      else if (kind === 'noise') await this.runOnWorker({ type: 'noise', channel: a, targetQubit: b, strength: c });
       else if (kind === 'if') { if (this.bits[a] === 1) await this.runOp(b); }
       else if (kind === 'bell') await this.bellSteps();
       else if (kind === 'ghz') await this.ghzSteps();
@@ -765,7 +869,7 @@ export const Lab = {
 
     /** Snapshot for checking a lesson result. */
     getState() {
-      return { re: this.stateRe, im: this.stateIm, n: this.n, measured: this.measurement, bits: { ...this.bits } };
+      return { re: this.stateRe, im: this.stateIm, rho: this.stateRho, n: this.n, measured: this.measurement, bits: { ...this.bits } };
     }
   }
 };

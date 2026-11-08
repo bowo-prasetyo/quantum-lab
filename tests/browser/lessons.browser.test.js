@@ -15,11 +15,13 @@ import { startBrowser, openPage as open } from './helpers.js';
 // Panel key → heading the lab shows for it
 const PANEL_HEADINGS = {
   gates: 'Gates',
+  noise: 'Noise',
   table: 'Quantum State',
   probabilities: 'Probabilities',
   shots: 'Shots',
   interference: 'Interference',
   density: 'Density Matrix',
+  unitary: 'Unitary Matrix',
   correlation: 'Correlation Graph',
   pauli: 'Pauli Expectations',
   entanglement: 'Entanglement',

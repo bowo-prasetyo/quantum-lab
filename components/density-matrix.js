@@ -18,6 +18,9 @@ export const DensityMatrix = {
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
+    // The density matrix when noise has made the state mixed, else null
+    // (then ρ = |ψ⟩⟨ψ| from re and im)
+    rho: { type: Object, default: null },
     n: { type: Number, required: true }
   },
 
@@ -33,10 +36,18 @@ export const DensityMatrix = {
       return 1 << this.n;
     },
     // The chosen entry as text, e.g. "Row |00⟩, column |11⟩: size 0.500, phase 0°"
+    matrix() {
+      return this.rho ?? engine.densityMatrix(this.re, this.im);
+    },
+
+    purity() {
+      return engine.purity(this.matrix);
+    },
+
     readout() {
       if (!this.cursor) return '';
       const { i, j } = this.cursor;
-      const rho = engine.densityMatrix(this.re, this.im);
+      const rho = this.matrix;
       const k = i * this.size + j;
       const re = rho.re[k];
       const im = rho.im[k];
@@ -71,11 +82,16 @@ export const DensityMatrix = {
         the phase<span v-if="n === 3"> (same colours as the 3D view)</span>.
         The diagonal holds the measurement probabilities.
       </p>
+      <p class="caption density-purity">
+        Purity Tr ρ² = {{ purity.toFixed(3) }}<template v-if="purity > 0.9995">: a pure state.</template><template v-else>: a mixed state. Noise has faded some
+        off-diagonal squares, so part of the state is now a random mix rather than a
+        superposition. A completely random state would have {{ (1 / (1 << n)).toFixed(3) }}.</template>
+      </p>
     </div>
   `,
 
   mounted() { this.draw(); },
-  watch: { re() { this.draw(); }, im() { this.draw(); }, cursor() { this.draw(); } },
+  watch: { re() { this.draw(); }, im() { this.draw(); }, rho() { this.draw(); }, cursor() { this.draw(); } },
 
   methods: {
     // The entry under the pointer, if it is over the grid
@@ -140,7 +156,7 @@ export const DensityMatrix = {
       ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, W, H);
 
-      const rho = engine.densityMatrix(this.re, this.im);
+      const rho = this.matrix;
       const entries = [];
       let max = 0;
 

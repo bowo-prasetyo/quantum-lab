@@ -353,8 +353,12 @@ export function isValidState(re, im, n, tolerance = 1e-6) {
  * length 2^n. `random` as for measure().
  */
 export function sampleCounts(re, im, shots, random = Math.random) {
+  return sampleCountsFromProbabilities(probabilities(re, im), shots, random);
+}
+
+/** sampleCounts for given outcome probabilities (e.g. a mixed state's diagonal). */
+export function sampleCountsFromProbabilities(probs, shots, random = Math.random) {
   if (!Number.isInteger(shots) || shots < 0) throw new RangeError(`shots must be a whole number, got ${shots}`);
-  const probs = probabilities(re, im);
   const counts = new Array(probs.length).fill(0);
   for (let k = 0; k < shots; k++) counts[pickOutcome(probs, random())]++;
   return counts;
@@ -509,4 +513,252 @@ export function pauliExpectation(re, im, paulis, n) {
   let value = 0;
   for (let i = 0; i < re.length; i++) value += re[i] * p.re[i] + im[i] * p.im[i];
   return value;
+}
+
+/**
+ * The 2^n × 2^n matrix of a step: column j is what `apply` does to basis
+ * state j. `apply(re, im)` returns { re, im } (a gate, CNOT, CZ, or several
+ * of them in a row). Returns { re, im, size } row-major, entry (i, j) at
+ * index i * size + j, like densityMatrix.
+ */
+export function unitaryOf(apply, n) {
+  const size = 1 << n;
+  const re = new Float64Array(size * size);
+  const im = new Float64Array(size * size);
+  for (let j = 0; j < size; j++) {
+    const basisRe = new Float64Array(size);
+    basisRe[j] = 1;
+    const column = apply(basisRe, new Float64Array(size));
+    for (let i = 0; i < size; i++) {
+      re[i * size + j] = column.re[i];
+      im[i * size + j] = column.im[i];
+    }
+  }
+  return { re, im, size };
+}
+
+/**
+ * How far a matrix is from unitary: the largest entry of |U†U − I|.
+ * About 1e-16 for every gate in this lab.
+ */
+export function unitarityError({ re, im, size }) {
+  let worst = 0;
+  for (let a = 0; a < size; a++) {
+    for (let b = 0; b < size; b++) {
+      // (U†U)ab = Σi conj(Uia) Uib
+      let sr = 0;
+      let si = 0;
+      for (let i = 0; i < size; i++) {
+        const ar = re[i * size + a], ai = -im[i * size + a];
+        const br = re[i * size + b], bi = im[i * size + b];
+        sr += ar * br - ai * bi;
+        si += ar * bi + ai * br;
+      }
+      worst = Math.max(worst, Math.hypot(sr - (a === b ? 1 : 0), si));
+    }
+  }
+  return worst;
+}
+
+// ---------- Mixed states (density matrices) ----------
+//
+// Noise turns a pure state |ψ⟩ into a mixed state, which has no single
+// list of amplitudes and is described by a density matrix ρ. A density
+// matrix is { re, im, size } row-major, as densityMatrix returns; for a
+// pure state it is |ψ⟩⟨ψ|. Gates act as ρ → UρU†, measurements read
+// probabilities off the diagonal, and noise mixes in other states.
+
+/**
+ * ρ → AρA† for a step `apply(re, im)` that acts on state vectors as A
+ * (a gate, CNOT, CZ, or any 2×2 matrix given to applyGate, such as a
+ * Kraus operator).
+ */
+export function applyToRho(rho, apply) {
+  const { size } = rho;
+  // M = Aρ, column by column
+  const mRe = new Float64Array(size * size);
+  const mIm = new Float64Array(size * size);
+  const colRe = new Float64Array(size);
+  const colIm = new Float64Array(size);
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) { colRe[i] = rho.re[i * size + j]; colIm[i] = rho.im[i * size + j]; }
+    const out = apply(colRe, colIm);
+    for (let i = 0; i < size; i++) { mRe[i * size + j] = out.re[i]; mIm[i * size + j] = out.im[i]; }
+  }
+  // MA† = (AM†)†: apply A to each column of M† (row j of M, conjugated)
+  const re = new Float64Array(size * size);
+  const im = new Float64Array(size * size);
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) { colRe[i] = mRe[j * size + i]; colIm[i] = -mIm[j * size + i]; }
+    const out = apply(colRe, colIm);
+    // (AM†)ij = out[i] for column j; its dagger puts conj(out[i]) at (j, i)
+    for (let i = 0; i < size; i++) { re[j * size + i] = out.re[i]; im[j * size + i] = -out.im[i]; }
+  }
+  return { re, im, size };
+}
+
+// Weighted sum of density matrices: Σ w·ρ
+function mixRhos(terms) {
+  const { size } = terms[0][1];
+  const re = new Float64Array(size * size);
+  const im = new Float64Array(size * size);
+  for (const [w, r] of terms) {
+    for (let k = 0; k < re.length; k++) { re[k] += w * r.re[k]; im[k] += w * r.im[k]; }
+  }
+  return { re, im, size };
+}
+
+const c2 = (re, im = 0) => ({ re, im });
+
+/** Noise channels: each turns strength 0 (none) to 1 (full) into Kraus terms. */
+export const NOISE_CHANNELS = Object.freeze({
+  // Loses phase: off-diagonal entries that differ in this qubit shrink by
+  // (1 − λ); the Bloch vector shrinks towards the z-axis. Probabilities stay.
+  dephasing: λ => [[1 - λ / 2, 'I'], [λ / 2, 'Z']],
+  // Random X, Y or Z errors: the Bloch vector shrinks towards the centre by
+  // (1 − λ). At full strength the qubit is completely random.
+  depolarizing: λ => [[1 - 3 * λ / 4, 'I'], [λ / 4, 'X'], [λ / 4, 'Y'], [λ / 4, 'Z']],
+  // Loses energy, as an excited atom decays: |1⟩ falls to |0⟩ with
+  // probability γ. At full strength the qubit is reset to |0⟩.
+  damping: γ => [
+    [1, [[c2(1), c2(0)], [c2(0), c2(Math.sqrt(1 - γ))]]],
+    [1, [[c2(0), c2(Math.sqrt(γ))], [c2(0), c2(0)]]]
+  ]
+});
+
+/**
+ * Applies noise of the given channel ('dephasing', 'depolarizing' or
+ * 'damping') and strength (0 to 1) to one qubit: ρ → Σ w K ρ K†.
+ * Accepts a density matrix and returns a new one.
+ */
+export function applyNoise(rho, channel, qubit, strength, n) {
+  const kraus = NOISE_CHANNELS[channel];
+  if (!kraus) throw new Error(`Unknown noise channel: ${channel}`);
+  checkQubit(qubit, n);
+  if (!(strength >= 0 && strength <= 1)) throw new RangeError(`strength must be from 0 to 1, got ${strength}`);
+  const terms = kraus(strength)
+    .filter(([w]) => w > 0)
+    .map(([w, k]) => [w, k === 'I' ? rho : applyToRho(rho, (re, im) => applyGate(re, im, k, qubit, n))]);
+  return mixRhos(terms);
+}
+
+/** Measurement probabilities of a mixed state: its diagonal. */
+export function rhoProbabilities(rho) {
+  return Array.from({ length: rho.size }, (_, i) => rho.re[i * rho.size + i]);
+}
+
+/** Purity Tr ρ²: 1 for a pure state, down to 1/2^n for a completely random one. */
+export function purity(rho) {
+  let sum = 0;
+  for (let k = 0; k < rho.re.length; k++) sum += rho.re[k] * rho.re[k] + rho.im[k] * rho.im[k];
+  return sum;
+}
+
+/** Bloch vector of one qubit of a mixed state (as blochVector). */
+export function rhoBlochVector(rho, qubit, n) {
+  checkQubit(qubit, n);
+  const { size } = rho;
+  const bit = 1 << bitOf(qubit, n);
+  let rho00 = 0, rho11 = 0, r01Re = 0, r01Im = 0;
+  for (let i = 0; i < size; i++) {
+    if (i & bit) { rho11 += rho.re[i * size + i]; continue; }
+    rho00 += rho.re[i * size + i];
+    const j = i | bit; // same other qubits, this one 1
+    r01Re += rho.re[i * size + j];
+    r01Im += rho.im[i * size + j];
+  }
+  return { x: 2 * r01Re, y: -2 * r01Im, z: rho00 - rho11 };
+}
+
+/** ⟨P⟩ = Tr(Pρ) for a Pauli string (as pauliExpectation). */
+export function rhoPauliExpectation(rho, paulis, n) {
+  if (typeof paulis !== 'string' || paulis.length !== n || /[^IXYZ]/.test(paulis)) {
+    throw new RangeError(`Pauli string must be ${n} letters from I, X, Y, Z, got ${paulis}`);
+  }
+  const { size } = rho;
+  let total = 0;
+  for (let j = 0; j < size; j++) {
+    let col = {
+      re: Float64Array.from({ length: size }, (_, i) => rho.re[i * size + j]),
+      im: Float64Array.from({ length: size }, (_, i) => rho.im[i * size + j])
+    };
+    for (let q = 0; q < n; q++) if (paulis[q] !== 'I') col = applyGate(col.re, col.im, paulis[q], q, n);
+    total += col.re[j];
+  }
+  return total;
+}
+
+/**
+ * Measures every qubit of a mixed state. The result is a basis state,
+ * which is pure again: returns { re, im, index, label } like measure().
+ */
+export function rhoMeasure(rho, n, random = Math.random) {
+  const index = pickOutcome(rhoProbabilities(rho), random());
+  const re = new Float64Array(rho.size);
+  re[index] = 1;
+  return { re, im: new Float64Array(rho.size), index, label: basisLabel(index, n) };
+}
+
+/**
+ * Measures one qubit of a mixed state: keeps the rows and columns that
+ * agree with the result, and rescales. Returns { rho, bit, probability }.
+ */
+export function rhoMeasureQubit(rho, qubit, n, random = Math.random) {
+  checkQubit(qubit, n);
+  const { size } = rho;
+  const bit = 1 << bitOf(qubit, n);
+  const probs = rhoProbabilities(rho);
+  const total = probs.reduce((a, b) => a + b, 0);
+  let p1 = 0;
+  for (let i = 0; i < size; i++) if (i & bit) p1 += probs[i];
+  p1 /= total;
+  const outcome = random() < p1 ? 1 : 0;
+  const probability = outcome ? p1 : 1 - p1;
+  const scale = 1 / (probability * total);
+  const keep = i => ((i & bit) ? 1 : 0) === outcome;
+  const re = new Float64Array(size * size);
+  const im = new Float64Array(size * size);
+  for (let i = 0; i < size; i++) {
+    if (!keep(i)) continue;
+    for (let j = 0; j < size; j++) {
+      if (!keep(j)) continue;
+      re[i * size + j] = rho.re[i * size + j] * scale;
+      im[i * size + j] = rho.im[i * size + j] * scale;
+    }
+  }
+  return { rho: { re, im, size }, bit: outcome, probability };
+}
+
+/**
+ * A pure state with the same probabilities as a mixed one (amplitudes
+ * √p, phase 0). Not physically the same state: the lab keeps it beside
+ * the density matrix only so that views that read probabilities from
+ * amplitudes (charts, shots, announcements) stay right.
+ */
+export function probabilityAmplitudes(rho) {
+  return {
+    re: Float64Array.from(rhoProbabilities(rho), p => Math.sqrt(Math.max(0, p))),
+    im: new Float64Array(rho.size)
+  };
+}
+
+/**
+ * True if `rho` is a usable n-qubit density matrix: the right size, finite,
+ * Hermitian, trace 1 and no negative probabilities (within `tolerance`).
+ * Used to reject corrupt saved data.
+ */
+export function isValidRho(rho, n, tolerance = 1e-6) {
+  const size = 1 << n;
+  if (!rho || rho.size !== size || !rho.re || !rho.im || rho.re.length !== size * size || rho.im.length !== size * size) return false;
+  let trace = 0;
+  for (let i = 0; i < size; i++) {
+    for (let j = 0; j < size; j++) {
+      const a = rho.re[i * size + j], b = rho.im[i * size + j];
+      if (!Number.isFinite(a) || !Number.isFinite(b)) return false;
+      if (Math.abs(a - rho.re[j * size + i]) > tolerance || Math.abs(b + rho.im[j * size + i]) > tolerance) return false;
+    }
+    if (rho.re[i * size + i] < -tolerance) return false;
+    trace += rho.re[i * size + i];
+  }
+  return Math.abs(trace - 1) <= tolerance;
 }

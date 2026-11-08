@@ -1256,3 +1256,179 @@ button:disabled {
 .pauli-none {
   color: var(--text-soft);
 }
+
+/* ---------- Unitary matrix ---------- */
+
+.unitary-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.unitary-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.unitary-what {
+  color: var(--text-soft);
+}
+
+.unitary-scroll {
+  overflow-x: auto;
+}
+
+.unitary-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unitary-table th {
+  padding: 2px 4px;
+  color: var(--text-muted);
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.unitary-table td {
+  min-width: 3.2em;
+  height: 2.2em;
+  padding: 2px 4px;
+  border: 1px solid var(--border-faint);
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+@media (pointer: coarse) {
+  .unitary-mode label {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Timeline ---------- */
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-controls button {
+  margin: 0;
+  flex: none;
+}
+
+.timeline-slider {
+  flex: 1;
+  display: flex;
+}
+
+.timeline-slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.timeline-status {
+  margin: 8px 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-strip {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  overflow-x: auto;
+}
+
+.timeline-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.timeline-frame.current {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-tint-strong);
+}
+
+.timeline-bar {
+  fill: var(--canvas-bar);
+}
+
+.timeline-label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .timeline-controls button {
+    min-height: 44px;
+  }
+}
+
+/* ---------- Noise ---------- */
+
+.noise-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+
+.noise-channels label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.noise-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.noise-strength input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.noise-strength output {
+  min-width: 3em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mixed-notice,
+.entanglement-mixed {
+  padding: 10px 12px;
+  border-left: 4px solid var(--measure);
+  border-radius: 6px;
+  background: var(--accent-tint);
+}
+
+@media (pointer: coarse) {
+  .noise-channels label {
+    min-height: 44px;
+  }
+}

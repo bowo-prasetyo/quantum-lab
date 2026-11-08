@@ -57,13 +57,15 @@ What each size shows:
 | Probability chart | 2 bars | 4 bars | 8 bars |
 | Shots: counts from 100 or 1000 runs, beside the exact probabilities | ✓ | ✓ | ✓ |
 | Interference: the paths into each amplitude after the last gate | ✓ | ✓ | ✓ |
-| Bloch sphere per qubit | 1 | 2 | 3 |
-| Density matrix (advanced view) | 2×2 | 4×4 | 8×8 |
+| Bloch sphere per qubit, animating each gate as its turn | 1 | 2 | 3 |
+| Density matrix, with its purity (advanced view) | 2×2 | 4×4 | 8×8 |
+| Unitary matrix of the last gate or the whole circuit (advanced view) | 2×2 | 4×4 | 8×8 |
+| Noise: dephasing, amplitude damping, depolarizing; mixed states (advanced) | ✓ | ✓ | ✓ |
 | Correlation graph (advanced view) | — | 1 edge | 3 edges |
 | Pauli expectations: ⟨X⟩⟨Y⟩⟨Z⟩ per qubit, 3 × 3 grid per pair, three-qubit strings (advanced view) | — | 1 grid | 3 grids + ⟨XXX⟩… |
 | Entanglement: entropy per qubit, mutual information per pair (advanced view) | — | ✓ | ✓ |
 | 3D basis-state cube (advanced view) | — | — | ✓ |
-| Circuit editor (tap, drag or keyboard) | ✓ | ✓ | ✓ |
+| Circuit editor (tap, drag or keyboard), with a step-through timeline | ✓ | ✓ | ✓ |
 
 ---
 
@@ -429,17 +431,21 @@ quantum-lab/
 │   ├── density-matrix.js
 │   ├── correlation-graph.js
 │   ├── cube-3d.js         # WebGL view (3 qubits)
+│   ├── unitary-view.js    # Matrix of the last gate or the whole circuit
+│   ├── noise-panel.js     # Dephasing, amplitude damping, depolarizing
+│   ├── circuit-timeline.js # Frames of a circuit run, to step back through
 │   └── circuit-editor.js  # Tap, drag (mouse or touch) or keyboard
 ├── pages/
 │   ├── lessons.js         # Lesson list
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js
 │   └── help.js
-├── lessons.js             # The 22 lessons, as data
+├── lessons.js             # The 23 lessons, as data
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
-├── engine.js              # Simulation maths: pure functions, any number of qubits
-├── worker.js              # Background worker: runs engine.js gates and measurement
+├── engine.js              # Simulation maths: pure functions, pure and mixed states
+├── bloch-rotation.js      # Each single-qubit gate as a turn of the Bloch sphere
+├── worker.js              # Background worker: runs engine.js gates, noise and measurement
 ├── colors.js              # Phase → colour, shared by the views
 ├── db.js                  # Saved state per lab size (IndexedDB)
 ├── import-old.js          # One-time import from the original simulators
@@ -544,7 +550,7 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ## Lessons
 
-One path of 22 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
+One path of 23 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
 
 - opens a lab with the right number of qubits, showing only the panels it needs
 - asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
@@ -555,7 +561,7 @@ One path of 22 lessons takes a learner from a single qubit to three-qubit entang
 |---|---|
 | 1. One qubit | Bit flip · Superposition · Measurement collapse · Reversibility · Phase you can’t see · Phase you can see: interference · Complex phase: S, T and Y · Reading the Bloch sphere |
 | 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Measuring one qubit of a Bell pair · Correlation is not entanglement |
-| 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
+| 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Decoherence: how noise ends a superposition · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
 | 4. Quantum algorithms | Deutsch–Jozsa: one question instead of three (3 qubits) · Grover’s search: finding the marked item (2 qubits) · Quantum teleportation (3 qubits) |
 
 Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does.
@@ -577,14 +583,11 @@ Both have been agreed.
 
 Possible future enhancements:
 
-- Animated gate transitions
 - Quantum Fourier Transform
 - Grover's algorithm
 - Shor's algorithm demonstrations
 - WebGPU acceleration
 - WASM math backend
-- Noise simulation
-- Decoherence simulation
 - Quantum error correction examples
 - Larger qubit systems
 
