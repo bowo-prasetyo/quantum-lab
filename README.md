@@ -473,7 +473,7 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-Each browser test fails if it takes more than 60 seconds (`TEST_TIMEOUT_MS` in `tests/browser/helpers.js`); import `test` from there, not from `node:test`, to get that limit. Node's `--test-timeout` limits each whole test file, not each test, so `package.json` sets it to 10 minutes and a file such as the lessons test, which opens every lesson, can grow with the lessons.
+The browser tests check English text, so they open every page in English (`newContext` and `assertEnglish` in `tests/browser/helpers.js`) rather than in the language of the computer running them; only the language tests choose other languages. Each browser test fails if it takes more than 60 seconds (`TEST_TIMEOUT_MS` in `tests/browser/helpers.js`); import `test` from there, not from `node:test`, to get that limit. Node's `--test-timeout` limits each whole test file, not each test, so `package.json` sets it to 10 minutes and a file such as the lessons test, which opens every lesson, can grow with the lessons.
 
 GitHub Actions runs both on every pull request.
 

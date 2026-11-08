@@ -1,5 +1,6 @@
 // Shared set-up for the browser tests: a minimal static file server for the
-// repo, a Chromium browser, and test() with a time limit of its own.
+// repo, a Chromium browser, English browser contexts, and test() with a time
+// limit of its own.
 
 import { test as nodeTest } from 'node:test';
 import { createServer } from 'node:http';
@@ -57,13 +58,32 @@ export async function startBrowser() {
   };
 }
 
-/** Opens a page in a fresh browser context, collecting page errors. */
+// The browser language of every test that checks English text. The app
+// picks its language from the browser (locale.js), so without this a test
+// would follow the machine running it: on a computer set to French it would
+// find French once the app has a French translation. Tests of other
+// languages (i18n.browser.test.js) pass their own locale.
+export const ENGLISH = 'en-US';
+
+/** A fresh browser context whose language is English, unless options.locale says otherwise. */
+export function newContext(browser, options = {}) {
+  return browser.newContext({ locale: ENGLISH, ...options });
+}
+
+/** Fails unless the page is in English, so a test never checks English text on a page in another language. */
+export async function assertEnglish(page) {
+  const lang = await page.evaluate(() => document.documentElement.lang);
+  if (lang !== 'en') throw new Error(`expected the page in English (lang="en"), got lang="${lang}"`);
+}
+
+/** Opens a page in a fresh English browser context, collecting page errors. */
 export async function openPage(browser, url) {
-  const page = await (await browser.newContext()).newPage();
+  const page = await (await newContext(browser)).newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(url);
   await page.locator('h1').first().waitFor();
+  await assertEnglish(page);
   return { page, errors };
 }

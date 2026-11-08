@@ -5,7 +5,7 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, test } from './helpers.js';
+import { startBrowser, newContext, assertEnglish, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });
@@ -16,12 +16,13 @@ const DESKTOP = { viewport: { width: 1280, height: 800 } };
 const PHONE = { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true };
 
 async function open(options, hash) {
-  const page = await (await env.browser.newContext(options)).newPage();
+  const page = await (await newContext(env.browser, options)).newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   await page.goto(env.base + hash);
   await page.locator('h1').first().waitFor();
+  await assertEnglish(page);
   await page.waitForTimeout(300); // let the canvases draw
   return { page, errors };
 }

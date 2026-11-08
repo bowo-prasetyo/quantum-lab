@@ -4,7 +4,7 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, test } from './helpers.js';
+import { startBrowser, newContext, assertEnglish, test } from './helpers.js';
 import { LESSONS } from '../../lessons.js';
 
 let env;
@@ -15,7 +15,7 @@ const settle = page => page.waitForTimeout(400);
 
 // A fresh browser with the given colour scheme and localStorage
 async function withPage(hash, body, { colorScheme = 'dark', storage = {} } = {}) {
-  const context = await env.browser.newContext({ colorScheme });
+  const context = await newContext(env.browser, { colorScheme });
   await context.addInitScript(items => {
     for (const [k, v] of Object.entries(items)) {
       if (localStorage.getItem(k) === null) localStorage.setItem(k, v);
@@ -28,6 +28,7 @@ async function withPage(hash, body, { colorScheme = 'dark', storage = {} } = {})
   try {
     await page.goto(env.base + hash);
     await page.locator('h1').first().waitFor();
+    await assertEnglish(page);
     await settle(page);
     await body(page);
     assert.deepEqual(errors, []);

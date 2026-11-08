@@ -4,7 +4,7 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, openPage, test } from './helpers.js';
+import { startBrowser, openPage, newContext, assertEnglish, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });
@@ -261,11 +261,12 @@ describe('Bloch sphere turns', () => {
     }));
 
   test('with reduce motion, the vector jumps but the path is still drawn', async () => {
-    const context = await env.browser.newContext({ reducedMotion: 'reduce' });
+    const context = await newContext(env.browser, { reducedMotion: 'reduce' });
     const page = await context.newPage();
     try {
       await page.goto(env.base + '#/lab/1');
       await page.locator('h1').waitFor();
+      await assertEnglish(page);
       await settle(page);
       await button(page, 'S').click();   // |0⟩ is on the z-axis: S shows nothing
       await settle(page);
