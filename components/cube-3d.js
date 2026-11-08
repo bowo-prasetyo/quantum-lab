@@ -4,7 +4,7 @@
 // Pointing at or tapping a corner gives its probability and phase as text.
 
 import { phaseToRgb } from '../colors.js';
-import { redrawOnResize } from './canvas-fit.js';
+import { redrawOnResize, themeColors } from './canvas-fit.js';
 import { basisLabel } from '../engine.js';
 import { percent, degrees } from '../describe.js';
 
@@ -255,7 +255,9 @@ export const Cube3D = {
       const { modelView, projection } = cameraMatrices(this.camera, canvas.width / canvas.height);
 
       gl.viewport(0, 0, canvas.width, canvas.height);
-      gl.clearColor(0, 0, 0, 1);
+      // Background from the theme's --canvas-bg (#rrggbb)
+      const bg = themeColors().bg.match(/[0-9a-f]{2}/gi)?.map(h => parseInt(h, 16) / 255) || [0, 0, 0];
+      gl.clearColor(bg[0], bg[1], bg[2], 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
       const vertices = [];

@@ -40,6 +40,7 @@ export const Help = {
         <ul>
           <li>On a wide screen, the gates and the circuit editor stay on the left while you scroll the views on the right, so you see each gate’s effect as you press it. In a lesson, the steps and <strong>Check my result</strong> are there too.</li>
           <li>On a narrow screen, such as a phone, the views are in tabs above the gates (State, Probabilities, Bloch spheres and so on). Tap a tab, or use the arrow keys, to switch view.</li>
+          <li><strong>Theme</strong>, at the top, switches between light and dark colours. <strong>System</strong> follows your device’s setting.</li>
         </ul>
       </div>
 
@@ -96,7 +97,8 @@ export const Help = {
         <ul>
           <li>Each lab size saves its state and circuit in this browser and restores them when you come back.</li>
           <li>Lessons use their own lab and don’t change your saved state.</li>
-          <li>Your lesson predictions, whether you have seen the welcome, and whether advanced views are on are also stored only in this browser.</li>
+          <li>In each lesson, your <strong>first prediction</strong> is the one that counts in your tally. When you come back to a lesson it is shown, and <strong>Try again (practice)</strong> lets you answer again without changing it.</li>
+          <li>Your lesson predictions, your theme, whether you have seen the welcome, and whether advanced views are on are also stored only in this browser.</li>
           <li>Nothing is sent to a server: there are no accounts and no tracking.</li>
         </ul>
       </div>

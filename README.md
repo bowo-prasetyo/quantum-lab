@@ -107,6 +107,8 @@ What each size shows:
 - 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration
+- Light and dark themes (following the device by default, or chosen in the top bar), canvases included
+- Revisiting a lesson shows your first prediction, which is the one the tally counts; "Try again (practice)" answers again without changing it
 - A welcome on the first visit that offers the lessons or free play, and advanced views (density matrix, correlations, 3D view) that the free lab reveals with one switch, or by itself once the learner reaches Part 3 of the lessons
 
 ---

@@ -5,7 +5,7 @@ import { AppNav } from '../components/app-nav.js';
 import { Lab } from '../lab.js';
 import { LESSONS, PARTS, lessonById } from '../lessons.js';
 import { evaluateChecks } from '../lesson-checks.js';
-import { loadPredictions, recordPrediction } from '../progress.js';
+import { loadPredictions, recordPrediction, firstChoice } from '../progress.js';
 import { setPref } from '../prefs.js';
 
 // Pause between steps in "Show me": 600 ms, shorter for long lessons so
@@ -25,11 +25,14 @@ export const Lesson = {
 
   data() {
     const lesson = lessonById(this.id);
-    const earlier = lesson ? loadPredictions()[lesson.id] : undefined;
     return {
       lesson,
-      chosen: null,             // index of the option picked this visit
-      answeredBefore: earlier !== undefined,
+      chosen: null,             // index of the option picked this visit (first answer or practice)
+      // The first prediction, from an earlier visit or earlier in this one:
+      // right or not (undefined if none yet), and which option (null if not known)
+      firstCorrect: lesson ? loadPredictions()[lesson.id] : undefined,
+      firstPick: lesson ? firstChoice(lesson.id) : null,
+      practice: false,          // answering again for practice; doesn't change the tally
       checkResult: null,        // { pass, results } after "Check my result"
       busy: false
     };
@@ -52,6 +55,21 @@ export const Lesson = {
     predicted() {
       return this.chosen !== null;
     },
+    answeredBefore() {
+      return this.firstCorrect !== undefined;
+    },
+    // Options are locked once answered, until "Try again (practice)"
+    locked() {
+      return this.predicted || (this.answeredBefore && !this.practice);
+    },
+    // The option shown as the learner's: this visit's pick, or else the first pick
+    shownPick() {
+      if (this.predicted) return this.chosen;
+      return this.locked ? this.firstPick : null;
+    },
+    shownRight() {
+      return this.predicted ? this.chosen === this.lesson.predict.answer : this.firstCorrect;
+    },
     // The explanation is shown once the learner has predicted or succeeded
     showResult() {
       return this.predicted || this.answeredBefore || (this.checkResult && this.checkResult.pass);
@@ -69,9 +87,20 @@ export const Lesson = {
 
   methods: {
     choose(i) {
-      if (this.predicted) return;
+      if (this.locked) return;
       this.chosen = i;
-      recordPrediction(this.lesson.id, i === this.lesson.predict.answer);
+      if (this.answeredBefore) return; // practice: the first answer stands
+      const correct = i === this.lesson.predict.answer;
+      recordPrediction(this.lesson.id, correct, i);
+      this.firstCorrect = correct;
+      this.firstPick = i;
+    },
+
+    // Answer again without changing the recorded first prediction
+    practiseAgain() {
+      this.practice = true;
+      this.chosen = null;
+      this.$nextTick(() => this.$el.querySelector('.option')?.focus());
     },
 
     async setUp() {
@@ -140,19 +169,39 @@ export const Lesson = {
                 :key="i"
                 class="option"
                 :class="{
-                  chosen: chosen === i,
-                  right: predicted && i === lesson.predict.answer,
-                  wrong: predicted && chosen === i && i !== lesson.predict.answer
+                  chosen: shownPick === i,
+                  right: locked && i === lesson.predict.answer,
+                  wrong: locked && shownPick === i && i !== lesson.predict.answer
                 }"
-                :disabled="predicted"
+                :disabled="locked"
+                :aria-pressed="shownPick === i ? 'true' : null"
                 @click="choose(i)"
-              >{{ option }}</button>
+              >{{ option }}<span v-if="locked && i === lesson.predict.answer" class="visually-hidden"> (the right answer)</span><span v-if="locked && shownPick === i && i !== lesson.predict.answer" class="visually-hidden"> (your answer)</span></button>
             </div>
-            <p v-if="predicted" class="verdict" role="status">
-              {{ chosen === lesson.predict.answer ? '✓ Right!' : '✗ Not quite.' }}
+
+            <!-- Practice answer -->
+            <template v-if="practice">
+              <p v-if="predicted" class="verdict" role="status">
+                Practice: {{ shownRight ? '✓ Right!' : '✗ Not quite. The right answer is marked in green.' }}
+              </p>
+              <p class="caption">Practice answers don’t change your tally: your first prediction stands.</p>
+            </template>
+
+            <!-- First answer, just now -->
+            <p v-else-if="predicted" class="verdict" role="status">
+              {{ shownRight ? '✓ Right!' : '✗ Not quite.' }}
               Try it to see why.
             </p>
+
+            <!-- First answer, on an earlier visit -->
+            <p v-else-if="answeredBefore" class="verdict revisit">
+              Your first prediction was {{ shownRight ? 'right ✓' : 'not quite right ✗' }}.
+              <span v-if="firstPick === null" class="caption">(This browser kept only whether it was right.)</span>
+            </p>
+
             <p v-else class="caption">Pick an answer before you try it. It’s fine to guess.</p>
+
+            <button v-if="locked" class="secondary practice-button" @click="practiseAgain">Try again (practice)</button>
           </div>
         </div>
 
