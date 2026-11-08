@@ -132,6 +132,8 @@ export const Lab = {
       noise: savedNoise(),
       // Run and Step add that noise to every qubit after each step
       noisyRun: false,
+      // A lesson's readout errors for the Shots view (see setReadoutPreset)
+      readoutPreset: null,
       // Show amplitudes with the global phase removed (table, 3D view, interference)
       hideGlobalPhase: getPref('hide-global-phase', false),
       // Free lab only: show the density matrix, correlations, Pauli expectations, entanglement and 3D view
@@ -294,7 +296,7 @@ export const Lab = {
             <probability-chart :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="show('shots')" v-bind="viewAttrs('shots')">
-            <shots-histogram :re="stateRe" :im="stateIm" :n="n" />
+            <shots-histogram :re="stateRe" :im="stateIm" :n="n" :preset="readoutPreset" />
           </section>
           <section v-if="show('bloch')" v-bind="viewAttrs('bloch')">
             <bloch-spheres :re="stateRe" :im="stateIm" :rho="stateRho" :n="n" :step="lastStep" :step-id="stepSerial" />
@@ -502,6 +504,15 @@ export const Lab = {
       if (!remember) return;
       setPref('noise-channel', channel);
       setPref('noise-strength', strength);
+    },
+
+    /**
+     * Sets the Shots view's readout errors ({ oneAsZero, zeroAsOne }, or
+     * null to leave them to the learner). A fresh copy each time, so the
+     * view applies it again on every Set up (lessons).
+     */
+    setReadoutPreset(rates) {
+      this.readoutPreset = rates ? { ...rates } : null;
     },
 
     /** Turns noisy runs on or off (lessons). */

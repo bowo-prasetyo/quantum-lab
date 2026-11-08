@@ -495,3 +495,27 @@ describe('Readout errors in Shots', () => {
       assert.match(await shots.locator('.shots-summary').innerText(), /No shots run yet/);
     }));
 });
+
+describe('Lesson: Reading a qubit is noisy too', () => {
+  test('Set up switches on readout errors; Set up again restores them', () =>
+    withLab('#/lessons/noisy-readout', async page => {
+      const shots = page.locator('.card.shots');
+      const box = shots.getByRole('checkbox', { name: 'Readout errors', exact: true });
+      assert.equal(await box.isChecked(), true);
+      assert.deepEqual(await shots.locator('.shots-rate output').allInnerTexts(), ['5%', '2%']);
+      assert.equal(await shots.getByRole('checkbox', { name: /Correct for readout errors/ }).isChecked(), false);
+
+      await shots.getByRole('button', { name: 'Run 1000 shots' }).click();
+      const summary = await shots.locator('.shots-summary').innerText();
+      const impossible = [...summary.matchAll(/\|(\d{3})⟩ (\d+)/g)]
+        .filter(([, label]) => label !== '000' && label !== '111')
+        .reduce((s, [, , c]) => s + Number(c), 0);
+      assert.ok(impossible > 30, `results the GHZ state can't give: ${summary}`);
+
+      // The learner turns readout errors off; Set up brings them back
+      await box.uncheck();
+      await page.getByRole('button', { name: 'Set up again' }).click();
+      await settle(page);
+      assert.equal(await box.isChecked(), true);
+    }));
+});

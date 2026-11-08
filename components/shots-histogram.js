@@ -24,7 +24,11 @@ export const ShotsHistogram = {
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
-    n: { type: Number, required: true }
+    n: { type: Number, required: true },
+    // A lesson's readout errors, { oneAsZero, zeroAsOne } from 0 to 1: when
+    // set (a new object each Set up), readout errors are switched on at
+    // those rates, with correction off. null leaves the choice to the learner.
+    preset: { type: Object, default: null }
   },
 
   template: `
@@ -115,6 +119,17 @@ export const ShotsHistogram = {
 
   // A new state, or new error rates, make old counts meaningless
   watch: {
+    preset: {
+      immediate: true,
+      handler(p) {
+        if (!p) return;
+        this.readout = true;
+        this.oneAsZero = Math.round(p.oneAsZero * 100);
+        this.zeroAsOne = Math.round(p.zeroAsOne * 100);
+        this.mitigate = false;
+        this.counts = null;
+      }
+    },
     re() { this.counts = null; },
     im() { this.counts = null; },
     readout() { this.counts = null; },

@@ -48,6 +48,11 @@ describe('lesson data', () => {
       assert.ok(lesson.checks.length > 0, 'checks');
       assert.deepEqual(lesson.setup[0], ['reset'], 'setup starts with reset');
       for (const panel of lesson.panels) assert.ok(PANELS.includes(panel), `panel ${panel}`);
+      if (lesson.readout) {
+        assert.ok(lesson.panels.includes('shots'), 'readout needs the shots panel');
+        const { oneAsZero, zeroAsOne } = lesson.readout;
+        assert.ok(oneAsZero >= 0 && zeroAsOne >= 0 && oneAsZero + zeroAsOne < 1, 'readout rates');
+      }
       if (lesson.noisyRun) {
         // Noisy runs happen in the circuit editor, with the Noise panel to show the choice
         assert.ok(lesson.panels.includes('editor') && lesson.panels.includes('noise'), 'noisyRun needs the editor and noise panels');
