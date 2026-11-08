@@ -2,19 +2,19 @@
 // basis state. Replaces the raw JSON display of the old simulators.
 
 import * as engine from '../engine.js';
+import { t, formatNumber, formatPercent } from '../i18n.js';
+import { measurementText } from '../describe.js';
 
-// Avoids printing "-0.000"
-const fmt = (v, digits = 3) => {
-  const s = v.toFixed(digits);
-  return Number(s) === 0 ? (0).toFixed(digits) : s;
-};
+// 3 decimals in the language's style, with a real minus sign; never "−0.000"
+const fmt = v => formatNumber(v, { digits: 3, minus: true });
 
 export const AmplitudeTable = {
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
     n: { type: Number, required: true },
-    measurement: { type: String, default: '-' },
+    // The last measurement: '-', a basis label, or { qubit, bit }
+    measurement: { type: [String, Object], default: '-' },
     // Classical bits from measurements: { qubit: 0 | 1 }
     bits: { type: Object, default: () => ({}) },
     // Whether re/im have had their global phase removed for display
@@ -28,6 +28,8 @@ export const AmplitudeTable = {
 
   emits: ['toggle-global-phase'],
 
+  methods: { measurementText },
+
   computed: {
     referenceLabel() {
       return engine.basisLabel(this.reference, this.n);
@@ -37,7 +39,7 @@ export const AmplitudeTable = {
     bitsText() {
       if (!Object.keys(this.bits).length) return '';
       return [...Array(this.n).keys()]
-        .map(q => `q${q} = ${q in this.bits ? this.bits[q] : '–'}`)
+        .map(q => t('table.bit', { qubit: q, bit: q in this.bits ? this.bits[q] : '–' }))
         .join(' · ');
     },
 
@@ -46,15 +48,14 @@ export const AmplitudeTable = {
       return probs.map((p, i) => {
         const re = this.re[i];
         const im = this.im[i];
-        const imText = fmt(Math.abs(im));
-        const sign = Number(fmt(im)) < 0 ? '−' : '+';
+        const sign = Number(im.toFixed(3)) < 0 ? '−' : '+';
         const phaseDeg = Math.atan2(im, re) * 180 / Math.PI;
         return {
           label: engine.basisLabel(i, this.n),
-          amplitude: this.mixed ? '—' : `${fmt(re).replace('-', '−')} ${sign} ${imText}i`,
-          probability: (p * 100).toFixed(1) + '%',
+          amplitude: this.mixed ? '—' : t('number.complex', { re: fmt(re), sign, im: fmt(Math.abs(im)) }),
+          probability: formatPercent(p, { digits: 1, fixed: true }),
           // Phase is meaningless for a zero amplitude
-          phase: p < 1e-12 || this.mixed ? '—' : `${fmt(phaseDeg, 0).replace('-', '−')}°`,
+          phase: p < 1e-12 || this.mixed ? '—' : t('number.degrees', { value: formatNumber(phaseDeg, { minus: true }) }),
           zero: p < 1e-12
         };
       });
@@ -63,19 +64,16 @@ export const AmplitudeTable = {
 
   template: `
     <div class="card">
-      <h2>Quantum State</h2>
-      <p v-if="mixed" class="notice mixed-notice">
-        The state is <strong>mixed</strong> (noise was applied): it has no list of
-        amplitudes, only probabilities. The density matrix shows the whole state.
-      </p>
+      <h2>{{ $t('table.title') }}</h2>
+      <i18n-t v-if="mixed" k="table.mixed" tag="p" class="notice mixed-notice" />
       <div class="table-scroll">
         <table class="amp-table">
           <thead>
             <tr>
-              <th>Basis state</th>
-              <th>Amplitude</th>
-              <th>Probability</th>
-              <th>Phase</th>
+              <th>{{ $t('table.basisState') }}</th>
+              <th>{{ $t('table.amplitude') }}</th>
+              <th>{{ $t('table.probability') }}</th>
+              <th>{{ $t('table.phase') }}</th>
             </tr>
           </thead>
           <tbody>
@@ -89,28 +87,20 @@ export const AmplitudeTable = {
         </table>
       </div>
       <p v-if="n >= 2" class="caption qubit-order">
-        Qubit 0 is the left digit: |1{{ '0'.repeat(n - 1) }}⟩ means qubit 0 is 1
-        and the {{ n === 2 ? 'other is' : 'others are' }} 0.
+        {{ $t('table.qubitOrder', { count: n - 1, example: '|1' + '0'.repeat(n - 1) + '⟩' }) }}
       </p>
       <div v-if="!mixed" class="global-phase">
         <label>
           <input type="checkbox" :checked="globalPhaseHidden" @change="$emit('toggle-global-phase')">
-          Hide global phase
+          {{ $t('table.hideGlobalPhase') }}
         </label>
         <p class="caption">
-          <template v-if="globalPhaseHidden && reference >= 0">
-            Phases are shown relative to {{ referenceLabel }}, the first non-zero amplitude,
-            which is made real and positive. Every amplitude is turned by the same angle,
-            so nothing you could measure changes.
-          </template>
-          <template v-else>
-            Turning every amplitude by the same angle (a global phase) changes nothing
-            you could measure: only differences in phase matter. Tick the box to remove it.
-          </template>
+          <template v-if="globalPhaseHidden && reference >= 0">{{ $t('table.globalPhaseHidden', { reference: referenceLabel }) }}</template>
+          <template v-else>{{ $t('table.globalPhaseShown') }}</template>
         </p>
       </div>
-      <p>Measurement: {{ measurement }}</p>
-      <p v-if="bitsText" class="bits">Classical bits: {{ bitsText }}</p>
+      <p>{{ $t('table.measurement', { result: measurementText(measurement) }) }}</p>
+      <p v-if="bitsText" class="bits">{{ $t('table.bits', { bits: bitsText }) }}</p>
     </div>
   `
 };

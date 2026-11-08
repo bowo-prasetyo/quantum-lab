@@ -8,23 +8,11 @@
 // strength, changed with the 'settings' event), because the circuit
 // editor's N steps and noisy runs use it too.
 
-const CHANNELS = [
-  {
-    key: 'dephasing',
-    name: 'Dephasing',
-    text: 'Loses phase, as stray fields jostle the qubit. Off-diagonal squares of the density matrix that differ in this qubit shrink by the strength, and its Bloch vector shrinks towards the z-axis. Probabilities don’t change, but interference stops working.'
-  },
-  {
-    key: 'damping',
-    name: 'Amplitude damping',
-    text: 'Loses energy, as an excited atom decays: |1⟩ falls to |0⟩ with the given probability, so the Bloch vector is pulled towards the north pole. At 100% the qubit is reset to |0⟩.'
-  },
-  {
-    key: 'depolarizing',
-    name: 'Depolarizing',
-    text: 'Random errors: the Bloch vector shrinks towards the centre by the strength, as an X, Y or Z flip at random would do. At 100% the qubit is completely random.'
-  }
-];
+import { t, formatPercent } from '../i18n.js';
+
+// The kinds of noise (see NOISE_CHANNELS in engine.js); each one's name is
+// the message 'noise.<key>' and its description 'noise.<key>Text'
+const CHANNELS = ['dephasing', 'damping', 'depolarizing'];
 
 export const NoisePanel = {
   props: {
@@ -39,37 +27,29 @@ export const NoisePanel = {
 
   template: `
     <div class="card noise-panel">
-      <h2>Noise</h2>
+      <h2>{{ $t('noisePanel.title') }}</h2>
       <fieldset class="plain-fieldset" :disabled="disabled">
-        <div class="noise-channels" role="radiogroup" aria-label="Kind of noise">
-          <label v-for="c in CHANNELS" :key="c.key">
-            <input type="radio" name="noise-channel" :value="c.key" :checked="c.key === channel"
-              @change="$emit('settings', { channel: c.key, strength })"> {{ c.name }}
+        <div class="noise-channels" role="radiogroup" :aria-label="$t('noisePanel.kindAria')">
+          <label v-for="c in CHANNELS" :key="c">
+            <input type="radio" name="noise-channel" :value="c" :checked="c === channel"
+              @change="$emit('settings', { channel: c, strength })"> {{ $t('noise.' + c) }}
           </label>
         </div>
         <label class="noise-strength">
-          Strength
-          <input type="range" min="0" max="100" step="1" :value="percent" :aria-valuetext="percent + '%'"
+          {{ $t('noisePanel.strength') }}
+          <input type="range" min="0" max="100" step="1" :value="percent" :aria-valuetext="percentText"
             @input="$emit('settings', { channel, strength: Number($event.target.value) / 100 })">
-          <output>{{ percent }}%</output>
+          <output>{{ percentText }}</output>
         </label>
         <div class="button-grid noise-buttons">
-          <button v-for="q in qubits" :key="q" class="secondary" @click="apply(q)">Noise on Q{{ q }}</button>
-          <button v-if="n > 1" class="secondary" @click="apply('all')">Every qubit</button>
+          <button v-for="q in qubits" :key="q" class="secondary" @click="apply(q)">{{ $t('noisePanel.onQubit', { qubit: q }) }}</button>
+          <button v-if="n > 1" class="secondary" @click="apply('all')">{{ $t('noisePanel.every') }}</button>
         </div>
       </fieldset>
       <p class="caption">{{ description }}</p>
       <p class="caption">
-        <template v-if="mixed">
-          The state is now <strong>mixed</strong>: no single list of amplitudes
-          describes it. The density matrix, Bloch spheres, probabilities and Pauli
-          expectations show it; the views that need amplitudes say so.
-          Measure all or Reset makes it pure again.
-        </template>
-        <template v-else>
-          Noise makes the state mixed, which only a density matrix can describe.
-          Real qubits suffer all three kinds, all the time.
-        </template>
+        <i18n-t v-if="mixed" k="noisePanel.mixed" :params="{ measureAll: $t('gates.measureAll'), reset: $t('gates.reset') }" />
+        <template v-else>{{ $t('noisePanel.pure') }}</template>
       </p>
     </div>
   `,
@@ -85,8 +65,11 @@ export const NoisePanel = {
     percent() {
       return Math.round(this.strength * 100);
     },
+    percentText() {
+      return formatPercent(this.percent / 100, { digits: 0 });
+    },
     description() {
-      return CHANNELS.find(c => c.key === this.channel).text;
+      return t(`noise.${this.channel}Text`, { full: formatPercent(1, { digits: 0 }) });
     }
   },
 

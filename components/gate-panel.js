@@ -40,7 +40,7 @@ export const GatePanel = {
   // enough to sit beside the views on a wide screen and above them on a phone.
   template: `
     <div class="card gate-panel">
-      <h2>Gates</h2>
+      <h2>{{ $t('gates.title') }}</h2>
 
       <!-- A disabled fieldset disables every button and select inside it -->
       <fieldset class="plain-fieldset" :disabled="disabled">
@@ -49,7 +49,7 @@ export const GatePanel = {
           :key="q"
           class="gate-row"
           role="group"
-          :aria-label="'Qubit ' + q"
+          :aria-label="$t('gates.qubitAria', { qubit: q })"
         >
           <span class="gate-row-label" aria-hidden="true">Q{{ q }}</span>
           <button
@@ -63,7 +63,7 @@ export const GatePanel = {
           >{{ g }}</button>
           <button
             class="gate-button measure-button"
-            :aria-label="'Measure qubit ' + q"
+            :aria-label="$t('gates.measureQubitAria', { qubit: q })"
             :aria-describedby="descId('M')"
             @pointerenter="showHint('M')"
             @focus="showHint('M')"
@@ -86,16 +86,16 @@ export const GatePanel = {
         </div>
 
         <div class="action-row button-grid">
-          <button v-if="n >= 2" @click="$emit('bell')">Create Bell Pair</button>
-          <button v-if="n === 3" @click="$emit('ghz')">GHZ State</button>
-          <button @click="$emit('measure')">Measure all</button>
-          <button @click="$emit('reset')">Reset</button>
+          <button v-if="n >= 2" @click="$emit('bell')">{{ $t('gates.bell') }}</button>
+          <button v-if="n === 3" @click="$emit('ghz')">{{ $t('gates.ghz') }}</button>
+          <button @click="$emit('measure')">{{ $t('gates.measureAll') }}</button>
+          <button @click="$emit('reset')">{{ $t('gates.reset') }}</button>
           <button
             :disabled="!canUndo"
             aria-keyshortcuts="Control+Z Meta+Z"
-            title="Undo (Ctrl+Z)"
+            :title="$t('gates.undoTitle')"
             @click="$emit('undo')"
-          >Undo</button>
+          >{{ $t('gates.undo') }}</button>
         </div>
       </fieldset>
 
@@ -103,18 +103,13 @@ export const GatePanel = {
            screen readers, which get the same text via aria-describedby. -->
       <p class="gate-hint" aria-hidden="true">
         <template v-if="hintGate"><strong>{{ hintGate }}</strong> {{ GATE_INFO[hintGate] }}</template>
-        <template v-else>Point at, focus or tap a gate to see what it does.</template>
+        <template v-else>{{ $t('gates.hintEmpty') }}</template>
       </p>
       <span v-for="(text, g) in GATE_INFO" :key="g" :id="descId(g)" class="visually-hidden">{{ text }}</span>
 
       <p class="caption">
-        <strong>M</strong> measures just that qubit; <strong>Measure all</strong> measures every qubit.
-        <strong>Undo</strong> steps back, even past a measurement: the simulator
-        remembers the state from before, which a real quantum computer can’t do.
-        <template v-if="n >= 2">
-          Create Bell Pair{{ n === 3 ? ' and GHZ State start' : ' starts' }}
-          from |{{ '0'.repeat(n) }}⟩, so they always give the same state.
-        </template>
+        <i18n-t k="gates.caption" :params="{ measureAll: $t('gates.measureAll'), undo: $t('gates.undo') }" />
+        <template v-if="n >= 2">{{ ' ' + $t(n === 3 ? 'gates.presetsBoth' : 'gates.presetsBell', { bell: $t('gates.bell'), ghz: $t('gates.ghz'), zero: '|' + '0'.repeat(n) + '⟩' }) }}</template>
       </p>
     </div>
   `

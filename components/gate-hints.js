@@ -6,19 +6,16 @@
 // hover), and links every gate button to its description with
 // aria-describedby for screen readers. Keep in step with pages/concepts.js.
 
-export const GATE_INFO = Object.freeze({
-  I: 'Identity: leaves the qubit unchanged.',
-  H: 'Hadamard: turns |0⟩ into an equal superposition of |0⟩ and |1⟩. Applying it twice undoes it.',
-  X: 'Pauli-X, the quantum NOT: swaps |0⟩ and |1⟩.',
-  Y: 'Pauli-Y: swaps |0⟩ and |1⟩ and adds a phase: Y|0⟩ = i|1⟩.',
-  Z: 'Pauli-Z: flips the sign (phase 180°) of |1⟩; |0⟩ is unchanged.',
-  S: 'Phase S: gives |1⟩ a 90° phase. S twice is Z.',
-  T: 'π/8 gate T: gives |1⟩ a 45° phase. T twice is S.',
-  M: 'Measure: reads this qubit as 0 or 1 and collapses it to that result.',
-  N: 'Noise: adds the kind and strength of noise chosen in the Noise panel to this qubit.',
-  CNOT: 'Controlled-NOT: flips the target qubit when the control qubit is 1.',
-  CZ: 'Controlled-Z: flips the sign where both qubits are 1. Either qubit can be the control.'
-});
+import { t } from '../i18n.js';
+
+// The gates described, in the order they appear. Each description is the
+// message 'gate.<name>' in locales/en.js; reading GATE_INFO[gate] gives it
+// in the current language (a getter, so it follows a change of language).
+export const GATE_NAMES = Object.freeze(['I', 'H', 'X', 'Y', 'Z', 'S', 'T', 'M', 'N', 'CNOT', 'CZ']);
+
+export const GATE_INFO = Object.freeze(Object.defineProperties({}, Object.fromEntries(
+  GATE_NAMES.map(gate => [gate, { enumerable: true, get: () => t(`gate.${gate}`) }])
+)));
 
 /**
  * Component mixin: `hintGate` is the gate whose description is shown;

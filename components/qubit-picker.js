@@ -23,8 +23,8 @@ export const QubitPicker = {
 
   template: `
     <div class="qubit-picker">
-      <div class="picker-group" role="radiogroup" aria-label="Control qubit">
-        <span class="picker-label" aria-hidden="true">control</span>
+      <div class="picker-group" role="radiogroup" :aria-label="$t('picker.controlAria')">
+        <span class="picker-label" aria-hidden="true">{{ $t('picker.control') }}</span>
         <button
           v-for="q in qubits"
           :key="q"
@@ -36,8 +36,8 @@ export const QubitPicker = {
           @keydown="onKeydown($event, 'control')"
         >Q{{ q }}</button>
       </div>
-      <div class="picker-group" role="radiogroup" aria-label="Target qubit">
-        <span class="picker-label" aria-hidden="true">target</span>
+      <div class="picker-group" role="radiogroup" :aria-label="$t('picker.targetAria')">
+        <span class="picker-label" aria-hidden="true">{{ $t('picker.target') }}</span>
         <button
           v-for="q in qubits"
           :key="q"
@@ -46,7 +46,7 @@ export const QubitPicker = {
           :aria-checked="String(q === target)"
           :tabindex="q === target ? 0 : -1"
           :disabled="q === control"
-          :title="q === control ? 'Q' + q + ' is the control' : null"
+          :title="q === control ? $t('picker.isControl', { qubit: q }) : null"
           @click="setTarget(q)"
           @keydown="onKeydown($event, 'target')"
         >Q{{ q }}</button>

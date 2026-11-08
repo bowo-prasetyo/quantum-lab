@@ -2,6 +2,7 @@
 
 import * as engine from '../engine.js';
 import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
+import { t, formatPercent } from '../i18n.js';
 
 export const ProbabilityChart = {
   mixins: [redrawOnResize],
@@ -14,7 +15,7 @@ export const ProbabilityChart = {
 
   template: `
     <div class="card">
-      <h2>Probabilities</h2>
+      <h2>{{ $t('probs.title') }}</h2>
       <canvas ref="canvas" role="img" :aria-label="summary"></canvas>
     </div>
   `,
@@ -28,8 +29,8 @@ export const ProbabilityChart = {
       const likely = this.probs
         .map((p, i) => [engine.basisLabel(i, this.n), p])
         .filter(([, p]) => p > 0.0005)
-        .map(([label, p]) => `${label} ${(p * 100).toFixed(1)}%`);
-      return `Probability chart: ${likely.join(', ')}`;
+        .map(([label, p]) => t('describe.outcome', { label, percent: formatPercent(p, { digits: 1, fixed: true }) }));
+      return t('probs.aria', { list: likely.join(t('list.separator')) });
     }
   },
 
@@ -72,8 +73,8 @@ export const ProbabilityChart = {
         ctx.fillText(engine.basisLabel(i, this.n), cx, baseline + 20);
 
         // Drop the decimal if the label would not fit above its bar
-        let text = `${(probs[i] * 100).toFixed(1)}%`;
-        if (ctx.measureText(text).width > slot - 2) text = `${Math.round(probs[i] * 100)}%`;
+        let text = formatPercent(probs[i], { digits: 1, fixed: true });
+        if (ctx.measureText(text).width > slot - 2) text = formatPercent(probs[i], { digits: 0 });
         ctx.fillText(text, cx, baseline - height - 8);
       }
 

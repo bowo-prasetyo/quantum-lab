@@ -13,18 +13,22 @@
 
 import { QubitPicker } from './qubit-picker.js';
 import { gateHints } from './gate-hints.js';
+import { t, formatPercent } from '../i18n.js';
 
-// Noise steps' names, by channel (see NOISE_CHANNELS in engine.js)
-export const NOISE_STEP_NAMES = Object.freeze({ dephasing: 'Dephase', damping: 'Damp', depolarizing: 'Depolarize' });
+/** A noise step's short name and strength, e.g. "Dephase 10%" (channel: see NOISE_CHANNELS in engine.js). */
+export function noiseStepText(channel, strength) {
+  return t('step.noiseName', { name: t(`step.${channel}`), percent: formatPercent(Math.round(strength * 100) / 100, { digits: 0 }) });
+}
 
 /**
  * A circuit step as text: 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure
  * qubit 2), 'Dephase 10% q1' (noise: { gate: 'N', target, channel, strength }).
+ * Gate names and the qN notation stay the same in every language.
  */
 export function stepLabel(step) {
   if (step.gate === 'CNOT') return `CNOT q${step.control}→q${step.target}`;
   if (step.gate === 'CZ') return `CZ q${step.control},q${step.target}`;
-  if (step.gate === 'N') return `${NOISE_STEP_NAMES[step.channel]} ${Math.round(step.strength * 100)}% q${step.target}`;
+  if (step.gate === 'N') return t('step.noise', { noise: noiseStepText(step.channel, step.strength), target: step.target });
   return `${step.gate} q${step.target}`;
 }
 
@@ -74,23 +78,22 @@ export const CircuitEditor = {
     zeros() {
       return '0'.repeat(this.n);
     },
-    // e.g. "Step 2 of 3: CNOT q0→q1", read out by screen readers
+    // e.g. "Step 2 of 3: CNOT q0→q1."
     status() {
       if (this.applied === null || this.applied === 0) return '';
       const total = this.circuit.length;
       const last = this.circuit[this.applied - 1];
-      const text = `Step ${this.applied} of ${total}${last ? ': ' + this.stepLabel(last) : ''}.`;
-      return this.applied >= total && !this.running
-        ? `${text} All steps applied; Step starts again.`
-        : text;
+      const text = last
+        ? t('editor.status', { k: this.applied, total, step: this.stepLabel(last) })
+        : t('editor.statusBare', { k: this.applied, total });
+      return this.applied >= total && !this.running ? t('editor.statusDone', { status: text }) : text;
     },
     pairLabel() {
-      return `control Q${this.control}, target Q${this.target}`;
+      return t('editor.pair', { control: this.control, target: this.target });
     },
     // e.g. "Dephase 10%"
     noiseText() {
-      if (!this.noise) return '';
-      return `${NOISE_STEP_NAMES[this.noise.channel]} ${Math.round(this.noise.strength * 100)}%`;
+      return this.noise ? noiseStepText(this.noise.channel, this.noise.strength) : '';
     }
   },
 
@@ -107,7 +110,7 @@ export const CircuitEditor = {
 
   template: `
     <div class="card">
-      <h2>Circuit Editor</h2>
+      <h2>{{ $t('editor.title') }}</h2>
 
       <!-- Palette: a row of gates per qubit, then CNOT and CZ for the chosen pair -->
       <div
@@ -116,7 +119,7 @@ export const CircuitEditor = {
         class="gate-row palette-row"
         :class="{ 'with-noise': noise }"
         role="group"
-        :aria-label="'Add to qubit ' + q"
+        :aria-label="$t('editor.rowAria', { qubit: q })"
       >
         <span class="gate-row-label" aria-hidden="true">Q{{ q }}</span>
         <div
@@ -125,7 +128,7 @@ export const CircuitEditor = {
           class="gate"
           role="button"
           tabindex="0"
-          :aria-label="'Add ' + g + ' on Q' + q"
+          :aria-label="$t('editor.addAria', { gate: g, qubit: q })"
           :aria-describedby="descId(g)"
           :aria-disabled="running ? 'true' : null"
           draggable="true"
@@ -142,7 +145,7 @@ export const CircuitEditor = {
           class="gate noise-chip"
           role="button"
           tabindex="0"
-          :aria-label="'Add ' + noiseText + ' noise on Q' + q"
+          :aria-label="$t('editor.addNoiseAria', { noise: noiseText, qubit: q })"
           :aria-describedby="descId('N')"
           :aria-disabled="running ? 'true' : null"
           draggable="true"
@@ -165,7 +168,7 @@ export const CircuitEditor = {
             class="gate"
             role="button"
             tabindex="0"
-            :aria-label="'Add ' + g + ', ' + pairLabel"
+            :aria-label="$t('editor.addPairAria', { gate: g, pair: pairLabel })"
             :aria-describedby="descId(g)"
             :aria-disabled="running ? 'true' : null"
             draggable="true"
@@ -182,23 +185,17 @@ export const CircuitEditor = {
 
       <p class="gate-hint" aria-hidden="true">
         <template v-if="hintGate"><strong>{{ hintGate }}</strong> {{ GATE_INFO[hintGate] }}</template>
-        <template v-else>Point at, focus or tap a gate to see what it does.</template>
+        <template v-else>{{ $t('gates.hintEmpty') }}</template>
       </p>
       <span v-for="(text, g) in GATE_INFO" :key="g" :id="descId(g)" class="visually-hidden">{{ text }}</span>
 
-      <p class="caption">
-        Tap or drag a gate to add it to the circuit: each row adds to its qubit
-        (M measures it<template v-if="noise">; N adds the noise chosen in the
-        Noise panel, now {{ noiseText }}</template>)<template v-if="n >= 2">, and CNOT and CZ use the control
-        and target chosen above, the same pair as in the Gates panel</template>.
-        Press × on a step to remove it.
-      </p>
+      <p class="caption">{{ $t('editor.caption' + (noise ? 'Noise' : '') + (n >= 2 ? 'Pair' : ''), { noise: noiseText }) }}</p>
 
       <ol
         ref="dropzone"
         class="circuit-dropzone"
         :class="{ 'drop-target': touchDrag && touchDrag.over }"
-        aria-label="Circuit steps"
+        :aria-label="$t('editor.stepsAria')"
         @dragover.prevent
         @drop="onDrop"
       >
@@ -212,41 +209,41 @@ export const CircuitEditor = {
           <span class="circuit-step-label">{{ stepLabel(step) }}</span>
           <button
             class="circuit-step-remove"
-            :aria-label="'Remove step ' + (index + 1) + ', ' + stepLabel(step)"
-            :title="'Remove ' + stepLabel(step)"
+            :aria-label="$t('editor.removeAria', { k: index + 1, step: stepLabel(step) })"
+            :title="$t('editor.removeTitle', { step: stepLabel(step) })"
             :disabled="running"
             @click="remove(index)"
           >×</button>
         </li>
-        <li v-if="!circuit.length" class="circuit-empty">Empty: add gates above.</li>
+        <li v-if="!circuit.length" class="circuit-empty">{{ $t('editor.empty') }}</li>
       </ol>
 
       <label class="check-label">
         <input type="checkbox" v-model="fromZero" :disabled="running" />
-        Start from |{{ zeros }}⟩
+        {{ $t('editor.fromZero', { zero: '|' + zeros + '⟩' }) }}
       </label>
       <label v-if="noise" class="check-label">
         <input type="checkbox" :checked="noisyRun" :disabled="running"
           @change="$emit('noisy-run', $event.target.checked)" />
-        Noisy run: {{ noiseText }} on every qubit after each step, as on real hardware
+        {{ $t('editor.noisyRun', { noise: noiseText }) }}
       </label>
 
       <div class="button-grid circuit-actions">
         <button :disabled="!circuit.length || running" @click="$emit('run', { fromZero })">
-          {{ running ? 'Running…' : 'Run Circuit' }}
+          {{ $t(running ? 'editor.running' : 'editor.run') }}
         </button>
         <button
           :disabled="!circuit.length || running"
-          title="Apply the next step"
+          :title="$t('editor.stepTitle')"
           @click="$emit('step', { fromZero })"
-        >Step</button>
-        <button :disabled="!circuit.length || running" @click="$emit('clear')">Clear</button>
+        >{{ $t('editor.step') }}</button>
+        <button :disabled="!circuit.length || running" @click="$emit('clear')">{{ $t('editor.clear') }}</button>
         <button
           v-if="showUndo"
           :disabled="!canUndo || running"
           aria-keyshortcuts="Control+Z Meta+Z"
           @click="$emit('undo')"
-        >Undo</button>
+        >{{ $t('gates.undo') }}</button>
       </div>
 
       <!-- Visual only: the lab announces each step, with the state it gives -->

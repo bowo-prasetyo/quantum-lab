@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 
 import {
   t, setLocale, getLocale, onLocaleChange, negotiate, detectLocale, fallbackChain,
-  availableLocales, localeName, isRtl, formatNumber, formatPercent, formatList
+  availableLocales, localeName, isRtl, formatNumber, formatPercent, formatList, capitalize
 } from '../i18n.js';
 import { LOCALES, DEFAULT_LOCALE } from '../locales/index.js';
 import { pseudoText } from '../locales/pseudo.js';
@@ -17,6 +17,12 @@ afterEach(() => setLocale(DEFAULT_LOCALE));
 
 const placeholders = text => [...text.matchAll(/\{(\w+)\}/g)].map(m => m[1]).sort();
 const forms = message => (typeof message === 'string' ? [message] : Object.values(message));
+// How many bold and emphasized spans, and which link targets, a message has
+const markup = text => ({
+  bold: (text.match(/\*\*(.+?)\*\*/g) ?? []).length,
+  em: (text.replace(/\*\*(.+?)\*\*/g, '').match(/\*[^*\s][^*]*?\*/g) ?? []).length,
+  links: [...text.matchAll(/\]\(([^)\s]+)\)/g)].map(m => m[1])
+});
 
 describe('messages', () => {
   test('looks up a message and fills in placeholders', () => {
@@ -112,6 +118,28 @@ describe('formatting', () => {
     assert.equal(formatNumber(-0.5, { digits: 1 }), '-0.5');
   });
 
+  test('in English, numbers read exactly as toFixed gave them (apart from never "-0")', () => {
+    let seed = 1;
+    const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let k = 0; k < 20000; k++) {
+      const v = (random() - 0.5) * 4;
+      for (const digits of [0, 1, 2, 3]) {
+        const fixed = v.toFixed(digits);
+        assert.equal(formatNumber(v, { digits }), Number(fixed) === 0 ? (0).toFixed(digits) : fixed, `${v} to ${digits}`);
+      }
+      const p = random();
+      assert.equal(formatPercent(p, { digits: 1, fixed: true }), `${(p * 100).toFixed(1)}%`, `${p} as a percentage`);
+    }
+  });
+
+  test('grouping from five digits, and a real minus sign on request', () => {
+    assert.equal(formatNumber(1000), '1000');
+    assert.equal(formatNumber(12345), '12,345');
+    assert.equal(formatNumber(-0.5, { digits: 2, minus: true }), '−0.50');
+    assert.equal(formatPercent(-0.004, { minus: true }), '−0.4%');
+    assert.equal(capitalize('noise, the density matrix'), 'Noise, the density matrix');
+  });
+
   test('percentages', () => {
     assert.equal(formatPercent(0.5), '50%');
     assert.equal(formatPercent(0.125), '12.5%');
@@ -119,14 +147,14 @@ describe('formatting', () => {
   });
 
   test('lists', () => {
-    assert.equal(formatList(['X', 'H', 'Z']), 'X, H, and Z');
+    assert.equal(formatList(['X', 'H', 'Z']), 'X, H and Z', 'British English: no comma before "and"');
     assert.equal(formatList(['X', 'H']), 'X and H');
     assert.equal(formatList(['X', 'H'], { type: 'disjunction' }), 'X or H');
   });
 
-  test('the pseudo-locale formats like English', () => {
+  test('the pseudo-locale formats numbers as German does, to expose unformatted ones', () => {
     setLocale('en-XA');
-    assert.equal(formatNumber(0.5, { digits: 2 }), '0.50');
+    assert.equal(formatNumber(0.5, { digits: 2 }), '0,50');
     assert.equal(t('nav.lab', { count: 1 }).includes('1'), true);
   });
 });
@@ -134,14 +162,14 @@ describe('formatting', () => {
 describe('pseudo-locale', () => {
   test('accents letters, brackets and lengthens the text, keeps placeholders', () => {
     const text = pseudoText('{count} qubits');
-    assert.match(text, /^\[\{count\} ǫúƀíţš ~+\]$/);
+    assert.match(text, /^⟦\{count\} ǫúƀíţš ~+⟧$/);
     assert.ok(text.length >= '{count} qubits'.length * 1.3);
   });
 
   test('plural messages keep their forms', () => {
     setLocale('en-XA');
-    assert.equal(t('nav.lab', { count: 1 }), '[1 ǫúƀíţ ~~~~~]');
-    assert.equal(t('nav.lab', { count: 2 }), '[2 ǫúƀíţš ~~~~~]');
+    assert.equal(t('nav.lab', { count: 1 }), '⟦1 ǫúƀíţ ~~~~~⟧');
+    assert.equal(t('nav.lab', { count: 2 }), '⟦2 ǫúƀíţš ~~~~~⟧');
   });
 });
 
@@ -156,13 +184,17 @@ describe('every language', () => {
       }
     });
 
-    test(`${code}: same placeholders as English, and every plural form it needs`, () => {
+    test(`${code}: only English placeholders, the same markup, and every plural form it needs`, () => {
       const rules = new Intl.PluralRules(locale.intl ?? code).resolvedOptions().pluralCategories;
       for (const [key, message] of Object.entries(locale.messages)) {
-        const expected = placeholders(forms(english[key])[0]);
+        // A plural form may leave a placeholder out ("Bloch sphere" needs no
+        // {count}), but may not invent one
+        const allowed = new Set(forms(english[key]).flatMap(placeholders));
+        const englishMarkup = markup(forms(english[key])[0]);
         for (const text of forms(message)) {
           assert.equal(typeof text, 'string', `${key}: text`);
-          assert.deepEqual(placeholders(text), expected, `${key}: placeholders in "${text}"`);
+          for (const name of placeholders(text)) assert.ok(allowed.has(name), `${key}: unknown placeholder {${name}} in "${text}"`);
+          assert.deepEqual(markup(text), englishMarkup, `${key}: bold text and link targets in "${text}"`);
         }
         if (typeof message !== 'string') {
           assert.equal(typeof english[key], 'object', `${key}: plural only if English is`);
@@ -173,10 +205,11 @@ describe('every language', () => {
     });
   }
 
-  test('English plurals are written as plurals with a count', () => {
+  test('English uses every placeholder in at least one form, and keeps markup balanced', () => {
     for (const [key, message] of Object.entries(english)) {
-      if (typeof message === 'string') continue;
-      for (const text of forms(message)) assert.ok(text.includes('{count}'), `${key}: uses {count}`);
+      for (const text of forms(message)) {
+        assert.equal((text.match(/\*\*/g) ?? []).length % 2, 0, `${key}: unbalanced ** in "${text}"`);
+      }
     }
   });
 });

@@ -7,6 +7,7 @@ import { phaseToRgb } from '../colors.js';
 import { redrawOnResize, themeColors } from './canvas-fit.js';
 import { basisLabel } from '../engine.js';
 import { percent, degrees } from '../describe.js';
+import { t, formatPercent } from '../i18n.js';
 
 function mat4Perspective(fov, aspect, near, far) {
   const f = 1.0 / Math.tan(fov / 2);
@@ -128,31 +129,23 @@ export const Cube3D = {
 
   template: `
     <div class="card">
-      <h2>3D View</h2>
+      <h2>{{ $t('cube.title') }}</h2>
       <canvas
         ref="canvas"
         class="webgl-canvas"
         tabindex="0"
         role="img"
-        aria-label="3D view of the 8 basis states. Arrow keys rotate it; plus and minus zoom. The same probabilities and phases are in the Quantum State table."
+        :aria-label="$t('cube.aria')"
         @keydown="onKeydown"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
       ></canvas>
-      <p v-if="webglSupported" class="readout">{{ readout || 'Point at or tap a corner to read it.' }}</p>
-      <p class="caption" v-if="webglSupported && mixed">
-        The state is mixed (noise was applied), so the corners are grey: a mixed
-        state has probabilities but no phases.
-      </p>
-      <p class="caption" v-if="webglSupported">
-        The 8 basis states sit at the corners of a cube: point size shows
-        probability and colour shows phase.
-        Drag or use the arrow keys to rotate. Use the mouse wheel, pinch with
-        two fingers, or press + and − to zoom.
-      </p>
-      <p class="caption" v-else>WebGL is not available in this browser, so the 3D view is off.</p>
+      <p v-if="webglSupported" class="readout">{{ readout || $t('cube.readoutEmpty') }}</p>
+      <p class="caption" v-if="webglSupported && mixed">{{ $t('cube.mixed') }}</p>
+      <p class="caption" v-if="webglSupported">{{ $t('cube.caption') }}</p>
+      <p class="caption" v-else>{{ $t('cube.noWebgl') }}</p>
     </div>
   `,
 
@@ -180,9 +173,9 @@ export const Cube3D = {
       const im = this.im[this.picked];
       const p = re * re + im * im;
       const label = basisLabel(this.picked, 3);
-      if (p < 1e-12) return `${label}: probability 0%.`;
-      if (this.mixed) return `${label}: probability ${percent(p)}.`;
-      return `${label}: probability ${percent(p)}, phase ${degrees(Math.atan2(im, re))}.`;
+      if (p < 1e-12) return t('cube.readoutProbability', { state: label, p: formatPercent(0) });
+      if (this.mixed) return t('cube.readoutProbability', { state: label, p: percent(p) });
+      return t('cube.readout', { state: label, p: percent(p), phase: degrees(Math.atan2(im, re)) });
     }
   },
 

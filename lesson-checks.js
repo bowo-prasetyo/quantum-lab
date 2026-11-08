@@ -3,6 +3,8 @@
 // ("Check my result"), the unit tests and the browser test.
 
 import * as engine from './engine.js';
+import { t, formatNumber, formatPercent, formatList } from './i18n.js';
+import { measurementText } from './describe.js';
 
 const TOLERANCE = 1e-6;
 
@@ -13,13 +15,15 @@ const labelIndex = (label, n) => {
 };
 
 const close = (a, b) => Math.abs(a - b) <= TOLERANCE;
-const show = v => (Math.abs(v) < 5e-4 ? 0 : v).toFixed(3);
+const show = v => formatNumber(v, { digits: 3 });
 
 /**
  * Evaluates one check against { re, im, n, measured, rho }. rho is the
  * density matrix when noise has made the state mixed (re and im then hold
- * amplitudes √p), else null or absent.
- * Returns { pass, text } where text says what was expected and found.
+ * amplitudes √p), else null or absent. `measured` is the last measurement:
+ * '-', a basis label, or { qubit, bit } (see measurementText in describe.js).
+ * Returns { pass, text } where text says, in the current language, what was
+ * expected and found.
  */
 export function evaluateCheck(check, { re, im, n, measured, rho = null }) {
   const probs = rho ? engine.rhoProbabilities(rho) : engine.probabilities(re, im);
@@ -32,38 +36,40 @@ export function evaluateCheck(check, { re, im, n, measured, rho = null }) {
       for (const [label, value] of Object.entries(check.values)) expected[labelIndex(label, n)] = value;
       const pass = expected.every((p, i) => close(probs[i], p));
       const listed = Object.entries(check.values)
-        .map(([label, v]) => `${label} ${(v * 100).toFixed(1)}%`).join(', ');
-      return { pass, text: `Probabilities: ${listed}${Object.keys(check.values).length < probs.length ? ', all others 0%' : ''}` };
+        .map(([label, v]) => t('describe.outcome', { label, percent: formatPercent(v, { digits: 1, fixed: true }) }))
+        .join(t('list.separator'));
+      const others = Object.keys(check.values).length < probs.length;
+      return { pass, text: t(others ? 'check.probsOthers' : 'check.probs', { list: listed, zero: formatPercent(0) }) };
     }
 
     case 'amplitude': {
       const i = labelIndex(check.state, n);
       const pass = !rho && close(re[i], check.re) && close(im[i], check.im);
-      return { pass, text: `Amplitude of ${check.state}: ${show(check.re)} + ${show(check.im)}i (found ${show(re[i])} + ${show(im[i])}i)` };
+      return { pass, text: t('check.amplitude', { state: check.state, re: show(check.re), im: show(check.im), foundRe: show(re[i]), foundIm: show(im[i]) }) };
     }
 
     case 'bloch': {
       const v = bloch(check.qubit);
       const pass = close(v.x, check.x) && close(v.y, check.y) && close(v.z, check.z);
-      return { pass, text: `Qubit ${check.qubit} Bloch vector (x, y, z) = (${show(check.x)}, ${show(check.y)}, ${show(check.z)}) (found (${show(v.x)}, ${show(v.y)}, ${show(v.z)}))` };
+      return { pass, text: t('check.bloch', { qubit: check.qubit, x: show(check.x), y: show(check.y), z: show(check.z), foundX: show(v.x), foundY: show(v.y), foundZ: show(v.z) }) };
     }
 
     case 'blochLength': {
       const v = bloch(check.qubit);
       const length = Math.hypot(v.x, v.y, v.z);
-      return { pass: close(length, check.value), text: `Qubit ${check.qubit} Bloch vector length ${show(check.value)} (found ${show(length)})` };
+      return { pass: close(length, check.value), text: t('check.blochLength', { qubit: check.qubit, value: show(check.value), found: show(length) }) };
     }
 
     case 'zz': {
       const value = Math.abs(engine.zzCorrelation(re, im, check.q1, check.q2, n));
-      return { pass: close(value, check.value), text: `Correlation Q${check.q1}–Q${check.q2}: ${show(check.value)} (found ${show(value)})` };
+      return { pass: close(value, check.value), text: t('check.zz', { q1: check.q1, q2: check.q2, value: show(check.value), found: show(value) }) };
     }
 
     case 'density': {
       const matrix = rho ?? engine.densityMatrix(re, im);
       const k = check.i * matrix.size + check.j;
       const value = Math.hypot(matrix.re[k], matrix.im[k]);
-      return { pass: close(value, check.abs), text: `Density matrix |ρ[${check.i}][${check.j}]| = ${show(check.abs)} (found ${show(value)})` };
+      return { pass: close(value, check.abs), text: t('check.density', { i: check.i, j: check.j, value: show(check.abs), found: show(value) }) };
     }
 
     // Fidelity with the state the `ideal` operations give (run without
@@ -72,36 +78,36 @@ export function evaluateCheck(check, { re, im, n, measured, rho = null }) {
       const target = runOps(check.ideal, n);
       const value = engine.fidelity(target, re, im, rho);
       const pass = value >= check.min - TOLERANCE && value <= check.max + TOLERANCE;
-      return { pass, text: `Fidelity with the noiseless result: ${show(check.min)} to ${show(check.max)} (found ${show(value)})` };
+      return { pass, text: t('check.fidelity', { min: show(check.min), max: show(check.max), found: show(value) }) };
     }
 
     // Purity Tr ρ²: 1 for a pure state, less once noise has mixed it
     case 'purity': {
       const value = rho ? engine.purity(rho) : 1;
-      return { pass: close(value, check.value), text: `Purity Tr ρ² = ${show(check.value)} (found ${show(value)})` };
+      return { pass: close(value, check.value), text: t('check.purity', { value: show(check.value), found: show(value) }) };
     }
 
     // All the probability is on these basis states (any split between them)
     case 'onlyStates': {
       const allowed = new Set(check.states.map(label => labelIndex(label, n)));
       const outside = probs.reduce((sum, p, i) => sum + (allowed.has(i) ? 0 : p), 0);
-      return { pass: close(outside, 0), text: `Only ${check.states.join(' or ')} can be measured` };
+      return { pass: close(outside, 0), text: t('check.onlyStates', { states: formatList(check.states, { type: 'disjunction' }) }) };
     }
 
     // The state is a single basis state
     case 'collapsed': {
       const pass = probs.some(p => close(p, 1));
-      return { pass, text: 'The state has collapsed to a single basis state' };
+      return { pass, text: t('check.collapsed') };
     }
 
     case 'measured':
-      return { pass: measured === check.label, text: `Last measurement: ${check.label} (found ${measured})` };
+      return { pass: measured === check.label, text: t('check.measured', { label: check.label, found: measurementText(measured) }) };
 
     // The last measurement result is the state the qubits are now in
     case 'measuredMatchesState': {
       const pass = typeof measured === 'string' && /^\|[01]+⟩$/.test(measured) &&
         close(probs[labelIndex(measured, n)], 1);
-      return { pass, text: `The state is the last measured result (${measured})` };
+      return { pass, text: t('check.measuredMatchesState', { found: measurementText(measured) }) };
     }
 
     default:
@@ -167,7 +173,7 @@ export function runOps(ops, n, start = null, random = Math.random, { noisyRun = 
       const bits = Object.fromEntries([...m.label.replace(/[|⟩]/g, '')].map((d, q) => [q, Number(d)]));
       state = { re: m.re, im: m.im, rho: null, measured: m.label, bits };
     } else if (kind === 'measureQubit') {
-      const bits = bit => ({ measured: `qubit ${a} gave ${bit}`, bits: { ...state.bits, [a]: bit } });
+      const bits = bit => ({ measured: { qubit: a, bit }, bits: { ...state.bits, [a]: bit } });
       if (state.rho) {
         const m = engine.rhoMeasureQubit(state.rho, a, n, random);
         state = { ...engine.probabilityAmplitudes(m.rho), rho: m.rho, ...bits(m.bit) };

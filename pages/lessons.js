@@ -47,22 +47,17 @@ export const Lessons = {
       <app-nav />
 
       <div class="card">
-        <h1>Lessons</h1>
-        <p>
-          One path from a single qubit to three-qubit entanglement, in
-          {{ parts.reduce((sum, p) => sum + p.lessons.length, 0) }} short lessons.
-          In each one you set up the lab, <strong>predict</strong> what will happen,
-          then try it and see.
-        </p>
+        <h1>{{ $t('lessons.title') }}</h1>
+        <i18n-t k="lessons.intro" tag="p" :params="{ count: parts.reduce((sum, p) => sum + p.lessons.length, 0) }" />
         <p v-if="answered" class="tally">
-          Your predictions: {{ correct }} of {{ answered }} right first time.
-          <button class="link-button" @click="resetTally">Start over</button>
+          {{ $t('lessons.tally', { correct, count: answered }) }}
+          <button class="link-button" @click="resetTally">{{ $t('lessons.startOver') }}</button>
         </p>
-        <p class="caption">Your predictions are stored only in this browser.</p>
+        <p class="caption">{{ $t('lessons.stored') }}</p>
       </div>
 
       <div v-for="part in parts" :key="part.part" class="card">
-        <h2>Part {{ part.part }}: {{ part.title }}</h2>
+        <h2>{{ $t('lessons.part', { part: part.part, title: part.title }) }}</h2>
         <ol class="lesson-list" :start="part.lessons[0].number">
           <li v-for="lesson in part.lessons" :key="lesson.id">
             <router-link :to="'/lessons/' + lesson.id">{{ lesson.title }}</router-link>
@@ -70,7 +65,7 @@ export const Lessons = {
               v-if="lesson.id in predictions"
               class="badge"
               :class="predictions[lesson.id] ? 'right' : 'wrong'"
-            >{{ predictions[lesson.id] ? 'predicted ✓' : 'predicted ✗' }}</span>
+            >{{ $t(predictions[lesson.id] ? 'lessons.predictedRight' : 'lessons.predictedWrong') }}</span>
             <div class="caption">{{ lesson.goal }}</div>
           </li>
         </ol>

@@ -3,6 +3,9 @@
 
 import * as engine from '../engine.js';
 import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
+import { t, formatNumber } from '../i18n.js';
+
+const fmt2 = v => formatNumber(v, { digits: 2 });
 
 // Node positions as fractions of the width and height
 const NODES = {
@@ -21,14 +24,9 @@ export const CorrelationGraph = {
 
   template: `
     <div class="card">
-      <h2>Correlation Graph</h2>
+      <h2>{{ $t('correlation.title') }}</h2>
       <canvas ref="canvas" role="img" :aria-label="summary"></canvas>
-      <p class="caption">
-        Each edge shows how reliably two qubits' measured bits agree or disagree
-        (1.00 = always, 0.00 = as often one way as the other). It is not a measure
-        of entanglement: |{{ '0'.repeat(n) }}⟩ shows 1.00 although nothing is
-        entangled, and an entangled pair can show 0.00.
-      </p>
+      <p class="caption">{{ $t('correlation.caption', { one: fmt2(1), zero: fmt2(0), state: '|' + '0'.repeat(n) + '⟩' }) }}</p>
     </div>
   `,
 
@@ -47,8 +45,9 @@ export const CorrelationGraph = {
       return result;
     },
     summary() {
-      return 'Correlation graph: ' +
-        this.edges.map(e => `Q${e.q1} and Q${e.q2} ${e.strength.toFixed(2)}`).join(', ');
+      return t('correlation.aria', {
+        list: this.edges.map(e => t('correlation.edge', { q1: e.q1, q2: e.q2, value: fmt2(e.strength) })).join(t('list.separator'))
+      });
     }
   },
 
@@ -56,6 +55,8 @@ export const CorrelationGraph = {
   watch: { re() { this.draw(); }, im() { this.draw(); } },
 
   methods: {
+    fmt2,
+
     draw() {
       const canvas = this.$refs.canvas;
       if (!canvas) return;
@@ -80,7 +81,7 @@ export const CorrelationGraph = {
         ctx.lineTo(b.x, b.y);
         ctx.stroke();
         ctx.fillStyle = colors.text;
-        ctx.fillText(edge.strength.toFixed(2), (a.x + b.x) / 2, (a.y + b.y) / 2 - 10);
+        ctx.fillText(fmt2(edge.strength), (a.x + b.x) / 2, (a.y + b.y) / 2 - 10);
       }
 
       ctx.textBaseline = 'middle';

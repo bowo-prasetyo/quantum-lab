@@ -14,11 +14,12 @@
 
 import * as engine from '../engine.js';
 import { percent } from '../describe.js';
+import { t, formatNumber, formatPercent } from '../i18n.js';
 
 const SHOT_CHOICES = [100, 1000];
 
 // "−0.4%" with a real minus sign
-const signedPercent = p => percent(p).replace('-', '−');
+const signedPercent = p => formatPercent(Math.round(p * 1000) / 1000, { digits: 1, minus: true });
 
 export const ShotsHistogram = {
   props: {
@@ -33,36 +34,32 @@ export const ShotsHistogram = {
 
   template: `
     <div class="card shots">
-      <h2>Shots</h2>
-      <p class="caption">
-        A quantum computer can’t show you amplitudes. It runs the circuit again
-        and again, measuring each time, and counts the results. Each shot here
-        starts from the current state; the state itself doesn’t change.
-      </p>
+      <h2>{{ $t('shots.title') }}</h2>
+      <p class="caption">{{ $t('shots.intro') }}</p>
 
       <div class="shots-readout">
         <label class="check-label">
-          <input type="checkbox" v-model="readout"> Readout errors
+          <input type="checkbox" v-model="readout"> {{ $t('shots.readout') }}
         </label>
         <template v-if="readout">
           <label class="shots-rate">
-            Read 1 as 0
-            <input type="range" min="0" max="20" step="1" v-model.number="oneAsZero" :aria-valuetext="oneAsZero + '%'">
-            <output>{{ oneAsZero }}%</output>
+            {{ $t('shots.oneAsZero') }}
+            <input type="range" min="0" max="20" step="1" v-model.number="oneAsZero" :aria-valuetext="pct(oneAsZero / 100)">
+            <output>{{ pct(oneAsZero / 100) }}</output>
           </label>
           <label class="shots-rate">
-            Read 0 as 1
-            <input type="range" min="0" max="20" step="1" v-model.number="zeroAsOne" :aria-valuetext="zeroAsOne + '%'">
-            <output>{{ zeroAsOne }}%</output>
+            {{ $t('shots.zeroAsOne') }}
+            <input type="range" min="0" max="20" step="1" v-model.number="zeroAsOne" :aria-valuetext="pct(zeroAsOne / 100)">
+            <output>{{ pct(zeroAsOne / 100) }}</output>
           </label>
           <label class="check-label">
-            <input type="checkbox" v-model="mitigate"> Correct for readout errors (mitigation)
+            <input type="checkbox" v-model="mitigate"> {{ $t('shots.mitigate') }}
           </label>
         </template>
       </div>
 
       <div class="button-grid shots-buttons">
-        <button v-for="s in SHOT_CHOICES" :key="s" class="secondary" @click="run(s)">Run {{ s }} shots</button>
+        <button v-for="s in SHOT_CHOICES" :key="s" class="secondary" @click="run(s)">{{ $t('shots.run', { count: s, shots: num(s) }) }}</button>
       </div>
 
       <p class="shots-summary" role="status">{{ summary }}</p>
@@ -76,30 +73,14 @@ export const ShotsHistogram = {
             <span v-if="row.p" class="shots-expected" :style="{ left: row.markerLeft }"></span>
           </span>
           <span class="shots-count">
-            {{ row.count }} <span class="shots-detail">({{ row.observed }}<template v-if="row.corrected">, corrected {{ row.corrected }}</template>, exact {{ row.expected }})</span>
+            {{ num(row.count) }} <span class="shots-detail">({{ $t(row.corrected ? 'shots.detailCorrected' : 'shots.detail', row) }})</span>
           </span>
         </li>
       </ul>
-      <p v-if="counts" class="caption">
-        The bar is how often each result came up; the line marks its exact
-        probability. Run again: the counts change, but they stay close to the
-        lines, and closer with more shots.
-      </p>
-      <p v-if="counts && recordedWith" class="caption shots-readout-note">
-        These counts are what was <em>recorded</em>, with each bit misread now and
-        then (1 as 0: {{ pct(recordedWith.oneAsZero) }}, 0 as 1: {{ pct(recordedWith.zeroAsOne) }}).
-        The state didn’t change: results with no line, which the state can never
-        give, come from misreading alone. Real qubits are read 1 as 0 more often,
-        because a qubit can decay while it is being read.
-      </p>
-      <p v-if="counts && corrections" class="caption shots-readout-note">
-        The purple bars correct for it: knowing the error rates (the confusion
-        matrix, measured beforehand on real hardware), the counts are worked back
-        to estimates of the true probabilities, with no quantum error correction
-        needed. With few shots the estimates scatter, and can even dip below 0%,
-        because undoing the errors amplifies the random scatter too; with more
-        shots they settle near the lines.
-      </p>
+      <p v-if="counts" class="caption">{{ $t('shots.explain') }}</p>
+      <i18n-t v-if="counts && recordedWith" k="shots.recorded" tag="p" class="caption shots-readout-note"
+        :params="{ oneAsZero: pct(recordedWith.oneAsZero), zeroAsOne: pct(recordedWith.zeroAsOne) }" />
+      <p v-if="counts && corrections" class="caption shots-readout-note">{{ $t('shots.corrected', { zero: pct(0) }) }}</p>
     </div>
   `,
 
@@ -164,6 +145,7 @@ export const ShotsHistogram = {
           p,
           observed: percent(fraction),
           expected: percent(p),
+          // The corrected estimate's text, '' without one
           corrected: est === null ? '' : signedPercent(Math.abs(est) < 5e-4 ? 0 : est),
           barWidth: `${fraction * 100}%`,
           correctedWidth: est === null ? null : `${Math.min(1, Math.max(0, est)) * 100}%`,
@@ -175,13 +157,14 @@ export const ShotsHistogram = {
 
     // e.g. "100 shots: |00⟩ 52, |11⟩ 48."
     summary() {
-      if (!this.counts) return 'No shots run yet for this state.';
-      const seen = this.rows.filter(r => r.count).map(r => `${r.label} ${r.count}`);
-      const how = this.recordedWith ? ', read out with errors' : '';
-      let text = `${this.shots} shots${how}: ${seen.join(', ')}.`;
+      if (!this.counts) return t('shots.none');
+      const sep = t('list.separator');
+      const seen = this.rows.filter(r => r.count).map(r => t('shots.count', { label: r.label, count: this.num(r.count) })).join(sep);
+      let text = t(this.recordedWith ? 'shots.summaryErrors' : 'shots.summary', { count: this.shots, shots: this.num(this.shots), list: seen });
       if (this.corrections) {
-        const est = this.rows.filter(r => r.corrected && r.corrected !== '0%').map(r => `${r.label} ${r.corrected}`);
-        text += ` Corrected: ${est.join(', ')}.`;
+        const zero = signedPercent(0);
+        const est = this.rows.filter(r => r.corrected && r.corrected !== zero).map(r => t('describe.outcome', { label: r.label, percent: r.corrected })).join(sep);
+        text += ' ' + t('shots.summaryCorrected', { list: est });
       }
       return text;
     }
@@ -190,6 +173,10 @@ export const ShotsHistogram = {
   methods: {
     pct(p) {
       return percent(p);
+    },
+    // A whole number in the language's style
+    num(v) {
+      return formatNumber(v);
     },
 
     run(shots, random = Math.random) {

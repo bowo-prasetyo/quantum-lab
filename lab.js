@@ -22,7 +22,8 @@ import { CircuitTimeline } from './components/circuit-timeline.js';
 import { circuitStepApply } from './components/unitary-view.js';
 import { NoisePanel } from './components/noise-panel.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
-import { describeState } from './describe.js';
+import { describeState, measurementText } from './describe.js';
+import { t, formatNumber, formatPercent, formatList, capitalize } from './i18n.js';
 import { getPref, setPref } from './prefs.js';
 import { loadPredictions } from './progress.js';
 import { lessonById } from './lessons.js';
@@ -43,20 +44,9 @@ const ADVANCED = ['noise', 'density', 'unitary', 'correlation', 'pauli', 'entang
 const reachedAdvancedLessons = () =>
   Object.keys(loadPredictions()).some(id => (lessonById(id)?.part ?? 0) >= 3);
 
-// The views, in display order, with their tab labels on narrow screens
-const VIEWS = [
-  { key: 'table', label: 'State' },
-  { key: 'probabilities', label: 'Probabilities' },
-  { key: 'shots', label: 'Shots' },
-  { key: 'bloch', label: 'Bloch spheres' },
-  { key: 'interference', label: 'Interference' },
-  { key: 'density', label: 'Density matrix' },
-  { key: 'unitary', label: 'Unitary' },
-  { key: 'correlation', label: 'Correlations' },
-  { key: 'pauli', label: 'Pauli' },
-  { key: 'entanglement', label: 'Entanglement' },
-  { key: 'cube', label: '3D' }
-];
+// The views, in display order; each tab label on narrow screens is the
+// message 'view.<key>' (a plural by the number of qubits, for Bloch spheres)
+const VIEWS = ['table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube'];
 
 // The remembered noise choice, or the default if none (or a bad one) is saved
 function savedNoise() {
@@ -154,7 +144,7 @@ export const Lab = {
   template: `
     <div :class="{ container: !embedded, wide: !embedded }">
       <!-- Tells screen-reader users what each action did and what the state
-           is now ("H on qubit 0. |0⟩ 50%, |1⟩ 50%"). Not shown on screen:
+           is now ("H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%."). Not shown on screen:
            sighted users see it in the views. -->
       <p class="visually-hidden" role="status" aria-live="polite" data-testid="announcer">{{ announcement }}</p>
 
@@ -162,37 +152,26 @@ export const Lab = {
         <app-nav />
 
         <div class="card" :class="{ welcome }">
-          <h1>Glass Qubit: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
+          <h1>{{ $t('lab.title', { count: n }) }}</h1>
 
           <!-- First visit: a choice between the lessons and free play -->
           <template v-if="welcome">
-            <p class="welcome-lead">
-              <strong>Welcome!</strong> Learn how a quantum computer works by trying it:
-              press gates and watch every view change. Nothing to install, no account,
-              and everything stays in this browser.
-            </p>
-            <p>
-              New to quantum computing? Short lessons take you from one qubit to
-              entanglement, each starting with a prediction.
-            </p>
+            <i18n-t k="lab.welcomeLead" tag="p" class="welcome-lead" />
+            <p>{{ $t('lab.welcomeNew') }}</p>
             <div class="button-grid welcome-actions">
-              <router-link to="/lessons/bit-flip" class="button-link" @click="dismissWelcome">Start lesson 1</router-link>
-              <button class="secondary" @click="dismissWelcome">Explore the lab</button>
+              <router-link to="/lessons/bit-flip" class="button-link" @click="dismissWelcome">{{ $t('lab.startLesson1') }}</router-link>
+              <button class="secondary" @click="dismissWelcome">{{ $t('lab.explore') }}</button>
             </div>
           </template>
 
-          <p v-else>
-            {{ 1 << n }} basis states, from |{{ '0'.repeat(n) }}⟩ to |{{ '1'.repeat(n) }}⟩.
-            Apply gates and watch every view change.
-            New here? Start with the <router-link to="/lessons">lessons</router-link>.
-          </p>
+          <i18n-t v-else k="lab.intro" tag="p"
+            :params="{ count: 1 << n, first: '|' + '0'.repeat(n) + '⟩', last: '|' + '1'.repeat(n) + '⟩' }" />
         </div>
       </template>
 
       <div v-if="importedFrom" class="card notice" role="status">
-        Welcome back! We brought over your saved state{{ circuit.length ? ' and circuit' : '' }}
-        from the {{ importedFrom }}.
-        <button class="link-button" @click="importedFrom = null">Dismiss</button>
+        {{ $t(circuit.length ? 'lab.importedWithCircuit' : 'lab.imported', { count: n }) }}
+        <button class="link-button" @click="importedFrom = null">{{ $t('lab.dismiss') }}</button>
       </div>
 
       <div class="workbench">
@@ -271,7 +250,7 @@ export const Lab = {
             v-if="tabbed"
             class="view-tabs"
             role="tablist"
-            aria-label="Views"
+            :aria-label="$t('lab.viewsAria')"
             @keydown="onTabKeydown"
           >
             <button
@@ -326,14 +305,14 @@ export const Lab = {
           <!-- Free lab: the advanced views are one switch away -->
           <div v-if="!panels" class="card advanced-toggle">
             <p>
-              <strong>Advanced views:</strong> {{ advancedNames }}.
-              <template v-if="!showAdvanced">They build on ideas from Part 3 of the lessons.</template>
+              <i18n-t k="lab.advancedViews" :params="{ list: advancedNames }" />
+              <template v-if="!showAdvanced">{{ ' ' + $t('lab.advancedWhy') }}</template>
             </p>
             <button
               class="secondary"
               :aria-pressed="String(showAdvanced)"
               @click="toggleAdvanced"
-            >{{ showAdvanced ? 'Hide advanced views' : 'Show advanced views' }}</button>
+            >{{ $t(showAdvanced ? 'lab.hideAdvanced' : 'lab.showAdvanced') }}</button>
           </div>
         </div>
       </div>
@@ -350,21 +329,20 @@ export const Lab = {
       return engine.withoutGlobalPhase(this.stateRe, this.stateIm);
     },
 
-    // e.g. "the density matrix, correlations, entanglement and the 3D view"
+    // e.g. "Noise, the density matrix, the unitary matrix, correlations, … and the 3D view"
     advancedNames() {
-      const names = ['noise', 'the density matrix', 'the unitary matrix'];
-      if (this.n >= 2) names.push('correlations', 'Pauli expectations', 'entanglement');
-      if (this.n === 3) names.push('the 3D view');
-      const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
-      return text.charAt(0).toUpperCase() + text.slice(1);
+      const keys = ['noise', 'density', 'unitary'];
+      if (this.n >= 2) keys.push('correlation', 'pauli', 'entanglement');
+      if (this.n === 3) keys.push('cube');
+      return capitalize(formatList(keys.map(k => t(`advanced.${k}`))));
     },
 
     // The views this lab shows, in order, with their tab labels
     views() {
       return VIEWS
-        .filter(v => this.show(v.key))
-        .filter(v => !(['correlation', 'pauli', 'entanglement'].includes(v.key) && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
-        .map(v => ({ key: v.key, label: v.key === 'bloch' && this.n === 1 ? 'Bloch sphere' : v.label }));
+        .filter(key => this.show(key))
+        .filter(key => !(['correlation', 'pauli', 'entanglement'].includes(key) && this.n < 2) && !(key === 'cube' && this.n !== 3))
+        .map(key => ({ key, label: t(`view.${key}`, { count: this.n }) }));
     },
 
     // Tabs only on narrow screens, and only if there is more than one view
@@ -483,7 +461,7 @@ export const Lab = {
         const digits = reply.measured.replace(/[|⟩]/g, '');
         this.bits = Object.fromEntries([...digits].map((d, q) => [q, Number(d)]));
       } else if (reply.bit !== undefined) {
-        this.measurement = `qubit ${reply.qubit} gave ${reply.bit}`;
+        this.measurement = { qubit: reply.qubit, bit: reply.bit };
         this.bits = { ...this.bits, [reply.qubit]: reply.bit };
       }
 
@@ -538,7 +516,7 @@ export const Lab = {
       setPref('hide-global-phase', this.hideGlobalPhase);
       this.announcement = '';
       this.$nextTick(() => {
-        this.announcement = this.hideGlobalPhase ? 'Global phase hidden' : 'Global phase shown';
+        this.announcement = t(this.hideGlobalPhase ? 'announce.globalPhaseHidden' : 'announce.globalPhaseShown');
       });
     },
 
@@ -639,7 +617,7 @@ export const Lab = {
         this.stepIndex = last.stepIndex;
         this.frames = last.frames;
         await this.save();
-        this.announce('Undone');
+        this.announce(t('announce.undone'));
       });
     },
 
@@ -647,7 +625,7 @@ export const Lab = {
 
     /** Announces what just happened, followed by the state it left. */
     announce(what) {
-      const text = `${what}. Now: ${describeState(this.stateRe, this.stateIm, this.n)}.`;
+      const text = t('announce.now', { what, state: describeState(this.stateRe, this.stateIm, this.n) });
       // Clear first, so the same message twice in a row is read twice
       this.announcement = '';
       this.$nextTick(() => { this.announcement = text; });
@@ -658,7 +636,7 @@ export const Lab = {
       const count = this.circuit.length;
       this.announcement = '';
       this.$nextTick(() => {
-        this.announcement = `${what}. The circuit has ${count} ${count === 1 ? 'step' : 'steps'}.`;
+        this.announcement = t('announce.circuit', { what, count });
       });
     },
 
@@ -689,54 +667,55 @@ export const Lab = {
 
     applyGate(gate, targetQubit) {
       return this.act(() => this.runOnWorker({ type: 'gate', gate, targetQubit }),
-        `${gate} on qubit ${targetQubit}`);
+        t('announce.gate', { gate, qubit: targetQubit }));
     },
 
     applyCNOT(control, target) {
       return this.act(() => this.runOnWorker({ type: 'cnot', control, target }),
-        `CNOT, control qubit ${control}, target qubit ${target}`);
+        t('announce.cnot', { control, target }));
     },
 
     applyCZ(control, target) {
       return this.act(() => this.runOnWorker({ type: 'cz', control, target }),
-        `CZ on qubits ${control} and ${target}`);
+        t('announce.cz', { control, target }));
     },
 
     measure() {
       return this.act(() => this.runOnWorker({ type: 'measure' }),
-        () => `Measured every qubit: ${this.measurement}`);
+        () => t('announce.measureAll', { result: measurementText(this.measurement) }));
     },
 
     measureQubit(qubit) {
       return this.act(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }),
-        () => `Measured qubit ${qubit}: ${this.bits[qubit]}`);
+        () => t('announce.measureQubit', { qubit, bit: this.bits[qubit] }));
     },
 
     /** Noise on one qubit, or on every qubit ('all'). Makes the state mixed. */
     applyNoise(channel, qubit, strength) {
       const qubits = qubit === 'all' ? [...Array(this.n).keys()] : [qubit];
-      const names = { dephasing: 'Dephasing', depolarizing: 'Depolarizing', damping: 'Amplitude damping' };
       return this.act(async () => {
         for (const q of qubits) {
           await this.runOnWorker({ type: 'noise', channel, targetQubit: q, strength });
         }
-      }, `${names[channel]} noise, ${Math.round(strength * 100)}%, on ${qubit === 'all' ? 'every qubit' : 'qubit ' + qubit}`);
+      }, t(qubit === 'all' ? 'announce.noiseAll' : 'announce.noiseQubit', {
+        channel: t(`noise.${channel}`), percent: formatPercent(strength, { digits: 0 }), qubit
+      }));
     },
 
     reset() {
       return this.act(async () => {
         this.resetState();
         await this.save();
-      }, 'Reset');
+      }, t('announce.reset'));
     },
 
     // Presets start from |0…0⟩ so they always give the advertised state.
     createBellState() {
-      return this.act(() => this.bellSteps(), 'Bell pair created');
+      return this.act(() => this.bellSteps(), t('announce.bell'));
     },
 
     createGHZState() {
-      return this.act(() => this.ghzSteps(), 'GHZ state created');
+      return this.act(() => this.ghzSteps(), t('announce.ghz'));
     },
 
     // Preset sequences; call only from inside a queued task
@@ -763,7 +742,7 @@ export const Lab = {
       this.frames = [];
       this.circuit.push(step);
       this.save();
-      this.announceCircuit(`Added ${stepLabel(step)}`);
+      this.announceCircuit(t('announce.added', { step: stepLabel(step) }));
     },
 
     removeStep(index) {
@@ -772,7 +751,7 @@ export const Lab = {
       this.frames = [];
       const [removed] = this.circuit.splice(index, 1);
       this.save();
-      this.announceCircuit(`Removed ${stepLabel(removed)}`);
+      this.announceCircuit(t('announce.removed', { step: stepLabel(removed) }));
     },
 
     clearCircuit() {
@@ -782,7 +761,7 @@ export const Lab = {
       this.frames = [];
       this.circuit.splice(0);
       this.save();
-      this.announceCircuit('Circuit cleared');
+      this.announceCircuit(t('announce.cleared'));
     },
 
     /**
@@ -815,8 +794,10 @@ export const Lab = {
         }
         await this.save();
         const f = this.frames.at(-1)?.fidelity;
-        const fid = f !== null && f !== undefined && f < 0.9995 ? `, fidelity with the noiseless run ${f.toFixed(2)}` : '';
-        this.announce(`Circuit finished: ${this.circuit.length} ${this.circuit.length === 1 ? 'step' : 'steps'} applied${fid}`);
+        const noisy = f !== null && f !== undefined && f < 0.9995;
+        this.announce(t(noisy ? 'announce.finishedNoisy' : 'announce.finished', {
+          count: this.circuit.length, fidelity: noisy ? formatNumber(f, { digits: 2 }) : ''
+        }));
       });
     },
 
@@ -842,7 +823,7 @@ export const Lab = {
         // Stepping on from an earlier frame replaces the frames after it
         this.frames = [...this.frames.slice(0, this.stepIndex), this.snapshot(this.nextIdeal(ideal, step))];
         await this.save();
-        this.announce(`Step ${this.stepIndex} of ${this.circuit.length}: ${stepLabel(step)}`);
+        this.announce(t('announce.step', { k: this.stepIndex, total: this.circuit.length, step: stepLabel(step) }));
       });
     },
 
@@ -901,8 +882,8 @@ export const Lab = {
         if (oneForward) this.stepSerial++;
         this.stepIndex = k;
         await this.save();
-        this.announce(k === 0 ? 'Back to the start of the run'
-          : `Step ${k} of ${this.circuit.length}: ${stepLabel(this.circuit[k - 1])}`);
+        this.announce(k === 0 ? t('announce.backToStart')
+          : t('announce.step', { k, total: this.circuit.length, step: stepLabel(this.circuit[k - 1]) }));
       });
     },
 
@@ -936,7 +917,7 @@ export const Lab = {
           this.running = false;
         }
         await this.save();
-        if (delay) this.announce('Show me finished');
+        if (delay) this.announce(t('announce.showMe'));
       });
     },
 

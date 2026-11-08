@@ -13,6 +13,7 @@
 //   the entropies (exact for pure states, which is all this lab makes).
 
 import * as engine from '../engine.js';
+import { t, formatNumber } from '../i18n.js';
 
 const EPS = 1e-6;
 
@@ -22,12 +23,12 @@ const NODES = {
   3: [{ x: 100, y: 22 }, { x: 40, y: 98 }, { x: 160, y: 98 }]
 };
 
-const fmt = v => (Math.abs(v) < 0.005 ? 0 : v).toFixed(2);
+const fmt = v => formatNumber(Math.abs(v) < 0.005 ? 0 : v, { digits: 2 });
 
 function entropyWord(s) {
-  if (s < EPS) return 'not entangled';
-  if (s > 1 - EPS) return 'maximally entangled';
-  return 'partly entangled';
+  if (s < EPS) return t('entanglement.none');
+  if (s > 1 - EPS) return t('entanglement.maximal');
+  return t('entanglement.partial');
 }
 
 /**
@@ -38,21 +39,17 @@ export function entanglementVerdict(entropies) {
   const n = entropies.length;
   const free = entropies.map((s, q) => (s < EPS ? q : -1)).filter(q => q >= 0);
 
-  if (free.length === n) return 'No entanglement: every qubit has a state of its own.';
+  if (free.length === n) return t('entanglement.verdictNone');
 
-  if (n === 2) {
-    return entropies[0] > 1 - EPS
-      ? 'Qubits 0 and 1 are maximally entangled, as in a Bell pair.'
-      : 'Qubits 0 and 1 are partly entangled.';
-  }
+  if (n === 2) return t(entropies[0] > 1 - EPS ? 'entanglement.verdictBell' : 'entanglement.verdictPartial');
 
   if (free.length === 1) {
     const [a, b] = [0, 1, 2].filter(q => q !== free[0]);
-    return `Qubits ${a} and ${b} are entangled with each other; qubit ${free[0]} is separate.`;
+    return t('entanglement.verdictPair', { a, b, free: free[0] });
   }
 
   // No qubit can be split off, so all three are entangled together
-  return 'All three qubits are entangled together: none can be split off from the others, as in a GHZ state.';
+  return t('entanglement.verdictAll');
 }
 
 export const EntanglementPanel = {
@@ -66,31 +63,25 @@ export const EntanglementPanel = {
 
   template: `
     <div class="card entanglement">
-      <h2>Entanglement</h2>
-      <p v-if="mixed" class="entanglement-mixed">
-        The state is mixed (noise was applied). These measures only work for a pure
-        state: in a mixed one, a qubit’s entropy can come from noise as well as from
-        entanglement, so this view is paused until Measure all or Reset.
-      </p>
+      <h2>{{ $t('entanglement.title') }}</h2>
+      <p v-if="mixed" class="entanglement-mixed">{{ $t('entanglement.mixed', { measureAll: $t('gates.measureAll'), reset: $t('gates.reset') }) }}</p>
       <template v-else>
       <p class="entanglement-verdict"><strong>{{ verdict }}</strong></p>
 
-      <h3>Each qubit</h3>
+      <h3>{{ $t('entanglement.eachQubit') }}</h3>
       <ul class="entropy-rows">
         <li v-for="row in qubits" :key="row.q" class="entropy-row">
-          <span class="entropy-label">Qubit {{ row.q }}</span>
+          <span class="entropy-label">{{ $t('bloch.qubit', { qubit: row.q }) }}</span>
           <span class="entropy-track" aria-hidden="true"><span class="entropy-bar" :style="{ width: row.width }"></span></span>
-          <span class="entropy-value">S = {{ row.value }} <span class="entropy-word">({{ row.word }})</span></span>
+          <span class="entropy-value">{{ $t('entanglement.entropy', { value: row.value }) }} <span class="entropy-word">({{ row.word }})</span></span>
         </li>
       </ul>
       <p class="caption">
-        Entanglement entropy S, from 0 (the qubit has a state of its own) to 1
-        bit (maximally entangled). It grows as the qubit’s Bloch vector shrinks.
-        <template v-if="n === 3">With three qubits, splitting one off from the other two is
-        the only way to divide them, so these three numbers cover every split.</template>
+        {{ $t('entanglement.entropyCaption') }}
+        <template v-if="n === 3">{{ $t('entanglement.entropyCaption3') }}</template>
       </p>
 
-      <h3>Each pair</h3>
+      <h3>{{ $t('entanglement.eachPair') }}</h3>
       <svg class="mi-graph" viewBox="0 0 200 120" role="img" :aria-label="pairSummary">
         <g v-for="e in pairs" :key="e.key">
           <line :x1="e.a.x" :y1="e.a.y" :x2="e.b.x" :y2="e.b.y" class="mi-edge" :stroke-width="e.width" />
@@ -101,13 +92,7 @@ export const EntanglementPanel = {
           <text :x="node.x" :y="node.y + 4" class="mi-node-label" text-anchor="middle">Q{{ q }}</text>
         </g>
       </svg>
-      <p class="caption">
-        Mutual information I, from 0 (the two qubits’ results are unrelated,
-        whatever you measure) to 2 bits. It counts every kind of link, so it is
-        positive between qubits of a GHZ state even though no two of them are a
-        Bell pair. Unlike the correlation graph, it shows 0 for
-        |{{ '0'.repeat(n) }}⟩.
-      </p>
+      <p class="caption">{{ $t('entanglement.miCaption', { state: '|' + '0'.repeat(n) + '⟩' }) }}</p>
       </template>
     </div>
   `,
@@ -150,7 +135,9 @@ export const EntanglementPanel = {
     },
 
     pairSummary() {
-      return 'Mutual information: ' + this.pairs.map(e => `Q${e.q1} and Q${e.q2} ${e.value} bits`).join(', ');
+      return t('entanglement.miAria', {
+        list: this.pairs.map(e => t('entanglement.miPair', { q1: e.q1, q2: e.q2, value: e.value })).join(t('list.separator'))
+      });
     },
 
     verdict() {

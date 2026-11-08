@@ -38,7 +38,10 @@ export const Lesson = {
       firstCorrect: lesson ? loadPredictions()[lesson.id] : undefined,
       firstPick: lesson ? firstChoice(lesson.id) : null,
       practice: false,          // answering again for practice; doesn't change the tally
-      checkResult: null,        // { pass, results } after "Check my result"
+      // The lab's state when "Check my result" (or Show me) last checked it,
+      // or null; checkResult is worked out from it, so its text follows a
+      // change of language
+      checkedState: null,
       busy: false
     };
   },
@@ -81,6 +84,13 @@ export const Lesson = {
     },
     usesEditor() {
       return this.lesson.panels.includes('editor');
+    },
+    // { pass, results } for the last check, or null
+    checkResult() {
+      return this.checkedState ? evaluateChecks(this.lesson.checks, this.checkedState) : null;
+    },
+    lessonCount() {
+      return LESSONS.length;
     }
   },
 
@@ -119,7 +129,7 @@ export const Lesson = {
     },
 
     async setUp() {
-      this.checkResult = null;
+      this.checkedState = null;
       this.busy = true;
       try {
         this.prepareNoise();
@@ -131,7 +141,7 @@ export const Lesson = {
 
     // Runs the lesson's steps for the learner, slowly enough to follow
     async showMe() {
-      this.checkResult = null;
+      this.checkedState = null;
       this.busy = true;
       try {
         this.prepareNoise();
@@ -152,7 +162,8 @@ export const Lesson = {
     async check() {
       // Wait for any queued operations to finish first
       await this.$refs.lab.queue;
-      this.checkResult = evaluateChecks(this.lesson.checks, this.$refs.lab.getState());
+      // Frozen: Vue needn't watch inside it
+      this.checkedState = Object.freeze(this.$refs.lab.getState());
     }
   },
 
@@ -161,24 +172,24 @@ export const Lesson = {
       <app-nav />
 
       <div v-if="!lesson" class="card">
-        <h1>Lesson not found</h1>
-        <p><router-link to="/lessons">See all lessons</router-link></p>
+        <h1>{{ $t('lesson.notFound') }}</h1>
+        <p><router-link to="/lessons">{{ $t('lesson.seeAll') }}</router-link></p>
       </div>
 
       <template v-else>
         <div class="lesson-intro">
           <div class="card">
             <p class="caption">
-              <router-link to="/lessons">Lessons</router-link>
-              · Part {{ part.part }}: {{ part.title }} · Lesson {{ index + 1 }} of {{ LESSON_COUNT }}
+              <router-link to="/lessons">{{ $t('nav.lessons') }}</router-link>
+              · {{ $t('lessons.part', { part: part.part, title: part.title }) }} · {{ $t('lesson.position', { k: index + 1, total: lessonCount }) }}
             </p>
             <h1>{{ lesson.title }}</h1>
-            <p><strong>Goal:</strong> {{ lesson.goal }}</p>
-            <p><strong>Why it matters:</strong> {{ lesson.why }}</p>
+            <i18n-t k="lesson.goal" tag="p" :params="{ goal: lesson.goal }" />
+            <i18n-t k="lesson.why" tag="p" :params="{ why: lesson.why }" />
           </div>
 
           <div class="card predict">
-            <h2>1. Predict</h2>
+            <h2>{{ $t('lesson.predict') }}</h2>
             <p>{{ lesson.predict.question }}</p>
             <div class="options">
               <button
@@ -193,32 +204,31 @@ export const Lesson = {
                 :disabled="locked"
                 :aria-pressed="shownPick === i ? 'true' : null"
                 @click="choose(i)"
-              >{{ option }}<span v-if="locked && i === lesson.predict.answer" class="visually-hidden"> (the right answer)</span><span v-if="locked && shownPick === i && i !== lesson.predict.answer" class="visually-hidden"> (your answer)</span></button>
+              >{{ option }}<span v-if="locked && i === lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.rightAnswer') }}</span><span v-if="locked && shownPick === i && i !== lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.yourAnswer') }}</span></button>
             </div>
 
             <!-- Practice answer -->
             <template v-if="practice">
               <p v-if="predicted" class="verdict" role="status">
-                Practice: {{ shownRight ? '✓ Right!' : '✗ Not quite. The right answer is marked in green.' }}
+                {{ $t(shownRight ? 'lesson.practiceRight' : 'lesson.practiceWrong') }}
               </p>
-              <p class="caption">Practice answers don’t change your tally: your first prediction stands.</p>
+              <p class="caption">{{ $t('lesson.practiceNote') }}</p>
             </template>
 
             <!-- First answer, just now -->
             <p v-else-if="predicted" class="verdict" role="status">
-              {{ shownRight ? '✓ Right!' : '✗ Not quite.' }}
-              Try it to see why.
+              {{ $t(shownRight ? 'lesson.right' : 'lesson.wrong') }}
             </p>
 
             <!-- First answer, on an earlier visit -->
             <p v-else-if="answeredBefore" class="verdict revisit">
-              Your first prediction was {{ shownRight ? 'right ✓' : 'not quite right ✗' }}.
-              <span v-if="firstPick === null" class="caption">(This browser kept only whether it was right.)</span>
+              {{ $t(shownRight ? 'lesson.firstRight' : 'lesson.firstWrong') }}
+              <span v-if="firstPick === null" class="caption">{{ $t('lesson.keptOnly') }}</span>
             </p>
 
-            <p v-else class="caption">Pick an answer before you try it. It’s fine to guess.</p>
+            <p v-else class="caption">{{ $t('lesson.pick') }}</p>
 
-            <button v-if="locked" class="secondary practice-button" @click="practiseAgain">Try again (practice)</button>
+            <button v-if="locked" class="secondary practice-button" @click="practiseAgain">{{ $t('lesson.practise') }}</button>
           </div>
         </div>
 
@@ -234,17 +244,17 @@ export const Lesson = {
         >
           <template #side>
             <div class="card">
-              <h2>2. Try it</h2>
+              <h2>{{ $t('lesson.tryIt') }}</h2>
               <ol>
                 <li v-for="(step, i) in lesson.steps" :key="i">{{ step }}</li>
               </ol>
-              <button :disabled="busy" @click="setUp">Set up again</button>
-              <button :disabled="busy || !lesson.ops.length" @click="showMe">Show me</button>
-              <button :disabled="busy" @click="check">Check my result</button>
+              <button :disabled="busy" @click="setUp">{{ $t('lesson.setUp') }}</button>
+              <button :disabled="busy || !lesson.ops.length" @click="showMe">{{ $t('lesson.showMe') }}</button>
+              <button :disabled="busy" @click="check">{{ $t('lesson.check') }}</button>
 
               <div v-if="checkResult" class="check-result" :class="checkResult.pass ? 'pass' : 'fail'" role="status">
-                <p v-if="checkResult.pass"><strong>✓ That’s the expected result.</strong></p>
-                <p v-else><strong>Not yet.</strong> Follow the steps from a fresh set-up, or press Show me.</p>
+                <i18n-t v-if="checkResult.pass" k="lesson.pass" tag="p" />
+                <i18n-t v-else k="lesson.fail" tag="p" :params="{ showMe: $t('lesson.showMe') }" />
                 <ul>
                   <li v-for="(r, i) in checkResult.results" :key="i">{{ r.pass ? '✓' : '✗' }} {{ r.text }}</li>
                 </ul>
@@ -252,7 +262,7 @@ export const Lesson = {
             </div>
 
             <div class="card" v-if="showResult">
-              <h2>3. What happened</h2>
+              <h2>{{ $t('lesson.whatHappened') }}</h2>
               <p>{{ lesson.result }}</p>
             </div>
           </template>
@@ -262,9 +272,9 @@ export const Lesson = {
           <router-link v-if="previous" :to="'/lessons/' + previous.id">← {{ previous.title }}</router-link>
           <span v-else></span>
           <router-link v-if="next" :to="'/lessons/' + next.id">{{ next.title }} →</router-link>
-          <router-link v-else to="/lab/3">Finished! Explore the 3-qubit lab →</router-link>
+          <router-link v-else to="/lab/3">{{ $t('lesson.finished') }}</router-link>
         </div>
       </template>
     </div>
-  `.replace('{{ LESSON_COUNT }}', String(LESSONS.length))
+  `
 };
