@@ -55,7 +55,7 @@ What each size shows:
 | Reset | ✓ | ✓ | ✓ |
 | Amplitude table (amplitude, probability, phase), with a Hide global phase option | ✓ | ✓ | ✓ |
 | Probability chart | 2 bars | 4 bars | 8 bars |
-| Shots: counts from 100 or 1000 runs, beside the exact probabilities | ✓ | ✓ | ✓ |
+| Shots: counts from 100 or 1000 runs, beside the exact probabilities; optional readout errors and their mitigation | ✓ | ✓ | ✓ |
 | Interference: the paths into each amplitude after the last gate | ✓ | ✓ | ✓ |
 | Bloch sphere per qubit, animating each gate as its turn | 1 | 2 | 3 |
 | Density matrix, with its purity (advanced view) | 2×2 | 4×4 | 8×8 |

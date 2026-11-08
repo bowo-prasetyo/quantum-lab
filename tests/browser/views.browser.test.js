@@ -460,3 +460,38 @@ describe('Noisy runs', () => {
       assert.equal(await timeline.locator('.fidelity').count(), 0);
     }));
 });
+
+describe('Readout errors in Shots', () => {
+  test('misreads give impossible results; mitigation works them back out', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Create Bell Pair').click();
+      await settle(page);
+      const shots = card(page, 'Shots');
+      await shots.getByRole('checkbox', { name: 'Readout errors' }).check();
+      const sliders = shots.getByRole('slider');
+      await sliders.nth(0).fill('20');
+      await sliders.nth(1).fill('15');
+      await shots.getByRole('button', { name: 'Run 1000 shots' }).click();
+
+      const summary = await shots.locator('.shots-summary').innerText();
+      assert.match(summary, /^1000 shots, read out with errors: /);
+      const count = label => Number((summary.match(new RegExp(`\\|${label}⟩ (\\d+)`)) || [0, 0])[1]);
+      assert.ok(count('01') + count('10') > 50, `impossible results recorded: ${summary}`);
+      assert.match(await shots.locator('.shots-readout-note').first().innerText(), /1 as 0: 20%, 0 as 1: 15%/);
+      assert.equal(await shots.locator('.shots-corrected').count(), 0);
+
+      // Correcting: estimates near 50/0/0/50, from the same counts
+      await shots.getByRole('checkbox', { name: /Correct for readout errors/ }).check();
+      assert.equal(await shots.locator('.shots-summary').innerText().then(t => t.startsWith(summary)), true, 'same counts');
+      assert.equal(await shots.locator('.shots-corrected').count(), 4);
+      const details = await shots.locator('.shots-detail').allInnerTexts();
+      const corrected = details.map(t => Number(t.match(/corrected (−?[\d.]+)%/)[1].replace('−', '-')));
+      assert.ok(Math.abs(corrected[0] - 50) < 12 && Math.abs(corrected[3] - 50) < 12, `${details}`);
+      assert.ok(Math.abs(corrected[1]) < 10 && Math.abs(corrected[2]) < 10, `${details}`);
+      assert.ok(Math.abs(corrected.reduce((a, b) => a + b) - 100) < 0.5, 'estimates add up to 100%');
+
+      // New rates mean new counts
+      await sliders.nth(1).fill('5');
+      assert.match(await shots.locator('.shots-summary').innerText(), /No shots run yet/);
+    }));
+});

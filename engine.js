@@ -793,3 +793,101 @@ export function fidelity(ideal, re, im, rho = null) {
   }
   return total;
 }
+
+// ---------- Readout errors ----------
+//
+// Reading a qubit out can record the wrong bit even though the qubit
+// itself landed on the right one: a classical error in the measurement
+// electronics, not a change of the quantum state. `rates` is
+// { oneAsZero, zeroAsOne }: the chance of recording 0 when the qubit gave 1,
+// and 1 when it gave 0, the same for every qubit. On real hardware reading
+// 1 as 0 is the more common, because the qubit can decay while it is read.
+
+function checkRates({ oneAsZero, zeroAsOne }) {
+  for (const p of [oneAsZero, zeroAsOne]) {
+    if (!(typeof p === 'number' && p >= 0 && p <= 1)) throw new RangeError(`readout error rates must be from 0 to 1, got ${p}`);
+  }
+}
+
+/** The recorded result for a true basis index, each bit flipped with its chance. */
+export function misread(index, n, rates, random = Math.random) {
+  checkRates(rates);
+  let out = index;
+  for (let q = 0; q < n; q++) {
+    const bit = 1 << bitOf(q, n);
+    const p = (index & bit) ? rates.oneAsZero : rates.zeroAsOne;
+    if (random() < p) out ^= bit;
+  }
+  return out;
+}
+
+/**
+ * Shots with readout errors: each shot's true outcome is drawn from the
+ * probabilities, then read out with errors. Returns the recorded counts.
+ */
+export function sampleCountsWithReadout(probs, shots, rates, n, random = Math.random) {
+  checkRates(rates);
+  const truth = sampleCountsFromProbabilities(probs, shots, random);
+  const counts = new Array(probs.length).fill(0);
+  truth.forEach((c, i) => {
+    for (let k = 0; k < c; k++) counts[misread(i, n, rates, random)]++;
+  });
+  return counts;
+}
+
+/**
+ * The confusion matrix: entry [r][t] is the chance of recording r when the
+ * true outcome is t. Each qubit's 2 × 2 matrix is [[1 − zeroAsOne, oneAsZero],
+ * [zeroAsOne, 1 − oneAsZero]]; the register's is their tensor product.
+ * Each column adds up to 1.
+ */
+export function confusionMatrix(rates, n) {
+  checkRates(rates);
+  const size = 1 << n;
+  const m = [[1 - rates.zeroAsOne, rates.oneAsZero], [rates.zeroAsOne, 1 - rates.oneAsZero]];
+  return Array.from({ length: size }, (_, r) => Array.from({ length: size }, (_, t) => {
+    let p = 1;
+    for (let q = 0; q < n; q++) {
+      const bit = bitOf(q, n);
+      p *= m[(r >> bit) & 1][(t >> bit) & 1];
+    }
+    return p;
+  }));
+}
+
+/** The recorded-result probabilities that true probabilities lead to: M·p. */
+export function recordedProbabilities(probs, rates, n) {
+  const M = confusionMatrix(rates, n);
+  return M.map(row => row.reduce((s, v, t) => s + v * probs[t], 0));
+}
+
+/**
+ * Readout error mitigation: estimates the true probabilities from recorded
+ * counts by undoing the confusion matrix, p ≈ M⁻¹ (counts / shots). M is a
+ * tensor product, so its inverse is too: each qubit's 2 × 2 inverse is
+ * applied in turn. With few shots the estimates scatter, and can even dip a
+ * little below 0, because undoing M amplifies the random scatter in the
+ * counts. Needs oneAsZero + zeroAsOne < 1 (otherwise a 0 and a 1 can't be
+ * told apart at all).
+ */
+export function mitigateCounts(counts, rates, n) {
+  checkRates(rates);
+  const det = 1 - rates.oneAsZero - rates.zeroAsOne;
+  if (!(det > 1e-9)) throw new RangeError('readout errors this large can’t be undone: oneAsZero + zeroAsOne must be below 1');
+  const shots = counts.reduce((a, b) => a + b, 0);
+  let v = counts.map(c => (shots ? c / shots : 0));
+  // Inverse of [[1 − z, o], [z, 1 − o]]
+  const inv = [[(1 - rates.oneAsZero) / det, -rates.oneAsZero / det], [-rates.zeroAsOne / det, (1 - rates.zeroAsOne) / det]];
+  for (let q = 0; q < n; q++) {
+    const bit = 1 << bitOf(q, n);
+    const next = v.slice();
+    for (let i = 0; i < v.length; i++) {
+      if (i & bit) continue;
+      const j = i | bit;
+      next[i] = inv[0][0] * v[i] + inv[0][1] * v[j];
+      next[j] = inv[1][0] * v[i] + inv[1][1] * v[j];
+    }
+    v = next;
+  }
+  return v;
+}
