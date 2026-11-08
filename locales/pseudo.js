@@ -40,3 +40,11 @@ export function pseudoMessages(messages) {
       : Object.fromEntries(Object.entries(message).map(([form, text]) => [form, pseudoText(text)]))
   ]));
 }
+
+/** Lesson and page content in pseudo-language: every string in it, at any depth. */
+export function pseudoContent(value) {
+  if (typeof value === 'string') return pseudoText(value);
+  if (Array.isArray(value)) return value.map(pseudoContent);
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, pseudoContent(v)]));
+  return value;
+}

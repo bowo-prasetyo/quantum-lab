@@ -388,6 +388,8 @@ quantum-lab/
 ├── i18n.js                # Translated messages and locale-aware numbers (see docs/I18N.md)
 ├── locale.js              # The page's language: start language, <html lang>, Vue's $t
 ├── locales/               # Messages per language: en.js (the whole interface), plus the pseudo-locale for testing
+├── content/               # Lessons, Concepts and Help text per language: en.js
+├── content.js             # That text in the current language, with button names filled in
 ├── router.js              # Routes: #/lab/:n, #/lessons, #/lessons/:id, #/concepts, #/help (#/manual → lessons)
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
 ├── components/
@@ -415,7 +417,7 @@ quantum-lab/
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js        # Quantum Concepts reference
 │   └── help.js            # How to use the controls
-├── lessons.js             # The 25 lessons, as data
+├── lessons.js             # The 25 lessons, as data (their words are in content/)
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
 ├── prefs.js               # Small per-browser preferences (welcome seen, advanced views)
@@ -455,7 +457,7 @@ They cover:
 - noise and mixed states, readout errors and their mitigation, and the maths behind the Shots, Interference, Entanglement and Unitary views
 - the one-line gate descriptions and the screen-reader state descriptions: each claim is checked against the simulator
 - every lesson: its data is complete, its prediction answer is valid, and running Set up then its steps gives the result it promises
-- translation: messages, plurals, fallbacks, choosing a language, locale-aware numbers (English reads exactly as before), that every language has the same keys, placeholders and markup as English, and that every message the code names exists and every message is used
+- translation: messages, plurals, fallbacks, choosing a language, locale-aware numbers (English reads exactly as before), that every language has the same keys, placeholders and markup as English, that every message the code names exists and every message is used, and that each language's lessons, Concepts and Help fit the lessons (same options, in order) and name only real buttons
 
 **Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also cover the controls, the circuit editor, the layout on wide and narrow screens, accessibility, themes, language and onboarding, and check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
 
@@ -544,7 +546,7 @@ One path of 25 lessons takes a learner from a single qubit to three-qubit entang
 | 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Decoherence: how noise ends a superposition · Noise builds up with every step · Reading a qubit is noisy too · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
 | 4. Quantum algorithms | Deutsch–Jozsa: one question instead of three (3 qubits) · Grover’s search: finding the marked item (2 qubits) · Quantum teleportation (3 qubits) |
 
-Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does.
+Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does. Their words (title, goal, steps, prediction and explanation) are in `content/en.js`, by lesson id, so they can be translated.
 
 ---
 
@@ -561,7 +563,7 @@ Both have been agreed.
 
 ## Languages
 
-The app is being prepared for other languages. Its whole interface is translatable: every label, view, screen-reader announcement and lesson check comes from `locales/en.js`, and every number uses the language's decimal separator (`0,707 + 0,000i` in German). It picks the language from the address (`?lang=`), the learner's choice or the browser, and switching language updates the page at once. The lessons' own words, Concepts and Help are next. English is the only language so far, so no language picker is shown. Open `index.html?lang=en-XA` to see the pseudo-locale, a test language that shows which text is translatable. How it works, how to add a language and what comes next: [docs/I18N.md](docs/I18N.md).
+The app is ready for other languages. Everything a learner reads or hears is translatable: the interface (every label, view, screen-reader announcement and lesson check) comes from `locales/en.js`, and the lessons, Concepts and Help from `content/en.js`, which names buttons by their own labels. Every number uses the language's decimal separator (`0,707 + 0,000i` in German). It picks the language from the address (`?lang=`), the learner's choice or the browser, and switching language updates the page at once. English is the only language so far, so no language picker is shown. Open `index.html?lang=en-XA` to see the pseudo-locale, a test language that shows which text is translatable. How it works, how to add a language and what comes next: [docs/I18N.md](docs/I18N.md).
 
 ---
 

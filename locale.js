@@ -8,7 +8,7 @@
 // tells the canvases to redraw (canvas-fit.js).
 
 import { getPref, setPref } from './prefs.js';
-import { detectLocale, getLocale, setLocale, onLocaleChange, isRtl, t, trackLocaleWith } from './i18n.js';
+import { detectLocale, getLocale, setLocale, onLocaleChange, isRtl, t, fill, trackLocaleWith } from './i18n.js';
 
 function apply(locale) {
   const html = document.documentElement;
@@ -69,6 +69,8 @@ export function parseMarkup(message) {
 
 /**
  * <i18n-t k="key" :params="{ ... }" tag="p">: a message that holds markup.
+ * <i18n-t :text="..."> does the same for text that is already in the
+ * current language, such as a lesson step from content.js.
  * **bold** becomes <strong>, *emphasis* <em>, [text](/route) a <router-link>, and {name}
  * the slot of that name if there is one (for buttons, inputs or anything
  * else that has to sit inside a translated sentence), else params.name.
@@ -78,7 +80,8 @@ export function parseMarkup(message) {
 const I18nT = {
   name: 'I18nT',
   props: {
-    k: { type: String, required: true },
+    k: { type: String, default: null },
+    text: { type: String, default: null },
     params: { type: Object, default: () => ({}) },
     tag: { type: String, default: null }
   },
@@ -87,7 +90,8 @@ const I18nT = {
     const RouterLink = resolveComponent('router-link');
     // t() fills in params (and picks a plural form); placeholders it has
     // no value for are left in the text, for the slots
-    const children = parseMarkup(t(this.k, this.params)).map(part => {
+    const message = this.text !== null ? fill(this.text, this.params) : t(this.k, this.params);
+    const children = parseMarkup(message).map(part => {
       if (part.text !== undefined) return part.text;
       if (part.bold !== undefined) return h('strong', part.bold);
       if (part.em !== undefined) return h('em', part.em);

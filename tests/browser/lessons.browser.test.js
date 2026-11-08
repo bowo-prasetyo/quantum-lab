@@ -10,6 +10,7 @@ import { test, before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { LESSONS } from '../../lessons.js';
+import { lessonText } from '../../content.js';
 import { startBrowser, openPage as open } from './helpers.js';
 
 // Panel key → heading the lab shows for it
@@ -43,10 +44,11 @@ const openPage = hash => open(env.browser, base + hash);
 
 describe('every lesson in the browser', () => {
   for (const [index, lesson] of LESSONS.entries()) {
-    test(`${index + 1}. ${lesson.title}`, async () => {
+    const { title } = lessonText(lesson.id);
+    test(`${index + 1}. ${title}`, async () => {
       const { page, errors } = await openPage(`#/lessons/${lesson.id}`);
       try {
-        assert.equal(await page.locator('h1').innerText(), lesson.title);
+        assert.equal(await page.locator('h1').innerText(), title);
         assert.ok(
           (await page.locator('.caption').first().innerText()).includes(`Lesson ${index + 1} of ${LESSONS.length}`),
           'lesson number'

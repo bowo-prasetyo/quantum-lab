@@ -122,6 +122,28 @@ describe('Language', () => {
       assert.match(await result.innerText(), /That’s the expected result[\s\S]*Probabilities: \|1⟩ 100\.0%/);
     }));
 
+  test('lessons, Concepts and Help are translated, with button names from the buttons', () =>
+    withPage('?lang=en-XA#/lessons/bit-flip', async page => {
+      assert.match(await page.locator('h1').first().textContent(), /^⟦Ɓíţ ƒļíþ/);
+      const steps = page.locator('.workbench-side ol li');
+      assert.match(await steps.nth(1).textContent(), /⟦Ṁéášúŕé áļļ ~+⟧/, 'the step names the button as the button reads');
+      assert.equal(await page.getByRole('button', { name: /^⟦Ṁéášúŕé áļļ ~+⟧$/ }).count(), 1);
+
+      await picker(page).selectOption('en');
+      await page.waitForTimeout(300);
+      assert.equal(await page.locator('h1').first().textContent(), 'Bit flip');
+      assert.equal(await steps.nth(1).textContent(), 'Press Measure all.');
+
+      await page.goto(env.base + '?lang=en-XA#/help');
+      await page.locator('h1').first().waitFor();
+      assert.match(await page.locator('h1').first().textContent(), /^⟦Ĥéļþ/);
+      const link = page.locator('.card a[href="#/concepts"]').first();
+      assert.match(await link.textContent(), /Çöñçéþţš/, 'links keep their targets');
+      await page.goto(env.base + '?lang=en-XA#/concepts');
+      await page.locator('h1').first().waitFor();
+      assert.match(await page.locator('dt').first().textContent(), /^⟦Ǫúƀíţ/);
+    }));
+
   test('canvases still draw after a language change', () =>
     withPage('?lang=en-XA#/lab/1', async page => {
       await picker(page).selectOption('en');

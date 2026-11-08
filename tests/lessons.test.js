@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 
 import { LESSONS, PANELS, PARTS } from '../lessons.js';
 import { evaluateChecks, runOps } from '../lesson-checks.js';
+import { lessonText, partTitle } from '../content.js';
 
 /** Small seeded random generator (mulberry32) for repeatable measurements. */
 function seeded(seed) {
@@ -40,11 +41,13 @@ describe('lesson data', () => {
 
   for (const lesson of LESSONS) {
     test(`${lesson.id}: has every field, valid panels and a valid prediction`, () => {
-      assert.ok(typeof lesson.title === 'string' && lesson.title.length > 0, 'title');
-      for (const field of ['goal', 'why', 'result']) {
-        assert.ok(typeof lesson[field] === 'string' && lesson[field].length > 20, `${field}`);
+      const text = lessonText(lesson.id);
+      assert.ok(typeof text.title === 'string' && text.title.length > 0, 'title');
+      for (const field of ['goal', 'why', 'result', 'question']) {
+        assert.ok(typeof text[field] === 'string' && text[field].length > 20, `${field}`);
       }
-      assert.ok(lesson.steps.length > 0, 'steps');
+      assert.ok(text.steps.length > 0, 'steps');
+      assert.ok(partTitle(lesson.part), 'part title');
       assert.ok(lesson.checks.length > 0, 'checks');
       assert.deepEqual(lesson.setup[0], ['reset'], 'setup starts with reset');
       for (const panel of lesson.panels) assert.ok(PANELS.includes(panel), `panel ${panel}`);
@@ -57,9 +60,9 @@ describe('lesson data', () => {
         // Noisy runs happen in the circuit editor, with the Noise panel to show the choice
         assert.ok(lesson.panels.includes('editor') && lesson.panels.includes('noise'), 'noisyRun needs the editor and noise panels');
       }
-      assert.ok(lesson.predict.options.length >= 2, 'at least two options');
+      assert.ok(text.options.length >= 2, 'at least two options');
       assert.ok(Number.isInteger(lesson.predict.answer) &&
-        lesson.predict.answer >= 0 && lesson.predict.answer < lesson.predict.options.length, 'answer index');
+        lesson.predict.answer >= 0 && lesson.predict.answer < text.options.length, 'answer index');
     });
   }
 });
