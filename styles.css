@@ -1502,3 +1502,36 @@ button:disabled {
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* Shots: readout errors and their correction */
+.shots-readout {
+  margin: 8px 0;
+}
+
+.shots-rate {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 4px 0;
+}
+
+.shots-rate input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.shots-rate output {
+  min-width: 2.5em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The corrected estimate: a thinner purple bar along the bottom */
+.shots-corrected {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 5px;
+  border-radius: 0 0 4px 4px;
+  background: var(--measure);
+}
