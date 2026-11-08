@@ -4,15 +4,15 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, test } from './helpers.js';
+import { startBrowser, newContext, ENGLISH, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });
 after(() => env.close());
 
 // A fresh browser with the given browser language and localStorage
-async function withPage(path, body, { locale = 'en-US', storage = {} } = {}) {
-  const context = await env.browser.newContext({ locale });
+async function withPage(path, body, { locale = ENGLISH, storage = {} } = {}) {
+  const context = await newContext(env.browser, { locale });
   await context.addInitScript(items => {
     for (const [k, v] of Object.entries(items)) {
       if (localStorage.getItem(k) === null) localStorage.setItem(k, v);

@@ -4,7 +4,7 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, test } from './helpers.js';
+import { startBrowser, newContext, assertEnglish, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });
@@ -16,7 +16,7 @@ const welcome = page => page.getByText('Welcome!', { exact: false });
 
 // A fresh browser (nothing saved) unless `storage` presets localStorage
 async function withPage(hash, body, storage = {}) {
-  const context = await env.browser.newContext();
+  const context = await newContext(env.browser);
   await context.addInitScript(items => {
     for (const [k, v] of Object.entries(items)) localStorage.setItem(k, v);
   }, storage);
@@ -27,6 +27,7 @@ async function withPage(hash, body, storage = {}) {
   try {
     await page.goto(env.base + hash);
     await page.locator('h1').first().waitFor();
+    await assertEnglish(page);
     await settle(page);
     await body(page);
     assert.deepEqual(errors, []);

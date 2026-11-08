@@ -5,7 +5,7 @@
 import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, test } from './helpers.js';
+import { startBrowser, newContext, assertEnglish, test } from './helpers.js';
 
 const r = Math.SQRT1_2;
 let env;
@@ -54,12 +54,13 @@ const databases = page => page.evaluate(async () => (await indexedDB.databases()
 const probabilities = page => page.locator('.amp-table tbody tr td:nth-child(3)').allInnerTexts();
 
 async function freshPage() {
-  const page = await (await env.browser.newContext()).newPage();
+  const page = await (await newContext(env.browser)).newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   // Start on a page without a lab, so nothing loads before seeding
   await page.goto(env.base + '#/lessons');
   await page.locator('h1').waitFor();
+  await assertEnglish(page);
   return { page, errors };
 }
 
