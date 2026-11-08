@@ -25,8 +25,9 @@ export const CorrelationGraph = {
       <canvas ref="canvas" role="img" :aria-label="summary"></canvas>
       <p class="caption">
         Each edge shows how reliably two qubits' measured bits agree or disagree
-        (1.00 = always, 0.00 = unrelated). It is not a measure of entanglement:
-        |{{ '0'.repeat(n) }}⟩ shows 1.00 although nothing is entangled.
+        (1.00 = always, 0.00 = as often one way as the other). It is not a measure
+        of entanglement: |{{ '0'.repeat(n) }}⟩ shows 1.00 although nothing is
+        entangled, and an entangled pair can show 0.00.
       </p>
     </div>
   `,

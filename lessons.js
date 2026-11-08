@@ -328,10 +328,10 @@ export const LESSONS = [
     ops: [],
     predict: {
       question: 'The state is |00⟩. What does the correlation graph show?',
-      options: ['0.00: the qubits are unrelated', '1.00: the bits always agree', 'Nothing: there is no entanglement'],
+      options: ['0.00: the bits agree as often as not', '1.00: the bits always agree', 'Nothing: there is no entanglement'],
       answer: 1
     },
-    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. Use the Bloch spheres, not the graph, to spot entanglement.',
+    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. It works the other way too: a Bell pair with an extra H on qubit 1 is still fully entangled, yet the graph shows 0.00. Use the Bloch spheres, not the graph, to spot entanglement.',
     checks: [
       { type: 'zz', q1: 0, q2: 1, value: 1 },
       { type: 'blochLength', qubit: 0, value: 1 },
@@ -467,7 +467,7 @@ export const LESSONS = [
     n: 3,
     title: 'Deutsch–Jozsa: one question instead of three',
     goal: 'Find out whether a hidden function is constant or balanced by calling it only once.',
-    why: 'This is the first algorithm shown to beat any classical method on its problem. It runs on interference, the idea from Part 1.',
+    why: 'It extends Deutsch’s algorithm (1985), the first to beat every deterministic classical method on its problem. It runs on interference, the idea from Part 1.',
     panels: ['gates', 'table', 'probabilities'],
     setup: [['reset'], ['gate', 'X', 2], ['gate', 'H', 0], ['gate', 'H', 1], ['gate', 'H', 2]],
     steps: [
@@ -497,7 +497,7 @@ export const LESSONS = [
     steps: [
       'Set up has put both qubits in an equal superposition: each of the four items |00⟩, |01⟩, |10⟩, |11⟩ is 25% likely.',
       'Oracle: mark |11⟩ by flipping its sign. Press CZ (control Q0, target Q1). Check the amplitude table: |11⟩ is now −0.5, but every probability is still 25%.',
-      'Diffusion (inversion about the mean): press H on both qubits, then X on both qubits.',
+      'Diffusion (inversion about the mean, up to an overall sign): press H on both qubits, then X on both qubits.',
       'Flip the sign of |11⟩ again: press CZ.',
       'Finish the diffusion: X on both qubits, then H on both qubits.'
     ],
@@ -512,7 +512,7 @@ export const LESSONS = [
       options: ['25%, the same as guessing', '50%', '100%'],
       answer: 2
     },
-    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to 1. For four items, one round finds the answer with certainty. The CZ gate flips the sign of |11⟩ only; it is the same as H, CNOT, H on the target.',
+    result: 'The oracle only changes the marked item’s phase, which you can’t see in the probabilities. Diffusion then reflects every amplitude about their average: the three unmarked amplitudes cancel to 0 and the marked one grows to size 1. (The table shows −1: this circuit builds the diffusion with an overall minus sign, a global phase that no measurement can detect.) For four items, one round finds the answer with certainty. The CZ gate flips the sign of |11⟩ only; it is the same as H, CNOT, H on the target.',
     checks: [{ type: 'probs', values: { '|11⟩': 1 } }]
   },
   {
