@@ -1,9 +1,14 @@
 // Density matrix ρ = |ψ⟩⟨ψ| as a grid of squares: area = size of the entry
 // relative to the largest one, colour = phase.
+//
+// Pointing at or tapping a square, or moving with the arrow keys once the
+// matrix has keyboard focus, outlines it and gives its exact size and phase
+// as text under the matrix, so colour is never the only way to read phase.
 
 import * as engine from '../engine.js';
 import { phaseToCss } from '../colors.js';
 import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+import { percent, degrees } from '../describe.js';
 
 const LABEL_FONT = '12px Arial, sans-serif';
 
@@ -17,13 +22,48 @@ export const DensityMatrix = {
   },
 
   data() {
-    return { densityMax: 1 };
+    return {
+      densityMax: 1,
+      cursor: null   // { i, j }: the entry being read, or null
+    };
+  },
+
+  computed: {
+    size() {
+      return 1 << this.n;
+    },
+    // The chosen entry as text, e.g. "Row |00⟩, column |11⟩: size 0.500, phase 0°"
+    readout() {
+      if (!this.cursor) return '';
+      const { i, j } = this.cursor;
+      const rho = engine.densityMatrix(this.re, this.im);
+      const k = i * this.size + j;
+      const re = rho.re[k];
+      const im = rho.im[k];
+      const magnitude = Math.hypot(re, im);
+      const label = q => engine.basisLabel(q, this.n);
+      const where = i === j ? `Row and column ${label(i)}` : `Row ${label(i)}, column ${label(j)}`;
+      if (magnitude < 1e-9) return `${where}: 0.`;
+      const value = `${where}: size ${magnitude.toFixed(3)}, phase ${degrees(Math.atan2(im, re))}`;
+      return i === j ? `${value} (the probability of ${label(i)}, ${percent(magnitude)}).` : `${value}.`;
+    }
   },
 
   template: `
     <div class="card">
       <h2>Density Matrix</h2>
-      <canvas ref="canvas" role="img" aria-label="Density matrix (the diagonal holds the probabilities in the Quantum State table)"></canvas>
+      <canvas
+        ref="canvas"
+        class="readable-canvas"
+        tabindex="0"
+        role="img"
+        aria-label="Density matrix. Use the arrow keys to read each entry. The diagonal holds the probabilities in the Quantum State table."
+        @pointermove="onPointer"
+        @pointerdown="onPointer"
+        @focus="cursor = cursor || { i: 0, j: 0 }"
+        @keydown="onKeydown"
+      ></canvas>
+      <p class="readout" role="status">{{ readout || 'Point at, tap or use the arrow keys on a square to read it.' }}</p>
       <p class="caption">
         Row i, column j shows ρ<sub>ij</sub>.
         A square's area shows its size |ρ<sub>ij</sub>| compared with the
@@ -35,9 +75,37 @@ export const DensityMatrix = {
   `,
 
   mounted() { this.draw(); },
-  watch: { re() { this.draw(); }, im() { this.draw(); } },
+  watch: { re() { this.draw(); }, im() { this.draw(); }, cursor() { this.draw(); } },
 
   methods: {
+    // The entry under the pointer, if it is over the grid
+    onPointer(e) {
+      const layout = this.layout;
+      if (!layout) return;
+      const r = this.$refs.canvas.getBoundingClientRect();
+      const j = Math.floor((e.clientX - r.left - layout.left) / layout.cell);
+      const i = Math.floor((e.clientY - r.top - layout.top) / layout.cell);
+      if (i >= 0 && j >= 0 && i < this.size && j < this.size) {
+        if (!this.cursor || this.cursor.i !== i || this.cursor.j !== j) this.cursor = { i, j };
+      }
+    },
+
+    // Arrow keys move the outlined entry; Home and End jump along the row
+    onKeydown(e) {
+      const { i, j } = this.cursor || { i: 0, j: 0 };
+      const last = this.size - 1;
+      const moves = {
+        ArrowUp: [i - 1, j], ArrowDown: [i + 1, j],
+        ArrowLeft: [i, j - 1], ArrowRight: [i, j + 1],
+        Home: [i, 0], End: [i, last]
+      };
+      const move = moves[e.key];
+      if (!move) return;
+      e.preventDefault();
+      const clamp = v => Math.max(0, Math.min(last, v));
+      this.cursor = { i: clamp(move[0]), j: clamp(move[1]) };
+    },
+
     draw() {
       const canvas = this.$refs.canvas;
       if (!canvas) return;
@@ -64,6 +132,9 @@ export const DensityMatrix = {
       if (!fit) return;
       const { ctx, width: W, height: H } = fit;
       const { left, top, grid, cell, vertical } = layout;
+      this.layout = layout; // for finding the entry under the pointer
+      // Also on the element, so tests can aim at a square
+      Object.assign(canvas.dataset, { gridLeft: left, gridTop: top, cell });
 
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, W, H);
@@ -151,6 +222,13 @@ export const DensityMatrix = {
           ctx.textBaseline = 'bottom';
           ctx.fillText(labels[k], left + middle, top - 8);
         }
+      }
+
+      // Outline the entry being read
+      if (this.cursor) {
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(left + this.cursor.j * cell + 1, top + this.cursor.i * cell + 1, cell - 2, cell - 2);
       }
 
       // Phase legend: colour bar from +π (top) to −π (bottom)

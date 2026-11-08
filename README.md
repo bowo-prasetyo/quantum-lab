@@ -85,11 +85,11 @@ What each size shows:
 
 - Amplitude table (amplitude, probability and phase of each basis state)
 - Probability distribution chart
-- Density matrix visualization
+- Density matrix visualization (point, tap or use the arrow keys to read any entry's size and phase as text)
 - Reduced density matrix computation
 - Bloch sphere visualization
 - Correlation graph of measured-bit agreement between qubit pairs
-- 3D WebGL basis-state visualization
+- 3D WebGL basis-state visualization (rotate with the mouse, a finger or the arrow keys; point or tap to read a corner)
 
 ### Application Features
 
@@ -103,6 +103,7 @@ What each size shows:
 - Charts drawn at the screen's real size and pixel density, so they stay sharp and readable on any screen
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard): run the whole circuit or step through it one gate at a time, from |0…0⟩ or the current state
 - Undo (button or Ctrl+Z) for gates, measurements, Reset and circuit edits
+- Accessible: every action is announced to screen readers with the outcomes it leaves ("H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%."), charts have text descriptions, phase is never shown by colour alone, text meets WCAG AA contrast, and everything works from the keyboard
 - 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration

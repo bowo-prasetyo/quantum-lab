@@ -13,7 +13,8 @@ import { AmplitudeTable } from './components/amplitude-table.js';
 import { DensityMatrix } from './components/density-matrix.js';
 import { CorrelationGraph } from './components/correlation-graph.js';
 import { Cube3D } from './components/cube-3d.js';
-import { CircuitEditor } from './components/circuit-editor.js';
+import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
+import { describeState } from './describe.js';
 
 const STEP_DELAY_MS = 500; // pause between circuit steps so changes are visible
 const HISTORY_LIMIT = 100; // undo steps kept (this session only, not saved)
@@ -75,6 +76,7 @@ export const Lab = {
       // circuit editor so both show the same choice
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
+      announcement: '',    // last screen-reader announcement
       activeView: 'table'  // the view tab shown on narrow screens
     };
   },
@@ -88,6 +90,11 @@ export const Lab = {
   //     time) above the gates, like a calculator's display above its keys.
   template: `
     <div :class="{ container: !embedded, wide: !embedded }">
+      <!-- Tells screen-reader users what each action did and what the state
+           is now ("H on qubit 0. |0⟩ 50%, |1⟩ 50%"). Not shown on screen:
+           sighted users see it in the views. -->
+      <p class="visually-hidden" role="status" aria-live="polite" data-testid="announcer">{{ announcement }}</p>
+
       <template v-if="!embedded">
         <app-nav />
 
@@ -399,6 +406,26 @@ export const Lab = {
         this.circuit.splice(0, this.circuit.length, ...last.circuit);
         this.stepIndex = last.stepIndex;
         await this.save();
+        this.announce('Undone');
+      });
+    },
+
+    // ----- Screen-reader announcements -----
+
+    /** Announces what just happened, followed by the state it left. */
+    announce(what) {
+      const text = `${what}. Now: ${describeState(this.stateRe, this.stateIm, this.n)}.`;
+      // Clear first, so the same message twice in a row is read twice
+      this.announcement = '';
+      this.$nextTick(() => { this.announcement = text; });
+    },
+
+    // Announces a change to the circuit, which leaves the state as it is
+    announceCircuit(what) {
+      const count = this.circuit.length;
+      this.announcement = '';
+      this.$nextTick(() => {
+        this.announcement = `${what}. The circuit has ${count} ${count === 1 ? 'step' : 'steps'}.`;
       });
     },
 
@@ -415,48 +442,56 @@ export const Lab = {
 
     // Runs a learner's action through the queue, remembering the state
     // before it for Undo. Any action ends step-by-step play of the circuit.
-    act(task) {
+    // `what` describes it for screen readers: text, or a function called
+    // afterwards (for measurement results).
+    act(task, what) {
       return this.enqueue(async () => {
         this.remember();
         this.stepIndex = null;
         await task();
+        this.announce(typeof what === 'function' ? what() : what);
       });
     },
 
     applyGate(gate, targetQubit) {
-      return this.act(() => this.runOnWorker({ type: 'gate', gate, targetQubit }));
+      return this.act(() => this.runOnWorker({ type: 'gate', gate, targetQubit }),
+        `${gate} on qubit ${targetQubit}`);
     },
 
     applyCNOT(control, target) {
-      return this.act(() => this.runOnWorker({ type: 'cnot', control, target }));
+      return this.act(() => this.runOnWorker({ type: 'cnot', control, target }),
+        `CNOT, control qubit ${control}, target qubit ${target}`);
     },
 
     applyCZ(control, target) {
-      return this.act(() => this.runOnWorker({ type: 'cz', control, target }));
+      return this.act(() => this.runOnWorker({ type: 'cz', control, target }),
+        `CZ on qubits ${control} and ${target}`);
     },
 
     measure() {
-      return this.act(() => this.runOnWorker({ type: 'measure' }));
+      return this.act(() => this.runOnWorker({ type: 'measure' }),
+        () => `Measured every qubit: ${this.measurement}`);
     },
 
     measureQubit(qubit) {
-      return this.act(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }));
+      return this.act(() => this.runOnWorker({ type: 'measureQubit', targetQubit: qubit }),
+        () => `Measured qubit ${qubit}: ${this.bits[qubit]}`);
     },
 
     reset() {
       return this.act(async () => {
         this.resetState();
         await this.save();
-      });
+      }, 'Reset');
     },
 
     // Presets start from |0…0⟩ so they always give the advertised state.
     createBellState() {
-      return this.act(() => this.bellSteps());
+      return this.act(() => this.bellSteps(), 'Bell pair created');
     },
 
     createGHZState() {
-      return this.act(() => this.ghzSteps());
+      return this.act(() => this.ghzSteps(), 'GHZ state created');
     },
 
     // Preset sequences; call only from inside a queued task
@@ -482,13 +517,15 @@ export const Lab = {
       this.stepIndex = null;
       this.circuit.push(step);
       this.save();
+      this.announceCircuit(`Added ${stepLabel(step)}`);
     },
 
     removeStep(index) {
       this.remember();
       this.stepIndex = null;
-      this.circuit.splice(index, 1);
+      const [removed] = this.circuit.splice(index, 1);
       this.save();
+      this.announceCircuit(`Removed ${stepLabel(removed)}`);
     },
 
     clearCircuit() {
@@ -497,6 +534,7 @@ export const Lab = {
       this.stepIndex = null;
       this.circuit.splice(0);
       this.save();
+      this.announceCircuit('Circuit cleared');
     },
 
     /**
@@ -522,6 +560,7 @@ export const Lab = {
           this.running = false;
         }
         await this.save();
+        this.announce(`Circuit finished: ${this.circuit.length} ${this.circuit.length === 1 ? 'step' : 'steps'} applied`);
       });
     },
 
@@ -538,9 +577,11 @@ export const Lab = {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
         }
-        await this.runOnWorker(stepToMessage(this.circuit[this.stepIndex]));
+        const step = this.circuit[this.stepIndex];
+        await this.runOnWorker(stepToMessage(step));
         this.stepIndex++;
         await this.save();
+        this.announce(`Step ${this.stepIndex} of ${this.circuit.length}: ${stepLabel(step)}`);
       });
     },
 
@@ -573,6 +614,7 @@ export const Lab = {
           this.running = false;
         }
         await this.save();
+        if (delay) this.announce('Show me finished');
       });
     },
 

@@ -1,9 +1,12 @@
 // WebGL view of the 8 basis states of 3 qubits at the corners of a cube.
-// Point size = probability, colour = phase. Drag (mouse, finger or pen) to
-// rotate; mouse wheel or two-finger pinch to zoom.
+// Point size = probability, colour = phase. Drag (mouse, finger or pen) or
+// use the arrow keys to rotate; mouse wheel, pinch, or + and − to zoom.
+// Pointing at or tapping a corner gives its probability and phase as text.
 
 import { phaseToRgb } from '../colors.js';
 import { redrawOnResize } from './canvas-fit.js';
+import { basisLabel } from '../engine.js';
+import { percent, degrees } from '../describe.js';
 
 function mat4Perspective(fov, aspect, near, far) {
   const f = 1.0 / Math.tan(fov / 2);
@@ -44,6 +47,41 @@ function mat4Multiply(a, b) {
   return o;
 }
 
+// Corner of the cube for basis state i: one axis per qubit (q0 = x, q1 = y, q2 = z)
+const corner = i => [(i >> 2) & 1 ? 1 : -1, (i >> 1) & 1 ? 1 : -1, i & 1 ? 1 : -1];
+
+// The model-view and projection matrices the shader uses for this camera
+function cameraMatrices(camera, aspect) {
+  const projection = mat4Perspective(Math.PI / 3, aspect, 0.1, 100);
+  const view = mat4Identity();
+  view[14] = -camera.distance;
+  const rotation = mat4Multiply(mat4RotateY(camera.rotY), mat4RotateX(camera.rotX));
+  return { modelView: mat4Multiply(view, rotation), projection };
+}
+
+// Matrix × vector the way the shader does it (WebGL reads matrices column by column)
+function transform(m, v) {
+  return [0, 1, 2, 3].map(row => m[row] * v[0] + m[4 + row] * v[1] + m[8 + row] * v[2] + m[12 + row] * v[3]);
+}
+
+/**
+ * Where each of the 8 corners appears on a width × height view, in CSS
+ * pixels, and how far it is from the camera (`depth`), as the shader draws
+ * them. Used to find the corner under the pointer.
+ */
+export function projectCorners(camera, width, height) {
+  const { modelView, projection } = cameraMatrices(camera, width / height);
+  return [...Array(8).keys()].map(i => {
+    const world = transform(modelView, [...corner(i), 1]);
+    const clip = transform(projection, world);
+    return {
+      x: (clip[0] / clip[3] + 1) / 2 * width,
+      y: (1 - clip[1] / clip[3]) / 2 * height,
+      depth: -world[2]
+    };
+  });
+}
+
 const VERTEX_SHADER = `
   attribute vec3 pos;
   attribute float pointSize;
@@ -81,7 +119,8 @@ export const Cube3D = {
   data() {
     return {
       webglSupported: true,
-      camera: { rotX: 0, rotY: 0, distance: 4 }
+      camera: { rotX: 0, rotY: 0, distance: 4 },
+      picked: null   // the basis state being read (pointed at or tapped), or null
     };
   },
 
@@ -91,17 +130,21 @@ export const Cube3D = {
       <canvas
         ref="canvas"
         class="webgl-canvas"
+        tabindex="0"
         role="img"
-        aria-label="3D view of the 8 basis states (the same probabilities and phases are in the Quantum State table)"
+        aria-label="3D view of the 8 basis states. Arrow keys rotate it; plus and minus zoom. The same probabilities and phases are in the Quantum State table."
+        @keydown="onKeydown"
         @pointerdown="onPointerDown"
         @pointermove="onPointerMove"
         @pointerup="onPointerUp"
         @pointercancel="onPointerUp"
       ></canvas>
+      <p v-if="webglSupported" class="readout">{{ readout || 'Point at or tap a corner to read it.' }}</p>
       <p class="caption" v-if="webglSupported">
         The 8 basis states sit at the corners of a cube: point size shows
         probability and colour shows phase.
-        Drag to rotate. Use the mouse wheel or pinch with two fingers to zoom.
+        Drag or use the arrow keys to rotate. Use the mouse wheel, pinch with
+        two fingers, or press + and − to zoom.
       </p>
       <p class="caption" v-else>WebGL is not available in this browser, so the 3D view is off.</p>
     </div>
@@ -121,6 +164,20 @@ export const Cube3D = {
 
   beforeUnmount() {
     this.$refs.canvas?.removeEventListener('wheel', this.onWheel);
+  },
+
+  computed: {
+    // e.g. "|101⟩: probability 12.5%, phase 90°"
+    readout() {
+      if (this.picked === null) return '';
+      const re = this.re[this.picked];
+      const im = this.im[this.picked];
+      const p = re * re + im * im;
+      const label = basisLabel(this.picked, 3);
+      return p < 1e-12
+        ? `${label}: probability 0%.`
+        : `${label}: probability ${percent(p)}, phase ${degrees(Math.atan2(im, re))}.`;
+    }
   },
 
   watch: { re() { this.render(); }, im() { this.render(); } },
@@ -195,11 +252,7 @@ export const Cube3D = {
       if (!gl) return;
 
       const canvas = this.$refs.canvas;
-      const projection = mat4Perspective(Math.PI / 3, canvas.width / canvas.height, 0.1, 100);
-      const view = mat4Identity();
-      view[14] = -this.camera.distance;
-      const rotation = mat4Multiply(mat4RotateY(this.camera.rotY), mat4RotateX(this.camera.rotX));
-      const modelView = mat4Multiply(view, rotation);
+      const { modelView, projection } = cameraMatrices(this.camera, canvas.width / canvas.height);
 
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.clearColor(0, 0, 0, 1);
@@ -212,8 +265,7 @@ export const Cube3D = {
       for (let i = 0; i < 8; i++) {
         const re = this.re[i];
         const im = this.im[i];
-        // Corner of the cube: one axis per qubit (q0 = x, q1 = y, q2 = z)
-        vertices.push((i >> 2) & 1 ? 1 : -1, (i >> 1) & 1 ? 1 : -1, i & 1 ? 1 : -1);
+        vertices.push(...corner(i));
         sizes.push((5 + (re * re + im * im) * 60) * (this.pointScale || 1));
         colors.push(...phaseToRgb(Math.atan2(im, re)));
       }
@@ -236,16 +288,42 @@ export const Cube3D = {
       gl.drawArrays(gl.POINTS, 0, 8);
     },
 
+    // The corner under a point on the canvas (client coordinates), or null.
+    // Points are drawn bigger for likelier states, so the hit area grows too.
+    cornerAt(clientX, clientY) {
+      const canvas = this.$refs.canvas;
+      const r = canvas.getBoundingClientRect();
+      const x = clientX - r.left;
+      const y = clientY - r.top;
+      let best = null;
+      projectCorners(this.camera, r.width, r.height).forEach((c, i) => {
+        const p = this.re[i] * this.re[i] + this.im[i] * this.im[i];
+        // Same size as the shader's point (device pixels → CSS pixels)
+        const radius = (5 + p * 60) * (r.height / 300) / c.depth / 2;
+        const distance = Math.hypot(x - c.x, y - c.y);
+        if (distance <= Math.max(radius, 8) + 4 && (!best || distance < best.distance)) {
+          best = { i, distance };
+        }
+      });
+      return best ? best.i : null;
+    },
+
     onPointerDown(e) {
       // Keep receiving this pointer's events even if it leaves the canvas
       e.currentTarget.setPointerCapture(e.pointerId);
       this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       this.pinchDistance = this.pointerSpread();
+      this.downAt = { x: e.clientX, y: e.clientY };
     },
 
     onPointerMove(e) {
       const last = this.pointers.get(e.pointerId);
-      if (!last) return; // mouse moving without a button pressed
+      if (!last) {
+        // Mouse moving without a button pressed: read the corner under it
+        const hit = this.cornerAt(e.clientX, e.clientY);
+        if (hit !== null) this.picked = hit;
+        return;
+      }
 
       const current = { x: e.clientX, y: e.clientY };
       this.pointers.set(e.pointerId, current);
@@ -268,6 +346,31 @@ export const Cube3D = {
     onPointerUp(e) {
       this.pointers.delete(e.pointerId);
       this.pinchDistance = this.pointerSpread();
+      // A tap (not a drag) reads the corner under it
+      if (this.downAt && Math.hypot(e.clientX - this.downAt.x, e.clientY - this.downAt.y) < 6) {
+        const hit = this.cornerAt(e.clientX, e.clientY);
+        if (hit !== null) this.picked = hit;
+      }
+      this.downAt = null;
+    },
+
+    // Arrow keys rotate; + and − zoom
+    onKeydown(e) {
+      const turn = 0.15;
+      const actions = {
+        ArrowLeft: () => { this.camera.rotY -= turn; },
+        ArrowRight: () => { this.camera.rotY += turn; },
+        ArrowUp: () => { this.camera.rotX -= turn; },
+        ArrowDown: () => { this.camera.rotX += turn; },
+        '+': () => this.setCameraDistance(this.camera.distance - 0.5),
+        '=': () => this.setCameraDistance(this.camera.distance - 0.5),
+        '-': () => this.setCameraDistance(this.camera.distance + 0.5)
+      };
+      const action = actions[e.key];
+      if (!action) return;
+      e.preventDefault();
+      action();
+      this.render();
     },
 
     pointerSpread() {
