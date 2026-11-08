@@ -21,6 +21,7 @@ const PANEL_HEADINGS = {
   interference: 'Interference',
   density: 'Density Matrix',
   correlation: 'Correlation Graph',
+  pauli: 'Pauli Expectations',
   entanglement: 'Entanglement',
   cube: '3D View',
   editor: 'Circuit Editor'
@@ -64,7 +65,7 @@ describe('every lesson in the browser', () => {
         for (const [panel, heading] of Object.entries(PANEL_HEADINGS)) {
           const shown = await page.getByRole('heading', { name: heading, exact: true }).count();
           const wanted = lesson.panels.includes(panel) &&
-            !(['correlation', 'entanglement'].includes(panel) && lesson.n < 2) && !(panel === 'cube' && lesson.n < 3);
+            !(['correlation', 'pauli', 'entanglement'].includes(panel) && lesson.n < 2) && !(panel === 'cube' && lesson.n < 3);
           assert.equal(shown, wanted ? 1 : 0, `panel "${heading}"`);
         }
         const blochSpheres = await page.locator('.bloch-row canvas').count();

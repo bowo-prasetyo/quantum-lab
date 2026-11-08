@@ -16,6 +16,7 @@ import { Cube3D } from './components/cube-3d.js';
 import { ShotsHistogram } from './components/shots-histogram.js';
 import { InterferenceView } from './components/interference-view.js';
 import { EntanglementPanel } from './components/entanglement-panel.js';
+import { PauliPanel } from './components/pauli-panel.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
 import { getPref, setPref } from './prefs.js';
@@ -32,7 +33,7 @@ const WIDE_QUERY = '(min-width: 1000px)';
 // asks for them or reaches Part 3 of the lessons, where they are taught
 // (VISION: reveal advanced views as the learner progresses). Lessons show
 // whatever panels they list.
-const ADVANCED = ['density', 'correlation', 'entanglement', 'cube'];
+const ADVANCED = ['density', 'correlation', 'pauli', 'entanglement', 'cube'];
 
 // Whether the learner has answered a prediction in Part 3 or later
 const reachedAdvancedLessons = () =>
@@ -47,6 +48,7 @@ const VIEWS = [
   { key: 'interference', label: 'Interference' },
   { key: 'density', label: 'Density matrix' },
   { key: 'correlation', label: 'Correlations' },
+  { key: 'pauli', label: 'Pauli' },
   { key: 'entanglement', label: 'Entanglement' },
   { key: 'cube', label: '3D' }
 ];
@@ -63,7 +65,7 @@ export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
     DensityMatrix, CorrelationGraph, CircuitEditor, ShotsHistogram,
-    InterferenceView, EntanglementPanel,
+    InterferenceView, EntanglementPanel, PauliPanel,
     // Explicit tag: Vue would turn "Cube3D" into <cube3-d>
     'cube-3d': Cube3D
   },
@@ -102,7 +104,7 @@ export const Lab = {
       announcement: '',    // last screen-reader announcement
       // Show amplitudes with the global phase removed (table, 3D view, interference)
       hideGlobalPhase: getPref('hide-global-phase', false),
-      // Free lab only: show the density matrix, correlations, entanglement and 3D view
+      // Free lab only: show the density matrix, correlations, Pauli expectations, entanglement and 3D view
       showAdvanced: getPref('advanced-views', null) ?? reachedAdvancedLessons(),
       // First visit: offer the lessons (set once nothing saved is found)
       welcome: false,
@@ -252,6 +254,9 @@ export const Lab = {
           <section v-if="n >= 2 && show('correlation')" v-bind="viewAttrs('correlation')">
             <correlation-graph :re="stateRe" :im="stateIm" :n="n" />
           </section>
+          <section v-if="n >= 2 && show('pauli')" v-bind="viewAttrs('pauli')">
+            <pauli-panel :re="stateRe" :im="stateIm" :n="n" />
+          </section>
           <section v-if="n >= 2 && show('entanglement')" v-bind="viewAttrs('entanglement')">
             <entanglement-panel :re="stateRe" :im="stateIm" :n="n" />
           </section>
@@ -289,7 +294,7 @@ export const Lab = {
     // e.g. "the density matrix, correlations, entanglement and the 3D view"
     advancedNames() {
       const names = ['the density matrix'];
-      if (this.n >= 2) names.push('correlations', 'entanglement');
+      if (this.n >= 2) names.push('correlations', 'Pauli expectations', 'entanglement');
       if (this.n === 3) names.push('the 3D view');
       const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
       return text.charAt(0).toUpperCase() + text.slice(1);
@@ -299,7 +304,7 @@ export const Lab = {
     views() {
       return VIEWS
         .filter(v => this.show(v.key))
-        .filter(v => !(['correlation', 'entanglement'].includes(v.key) && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
+        .filter(v => !(['correlation', 'pauli', 'entanglement'].includes(v.key) && this.n < 2) && !(v.key === 'cube' && this.n !== 3))
         .map(v => ({ key: v.key, label: v.key === 'bloch' && this.n === 1 ? 'Bloch sphere' : v.label }));
     },
 
