@@ -34,8 +34,30 @@ export function fitCanvas(canvas, heightFor) {
 }
 
 /**
+ * The canvas colours of the current theme (the --canvas-* tokens in
+ * styles.css), read when drawing so the canvases follow the theme.
+ */
+export function themeColors() {
+  const style = getComputedStyle(document.documentElement);
+  const token = name => style.getPropertyValue(`--canvas-${name}`).trim();
+  return {
+    bg: token('bg'),
+    text: token('text'),
+    label: token('label'),
+    outline: token('outline'),
+    axis: token('axis'),
+    cell: token('cell'),
+    cellDiag: token('cell-diag'),
+    grid: token('grid'),
+    bar: token('bar'),
+    vector: token('vector')
+  };
+}
+
+/**
  * Component mixin: calls the component's draw() whenever one of its
- * canvases changes size (window resized, layout changed, tab shown).
+ * canvases changes size (window resized, layout changed, tab shown), or
+ * the colour theme changes (theme.js).
  * The redraw waits for the next frame, so a canvas that changes its own
  * height while drawing does not trigger a ResizeObserver loop error.
  */
@@ -48,9 +70,12 @@ export const redrawOnResize = {
     for (const canvas of this.$el.querySelectorAll('canvas')) {
       this.resizeObserver.observe(canvas);
     }
+    this.onThemeChange = () => this.draw();
+    window.addEventListener('themechange', this.onThemeChange);
   },
 
   beforeUnmount() {
+    window.removeEventListener('themechange', this.onThemeChange);
     this.resizeObserver.disconnect();
     cancelAnimationFrame(this.resizeFrame);
   }

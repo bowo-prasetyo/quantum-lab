@@ -1,6 +1,17 @@
-// Top navigation: lab size selector, lessons and reference pages.
+// Top navigation: lab size selector, lessons and reference pages, and the
+// colour theme (system, light or dark; see theme.js).
+
+import { getTheme, setTheme } from '../theme.js';
 
 export const AppNav = {
+  data() {
+    return { theme: getTheme() };
+  },
+
+  watch: {
+    theme(value) { setTheme(value); }
+  },
+
   template: `
     <nav class="card nav">
       <router-link to="/lab/1" class="nav-brand" aria-label="Glass Qubit, home">
@@ -22,6 +33,15 @@ export const AppNav = {
       <router-link to="/lessons" class="nav-link" active-class="active">Lessons</router-link>
       <router-link to="/concepts" class="nav-link" active-class="active">Concepts</router-link>
       <router-link to="/help" class="nav-link" active-class="active">Help</router-link>
+
+      <label class="theme-picker">
+        <span class="nav-label">Theme</span>
+        <select v-model="theme" aria-label="Colour theme">
+          <option value="system">System</option>
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
     </nav>
   `
 };

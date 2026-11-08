@@ -2,7 +2,7 @@
 // A vector shorter than 1 means the qubit is entangled with the others.
 
 import * as engine from '../engine.js';
-import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 
 // Avoids printing "-0.00"
 const fmt = v => {
@@ -14,6 +14,7 @@ function drawSphere(canvas, x, y, z) {
   const fit = fitCanvas(canvas, w => w);
   if (!fit) return;
   const { ctx, width: W, height: H } = fit;
+  const colors = themeColors();
   const cx = W / 2;
   const cy = H / 2;
   const radius = Math.min(W, H) * 0.38;
@@ -31,11 +32,11 @@ function drawSphere(canvas, x, y, z) {
     ctx.stroke();
   };
 
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = colors.bg;
   ctx.fillRect(0, 0, W, H);
 
   // Sphere outline and equator
-  ctx.strokeStyle = '#666';
+  ctx.strokeStyle = colors.outline;
   ctx.lineWidth = 1.5;
   ctx.beginPath();
   ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -45,13 +46,13 @@ function drawSphere(canvas, x, y, z) {
   ctx.stroke();
 
   // Axes
-  ctx.strokeStyle = '#555';
+  ctx.strokeStyle = colors.axis;
   line(project(-1, 0, 0), project(1, 0, 0));
   line(project(0, -1, 0), project(0, 1, 0));
   line(project(0, 0, -1), project(0, 0, 1));
 
   // Pole labels
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = colors.text;
   ctx.font = '13px Arial, sans-serif';
   ctx.textAlign = 'center';
   const north = project(0, 0, 1);
@@ -65,10 +66,10 @@ function drawSphere(canvas, x, y, z) {
 
   // Bloch vector
   const tip = project(x, y, z);
-  ctx.strokeStyle = '#2f6fed';
+  ctx.strokeStyle = colors.vector;
   ctx.lineWidth = 3;
   line({ x: cx, y: cy }, tip);
-  ctx.fillStyle = '#2f6fed';
+  ctx.fillStyle = colors.vector;
   ctx.beginPath();
   ctx.arc(tip.x, tip.y, 5, 0, Math.PI * 2);
   ctx.fill();

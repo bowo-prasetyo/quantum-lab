@@ -2,7 +2,7 @@
 // or disagree. Not a measure of entanglement (|0…0⟩ shows 1.00 everywhere).
 
 import * as engine from '../engine.js';
-import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 
 // Node positions as fractions of the width and height
 const NODES = {
@@ -61,9 +61,10 @@ export const CorrelationGraph = {
       const fit = fitCanvas(canvas, w => Math.min(250, Math.max(180, w * 0.42)));
       if (!fit) return;
       const { ctx, width: W, height: H } = fit;
+      const colors = themeColors();
       const nodes = NODES[this.n].map(p => ({ x: p.x * W, y: p.y * H }));
 
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, W, H);
       ctx.font = '12px Arial, sans-serif';
       ctx.textAlign = 'center';
@@ -71,19 +72,19 @@ export const CorrelationGraph = {
       for (const edge of this.edges) {
         const a = nodes[edge.q1];
         const b = nodes[edge.q2];
-        ctx.strokeStyle = '#4caf50';
+        ctx.strokeStyle = colors.bar;
         ctx.lineWidth = 1 + edge.strength * 8;
         ctx.beginPath();
         ctx.moveTo(a.x, a.y);
         ctx.lineTo(b.x, b.y);
         ctx.stroke();
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = colors.text;
         ctx.fillText(edge.strength.toFixed(2), (a.x + b.x) / 2, (a.y + b.y) / 2 - 10);
       }
 
       ctx.textBaseline = 'middle';
       nodes.forEach((node, i) => {
-        ctx.fillStyle = '#2f6fed';
+        ctx.fillStyle = colors.vector;
         ctx.beginPath();
         ctx.arc(node.x, node.y, 18, 0, Math.PI * 2);
         ctx.fill();

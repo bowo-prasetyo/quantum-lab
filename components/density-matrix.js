@@ -7,7 +7,7 @@
 
 import * as engine from '../engine.js';
 import { phaseToCss } from '../colors.js';
-import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 import { percent, degrees } from '../describe.js';
 
 const LABEL_FONT = '12px Arial, sans-serif';
@@ -132,11 +132,12 @@ export const DensityMatrix = {
       if (!fit) return;
       const { ctx, width: W, height: H } = fit;
       const { left, top, grid, cell, vertical } = layout;
+      const colors = themeColors();
       this.layout = layout; // for finding the entry under the pointer
       // Also on the element, so tests can aim at a square
       Object.assign(canvas.dataset, { gridLeft: left, gridTop: top, cell });
 
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, W, H);
 
       const rho = engine.densityMatrix(this.re, this.im);
@@ -158,12 +159,12 @@ export const DensityMatrix = {
       // Grid: diagonal cells slightly lighter so the probabilities stand out
       for (let k = 0; k < size; k++) {
         for (let m = 0; m < size; m++) {
-          ctx.fillStyle = k === m ? '#1c1c1c' : '#111';
+          ctx.fillStyle = k === m ? colors.cellDiag : colors.cell;
           ctx.fillRect(left + m * cell, top + k * cell, cell, cell);
         }
       }
 
-      ctx.strokeStyle = '#333';
+      ctx.strokeStyle = colors.grid;
       ctx.lineWidth = 1;
       for (let k = 0; k <= size; k++) {
         ctx.beginPath();
@@ -203,7 +204,7 @@ export const DensityMatrix = {
       }
 
       // Row and column labels
-      ctx.fillStyle = '#ccc';
+      ctx.fillStyle = colors.label;
       ctx.font = LABEL_FONT;
       for (let k = 0; k < size; k++) {
         const middle = k * cell + cell / 2;
@@ -226,7 +227,7 @@ export const DensityMatrix = {
 
       // Outline the entry being read
       if (this.cursor) {
-        ctx.strokeStyle = '#fff';
+        ctx.strokeStyle = colors.text;
         ctx.lineWidth = 2;
         ctx.strokeRect(left + this.cursor.j * cell + 1, top + this.cursor.i * cell + 1, cell - 2, cell - 2);
       }
@@ -239,7 +240,7 @@ export const DensityMatrix = {
         ctx.fillRect(barX, top + y, barW, 1);
       }
 
-      ctx.fillStyle = '#ccc';
+      ctx.fillStyle = colors.label;
       ctx.font = '11px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';

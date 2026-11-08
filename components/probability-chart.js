@@ -1,7 +1,7 @@
 // Bar chart of the measurement probability of every basis state.
 
 import * as engine from '../engine.js';
-import { fitCanvas, redrawOnResize } from './canvas-fit.js';
+import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 
 export const ProbabilityChart = {
   mixins: [redrawOnResize],
@@ -44,10 +44,11 @@ export const ProbabilityChart = {
       if (!fit) return;
       const { ctx, width: W, height: H } = fit;
 
+      const colors = themeColors();
       const probs = this.probs;
       const count = probs.length;
 
-      ctx.fillStyle = '#000';
+      ctx.fillStyle = colors.bg;
       ctx.fillRect(0, 0, W, H);
 
       // Spread the bars over the width; at most 70 px wide each
@@ -64,10 +65,10 @@ export const ProbabilityChart = {
         const cx = pad + slot * (i + 0.5);
         const height = probs[i] * maxHeight;
 
-        ctx.fillStyle = '#4caf50';
+        ctx.fillStyle = colors.bar;
         ctx.fillRect(cx - barWidth / 2, baseline - height, barWidth, height);
 
-        ctx.fillStyle = '#fff';
+        ctx.fillStyle = colors.text;
         ctx.fillText(engine.basisLabel(i, this.n), cx, baseline + 20);
 
         // Drop the decimal if the label would not fit above its bar

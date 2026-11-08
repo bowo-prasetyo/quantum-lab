@@ -1,8 +1,154 @@
+/* ---------- Colour themes ----------
+
+   Every colour is a token. Dark is the default; light follows the system
+   setting unless the learner picks a theme in the top bar (theme.js sets
+   data-theme on <html>). Canvases read the --canvas-* tokens when they
+   draw (components/canvas-fit.js), so they follow the theme too.
+   Text tokens meet WCAG AA (4.5:1) on --surface in both themes. */
+
+:root {
+  color-scheme: dark;
+  --bg: #111111;
+  --surface: #1b1b1b;          /* cards */
+  --surface-2: #2a2a2a;        /* chips, options, quiet buttons */
+  --surface-3: #222222;        /* hint line */
+  --border: #333333;
+  --border-faint: #2a2a2a;
+  --border-strong: #555555;
+  --text: #eeeeee;
+  --text-strong: #ffffff;
+  --text-soft: #cccccc;
+  --text-muted: #aaaaaa;
+  --text-dim: #8a8a8a;         /* zero-probability rows: 4.9:1 */
+  --link: #8fb2ff;
+  --brand-soft: #a9c6ff;
+  --accent: #2f6fed;           /* buttons, with --on-accent text */
+  --accent-dim: #1f4aa0;
+  --accent-tint: rgba(47, 111, 237, 0.05);
+  --accent-tint-strong: rgba(47, 111, 237, 0.2);
+  --on-accent: #ffffff;
+  --focus: #ffffff;
+  --chip: #444444;             /* circuit editor palette */
+  --measure: #6b4ad6;
+  --option-right: #1f6b36;
+  --option-wrong: #7a3020;
+  --badge-right-bg: #1f4d2b;
+  --badge-right-text: #9be3ac;
+  --badge-wrong-bg: #4d2a1f;
+  --badge-wrong-text: #f0b39b;
+  --pass-bg: #16331f;
+  --fail-bg: #33201a;
+
+  --canvas-bg: #000000;
+  --canvas-text: #ffffff;
+  --canvas-label: #cccccc;
+  --canvas-outline: #666666;
+  --canvas-axis: #555555;
+  --canvas-cell: #111111;
+  --canvas-cell-diag: #1c1c1c;
+  --canvas-grid: #333333;
+  --canvas-bar: #4caf50;
+  --canvas-vector: #2f6fed;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --bg: #f2f3f5;
+    --surface: #ffffff;
+    --surface-2: #e9ebef;
+    --surface-3: #f2f3f5;
+    --border: #d4d7dd;
+    --border-faint: #e6e8ec;
+    --border-strong: #9aa1ab;
+    --text: #1a1c20;
+    --text-strong: #000000;
+    --text-soft: #33363c;
+    --text-muted: #555a63;
+    --text-dim: #6b7079;
+    --link: #1d4fd8;
+    --brand-soft: #2f6fed;
+    --accent: #2f6fed;
+    --accent-dim: #1f4aa0;
+    --accent-tint: rgba(47, 111, 237, 0.06);
+    --accent-tint-strong: rgba(47, 111, 237, 0.18);
+    --on-accent: #ffffff;
+    --focus: #1a1c20;
+    --chip: #dde0e6;
+    --measure: #6b4ad6;
+    --option-right: #1f6b36;
+    --option-wrong: #a03a22;
+    --badge-right-bg: #dff3e5;
+    --badge-right-text: #1b5e2f;
+    --badge-wrong-bg: #fbe6df;
+    --badge-wrong-text: #8a2f17;
+    --pass-bg: #e3f4e8;
+    --fail-bg: #fbe9e3;
+
+    --canvas-bg: #ffffff;
+    --canvas-text: #111111;
+    --canvas-label: #33363c;
+    --canvas-outline: #8a8f98;
+    --canvas-axis: #b4b8bf;
+    --canvas-cell: #f4f5f7;
+    --canvas-cell-diag: #e6e8ec;
+    --canvas-grid: #d4d7dd;
+    --canvas-bar: #2e7d32;
+    --canvas-vector: #2f6fed;
+  }
+}
+
+/* The learner chose light in the top bar */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f2f3f5;
+  --surface: #ffffff;
+  --surface-2: #e9ebef;
+  --surface-3: #f2f3f5;
+  --border: #d4d7dd;
+  --border-faint: #e6e8ec;
+  --border-strong: #9aa1ab;
+  --text: #1a1c20;
+  --text-strong: #000000;
+  --text-soft: #33363c;
+  --text-muted: #555a63;
+  --text-dim: #6b7079;
+  --link: #1d4fd8;
+  --brand-soft: #2f6fed;
+  --accent: #2f6fed;
+  --accent-dim: #1f4aa0;
+  --accent-tint: rgba(47, 111, 237, 0.06);
+  --accent-tint-strong: rgba(47, 111, 237, 0.18);
+  --on-accent: #ffffff;
+  --focus: #1a1c20;
+  --chip: #dde0e6;
+  --measure: #6b4ad6;
+  --option-right: #1f6b36;
+  --option-wrong: #a03a22;
+  --badge-right-bg: #dff3e5;
+  --badge-right-text: #1b5e2f;
+  --badge-wrong-bg: #fbe6df;
+  --badge-wrong-text: #8a2f17;
+  --pass-bg: #e3f4e8;
+  --fail-bg: #fbe9e3;
+
+  --canvas-bg: #ffffff;
+  --canvas-text: #111111;
+  --canvas-label: #33363c;
+  --canvas-outline: #8a8f98;
+  --canvas-axis: #b4b8bf;
+  --canvas-cell: #f4f5f7;
+  --canvas-cell-diag: #e6e8ec;
+  --canvas-grid: #d4d7dd;
+  --canvas-bar: #2e7d32;
+  --canvas-vector: #2f6fed;
+}
+
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background: #111;
-  color: #eee;
+  background: var(--bg);
+  color: var(--text);
 }
 
 .container {
@@ -20,7 +166,7 @@ body {
 }
 
 .card {
-  background: #1b1b1b;
+  background: var(--surface);
   border-radius: 12px;
   padding: 20px;
   margin-bottom: 20px;
@@ -31,8 +177,8 @@ button {
   padding: 10px 14px;
   border: none;
   border-radius: 8px;
-  background: #2f6fed;
-  color: white;
+  background: var(--accent);
+  color: var(--on-accent);
   cursor: pointer;
 }
 
@@ -44,7 +190,9 @@ button:hover {
    the pixel size to match (components/canvas-fit.js), so they stay sharp. */
 canvas {
   display: block;
-  background: #000;
+  box-sizing: border-box;
+  background: var(--canvas-bg);
+  border: 1px solid var(--border-faint);  /* so a white canvas stands out on a white card */
   border-radius: 12px;
   width: 100%;
 }
@@ -70,13 +218,13 @@ canvas {
 
 .bloch-coords {
   margin: 6px 0 0;
-  color: #ccc;
+  color: var(--text-soft);
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
 
 .caption {
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -86,7 +234,7 @@ pre {
 
 .gate {
   padding: 10px 14px;
-  background: #444;
+  background: var(--chip);
   border-radius: 8px;
   cursor: grab;
   user-select: none;
@@ -100,14 +248,14 @@ pre {
   list-style: none;
   margin-bottom: 0;
   min-height: 60px;
-  border: 2px dashed #2f6fed;
+  border: 2px dashed var(--accent);
   border-radius: 10px;
   padding: 10px;
   margin-top: 10px;
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
-  background: rgba(47, 111, 237, 0.05);
+  background: var(--accent-tint);
 }
 
 /* A step: its label and a remove (×) button. Steps already applied by
@@ -117,18 +265,18 @@ pre {
   align-items: center;
   gap: 2px;
   padding: 0 0 0 12px;
-  background: #2f6fed;
+  background: var(--accent);
   border-radius: 8px;
-  color: white;
+  color: var(--on-accent);
 }
 
 .circuit-step.done {
-  background: #1f4aa0;
+  background: var(--accent-dim);
 }
 
 .circuit-step.current {
-  background: #2f6fed;
-  outline: 2px solid #fff;
+  background: var(--accent);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -147,13 +295,13 @@ pre {
 }
 
 .circuit-step-remove:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
   outline-offset: -2px;
 }
 
 .circuit-empty {
   align-self: center;
-  color: #aaa;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
@@ -225,7 +373,7 @@ pre {
 
 .picker-label {
   min-width: 4.5em;
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .picker-chip {
@@ -233,15 +381,15 @@ pre {
   padding: 6px 10px;
   min-width: 40px;
   min-height: 36px;
-  background: #2a2a2a;
-  color: #eee;
-  border: 1px solid #444;
+  background: var(--surface-2);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
 }
 
 .picker-chip[aria-checked="true"] {
-  background: #2f6fed;
-  border-color: #fff;
-  color: #fff;
+  background: var(--accent);
+  border-color: var(--focus);
+  color: var(--on-accent);
 }
 
 .picker-chip:disabled {
@@ -250,7 +398,7 @@ pre {
 }
 
 .picker-chip:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -267,21 +415,21 @@ pre {
   margin: 12px 0 0;
   padding: 8px 10px;
   border-radius: 8px;
-  background: #222;
-  color: #ccc;
+  background: var(--surface-3);
+  color: var(--text-soft);
   font-size: 14px;
   line-height: 1.4;
 }
 
 .gate-hint strong {
-  color: #fff;
+  color: var(--text-strong);
   margin-right: 4px;
 }
 
 /* A canvas that can be explored with the keyboard (density matrix, 3D view) */
 .readable-canvas:focus-visible,
 .webgl-canvas:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
@@ -289,7 +437,7 @@ pre {
 .readout {
   min-height: 1.4em;
   margin: 8px 0 0;
-  color: #ddd;
+  color: var(--text-soft);
   font-size: 14px;
   font-variant-numeric: tabular-nums;
 }
@@ -308,7 +456,7 @@ pre {
 /* ---------- Welcome and advanced views ---------- */
 
 .card.welcome {
-  border-left: 4px solid #2f6fed;
+  border-left: 4px solid var(--accent);
 }
 
 .welcome-lead {
@@ -333,8 +481,8 @@ pre {
   justify-content: center;
   padding: 10px 14px;
   border-radius: 8px;
-  background: #2f6fed;
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
   text-decoration: none;
 }
 
@@ -344,15 +492,15 @@ pre {
 
 .button-link:focus-visible,
 button:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 
 /* A quieter button, for the second choice */
 button.secondary {
-  background: #2a2a2a;
-  border: 1px solid #555;
-  color: #eee;
+  background: var(--surface-2);
+  border: 1px solid var(--border-strong);
+  color: var(--text);
 }
 
 @media (pointer: coarse) {
@@ -373,7 +521,7 @@ button.secondary {
 .advanced-toggle p {
   flex: 1 1 260px;
   margin: 0;
-  color: #ccc;
+  color: var(--text-soft);
 }
 
 .advanced-toggle button {
@@ -418,21 +566,21 @@ button.secondary {
 }
 
 .gate:focus-visible {
-  outline: 2px solid #2f6fed;
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
 .circuit-dropzone.drop-target {
   border-style: solid;
-  background: rgba(47, 111, 237, 0.2);
+  background: var(--accent-tint-strong);
 }
 
 .drag-ghost {
   position: fixed;
   transform: translate(-50%, -150%);
   padding: 10px 14px;
-  background: #2f6fed;
-  color: white;
+  background: var(--accent);
+  color: var(--on-accent);
   border-radius: 8px;
   pointer-events: none;
   z-index: 1000;
@@ -452,14 +600,14 @@ button.secondary {
   align-items: center;
   gap: 8px;
   margin-right: 8px;
-  color: #fff;
+  color: var(--text-strong);
   font-weight: 600;
   font-size: 1.1em;
   text-decoration: none;
 }
 
 .nav-brand-soft {
-  color: #a9c6ff;
+  color: var(--brand-soft);
   font-weight: 300;
 }
 
@@ -472,32 +620,47 @@ button.secondary {
 }
 
 .nav-label {
-  color: #aaa;
+  color: var(--text-muted);
 }
 
 .nav-sep {
   flex: 1;
 }
 
+.theme-picker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-picker select {
+  padding: 7px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+}
+
 .nav-link {
   padding: 8px 12px;
   border-radius: 8px;
-  background: #2a2a2a;
-  color: #eee;
+  background: var(--surface-2);
+  color: var(--text);
   text-decoration: none;
 }
 
 .nav-link.active {
-  background: #2f6fed;
-  color: white;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .notice {
-  border-left: 4px solid #2f6fed;
+  border-left: 4px solid var(--accent);
 }
 
 .notice a {
-  color: #8fb2ff;
+  color: var(--link);
 }
 
 button:disabled {
@@ -526,7 +689,7 @@ button:disabled {
 .amp-table td {
   padding: 6px 10px;
   text-align: right;
-  border-bottom: 1px solid #2a2a2a;
+  border-bottom: 1px solid var(--border-faint);
   white-space: nowrap;
 }
 
@@ -536,13 +699,13 @@ button:disabled {
 }
 
 .amp-table th {
-  color: #aaa;
+  color: var(--text-muted);
   font-weight: normal;
 }
 
 /* Dimmed, but still 4.9:1 against the card (WCAG AA needs 4.5:1) */
 .amp-table tr.zero td {
-  color: #8a8a8a;
+  color: var(--text-dim);
 }
 
 /* ---------- Lessons ---------- */
@@ -555,7 +718,7 @@ button:disabled {
 .lesson-nav a,
 .card p a,
 .caption a {
-  color: #8fb2ff;
+  color: var(--link);
 }
 
 .badge {
@@ -566,18 +729,18 @@ button:disabled {
 }
 
 .badge.right {
-  background: #1f4d2b;
-  color: #9be3ac;
+  background: var(--badge-right-bg);
+  color: var(--badge-right-text);
 }
 
 .badge.wrong {
-  background: #4d2a1f;
-  color: #f0b39b;
+  background: var(--badge-wrong-bg);
+  color: var(--badge-wrong-text);
 }
 
 .link-button {
   background: none;
-  color: #8fb2ff;
+  color: var(--link);
   padding: 0 4px;
   text-decoration: underline;
 }
@@ -589,26 +752,33 @@ button:disabled {
 }
 
 .option {
-  background: #2a2a2a;
+  background: var(--surface-2);
+  color: var(--text);
   text-align: left;
 }
 
 .option.chosen {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
 }
 
 .option.right {
-  background: #1f6b36;
+  background: var(--option-right);
+  color: var(--on-accent);
   opacity: 1;
 }
 
 .option.wrong {
-  background: #7a3020;
+  background: var(--option-wrong);
+  color: var(--on-accent);
   opacity: 1;
 }
 
 .option:disabled {
   cursor: default;
+}
+
+.practice-button {
+  margin: 4px 0 0;
 }
 
 .verdict {
@@ -622,11 +792,11 @@ button:disabled {
 }
 
 .check-result.pass {
-  background: #16331f;
+  background: var(--pass-bg);
 }
 
 .check-result.fail {
-  background: #33201a;
+  background: var(--fail-bg);
 }
 
 .lesson-nav {
@@ -643,11 +813,11 @@ button:disabled {
 
 .concepts dd {
   margin: 4px 0 0;
-  color: #ccc;
+  color: var(--text-soft);
 }
 
 .measure-button {
-  background: #6b4ad6;
+  background: var(--measure);
 }
 
 /* ---------- Gate panel ---------- */
@@ -662,7 +832,7 @@ button:disabled {
 }
 
 .gate-row-label {
-  color: #aaa;
+  color: var(--text-muted);
   font-weight: bold;
 }
 
@@ -677,7 +847,7 @@ button:disabled {
 .gate-panel .action-row {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #333;
+  border-top: 1px solid var(--border);
 }
 
 /* Buttons in equal columns, two or more per row, so none is left alone */
@@ -776,17 +946,17 @@ button:disabled {
 .view-tab {
   margin: 0;
   padding: 8px 12px;
-  background: #2a2a2a;
-  color: #eee;
+  background: var(--surface-2);
+  color: var(--text);
 }
 
 .view-tab[aria-selected="true"] {
-  background: #2f6fed;
-  color: #fff;
+  background: var(--accent);
+  color: var(--on-accent);
 }
 
 .view-tab:focus-visible {
-  outline: 2px solid #fff;
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

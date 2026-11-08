@@ -7,6 +7,13 @@
 
   <meta name="description" content="Learn how a quantum computer works by doing it: apply gates to 1, 2 and 3 qubits and see every effect at once. Free, no install, no accounts." />
   <meta name="theme-color" content="#111111" />
+  <!-- Apply a saved light or dark choice before the first paint (see theme.js) -->
+  <script>
+    try {
+      var theme = JSON.parse(localStorage.getItem('glass-qubit-theme'));
+      if (theme === 'light' || theme === 'dark') document.documentElement.dataset.theme = theme;
+    } catch (e) { /* no saved choice */ }
+  </script>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
   <link rel="icon" href="./favicon-32.png" type="image/png" sizes="32x32" />
   <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
