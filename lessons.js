@@ -17,6 +17,8 @@
 //   returnsToStart            optional: true if the steps end in the Set up state on purpose
 //   noisyRun                  optional: { channel, strength }: the steps run as a noisy run,
 //                             with that noise on every qubit after each step
+//   readout                   optional: { oneAsZero, zeroAsOne }: Set up switches on readout
+//                             errors in the Shots view at those rates
 //
 // Operations: ['reset'], ['gate', name, qubit], ['cnot', control, target],
 //             ['cz', control, target], ['measure'] (all qubits),
@@ -448,6 +450,33 @@ export const LESSONS = [
     result: 'Fidelity falls at every step: about 0.92 after the three GHZ gates, and about 0.78 after the four extra ones, even though they cancel and the noiseless circuit makes the same GHZ state. The noise doesn’t cancel: it builds up with the number of steps. On real hardware this limits a circuit’s depth, and it is why quantum error correction, which spends extra qubits to catch errors, is needed for long computations.',
     checks: [
       { type: 'fidelity', ideal: [['ghz']], min: 0.778, max: 0.789 }
+    ]
+  },
+  {
+    id: 'noisy-readout',
+    part: 3,
+    n: 3,
+    title: 'Reading a qubit is noisy too',
+    goal: 'See readout errors record results the state can never give, and correct for them after the fact.',
+    why: 'On real hardware, even a perfect state can be read out wrongly. Correcting for readout errors (mitigation) is a standard step in every experiment.',
+    panels: ['gates', 'table', 'probabilities', 'shots'],
+    setup: [['reset'], ['ghz']],
+    readout: { oneAsZero: 0.05, zeroAsOne: 0.02 },
+    steps: [
+      'Set up has made the GHZ state (|000⟩ + |111⟩)/√2 and switched on readout errors in the Shots view: each 1 is read as 0 5% of the time, and each 0 as 1 2% of the time.',
+      'Press Run 1000 shots and look for results other than |000⟩ and |111⟩.',
+      'Tick Correct for readout errors and compare the purple bars with the lines.',
+      'Press Run 100 shots a few times with the correction on, and watch the estimates scatter.'
+    ],
+    ops: [],
+    predict: {
+      question: 'The GHZ state can only give |000⟩ or |111⟩, but readout errors are on. What will 1000 shots record?',
+      options: ['Only |000⟩ and |111⟩', 'Mostly |000⟩ and |111⟩, plus a few results the state can never give', 'All eight results about equally'],
+      answer: 1
+    },
+    result: 'Roughly one shot in ten records a result such as |001⟩ or |110⟩, which the GHZ state can never give: one of its bits was misread. The state itself never changed, as the table shows; only the recording did. Correcting for readout errors works the counts back through the known error rates, and the impossible results drop to about 0% while |000⟩ and |111⟩ return to about 50%. With only 100 shots the corrected estimates scatter, and can even dip below 0%, because undoing the errors also amplifies the random scatter in the counts.',
+    checks: [
+      { type: 'probs', values: { '|000⟩': 0.5, '|111⟩': 0.5 } }
     ]
   },
   {

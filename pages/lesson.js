@@ -109,11 +109,13 @@ export const Lesson = {
     },
 
     // A lesson that runs on noisy hardware chooses its noise and turns on
-    // noisy runs (without changing the free lab's remembered choice)
+    // noisy runs (without changing the free lab's remembered choice); one
+    // about readout sets the Shots view's readout errors
     prepareNoise() {
       const lab = this.$refs.lab;
       if (this.lesson.noisyRun) lab.setNoise(this.lesson.noisyRun, { remember: false });
       lab.setNoisyRun(!!this.lesson.noisyRun);
+      lab.setReadoutPreset(this.lesson.readout ?? null);
     },
 
     async setUp() {
