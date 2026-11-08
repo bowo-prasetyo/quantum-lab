@@ -109,7 +109,7 @@ export const GatePanel = {
 
       <p class="caption">
         <i18n-t k="gates.caption" :params="{ measureAll: $t('gates.measureAll'), undo: $t('gates.undo') }" />
-        <template v-if="n >= 2">{{ ' ' + $t(n === 3 ? 'gates.presetsBoth' : 'gates.presetsBell', { bell: $t('gates.bell'), ghz: $t('gates.ghz'), zero: '|' + '0'.repeat(n) + '⟩' }) }}</template>
+        <template v-if="n >= 2">{{ $t('text.sentenceGap') + $t(n === 3 ? 'gates.presetsBoth' : 'gates.presetsBell', { bell: $t('gates.bell'), ghz: $t('gates.ghz'), zero: '|' + '0'.repeat(n) + '⟩' }) }}</template>
       </p>
     </div>
   `

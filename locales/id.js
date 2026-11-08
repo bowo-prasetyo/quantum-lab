@@ -24,6 +24,7 @@ export default {
 
   // Shared pieces
   'list.separator': ', ',
+  'text.sentenceGap': ' ',
   'number.degrees': '{value}°',
   'measurement.none': '-',
   'measurement.qubit': 'qubit {qubit} memberi {bit}',

@@ -14,6 +14,8 @@ import en from './en.js';
 import enContent from '../content/en.js';
 import id from './id.js';
 import idContent from '../content/id.js';
+import ja from './ja.js';
+import jaContent from '../content/ja.js';
 import { pseudoMessages, pseudoContent } from './pseudo.js';
 
 export const DEFAULT_LOCALE = 'en';
@@ -23,6 +25,8 @@ export const LOCALES = {
   en: { name: 'English', messages: en, content: enContent, intl: 'en-GB' },
   // Indonesian; terms in docs/glossary-id.md
   id: { name: 'Bahasa Indonesia', messages: id, content: idContent },
+  // Japanese; terms in docs/glossary-ja.md
+  ja: { name: '日本語', messages: ja, content: jaContent },
   // Numbers, percentages and lists follow German rules (0,707, 50 %), so a
   // number shown with a decimal point hasn't been formatted for the language
   'en-XA': { name: 'Pseudo (en-XA)', messages: pseudoMessages(en), content: pseudoContent(enContent), intl: 'de-DE', pseudo: true }

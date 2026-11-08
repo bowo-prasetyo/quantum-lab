@@ -164,7 +164,7 @@ export const ShotsHistogram = {
       if (this.corrections) {
         const zero = signedPercent(0);
         const est = this.rows.filter(r => r.corrected && r.corrected !== zero).map(r => t('describe.outcome', { label: r.label, percent: r.corrected })).join(sep);
-        text += ' ' + t('shots.summaryCorrected', { list: est });
+        text += t('text.sentenceGap') + t('shots.summaryCorrected', { list: est });
       }
       return text;
     }

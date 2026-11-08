@@ -387,8 +387,8 @@ quantum-lab/
 ├── app.js                 # Creates the Vue app
 ├── i18n.js                # Translated messages and locale-aware numbers (see docs/I18N.md)
 ├── locale.js              # The page's language: start language, <html lang>, Vue's $t
-├── locales/               # Interface messages per language: en.js, id.js (Indonesian), plus the pseudo-locale for testing
-├── content/               # Lessons, Concepts and Help text per language: en.js, id.js
+├── locales/               # Interface messages per language: en.js, id.js (Indonesian), ja.js (Japanese), plus the pseudo-locale for testing
+├── content/               # Lessons, Concepts and Help text per language: en.js, id.js, ja.js
 ├── content.js             # That text in the current language, with button names filled in
 ├── router.js              # Routes: #/lab/:n, #/lessons, #/lessons/:id, #/concepts, #/help (#/manual → lessons)
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
@@ -437,7 +437,7 @@ quantum-lab/
 │       └── *.browser.test.js  # Every lesson, controls, layout, accessibility, import… in a real browser
 ├── package.json           # Only configures the tests; the app has no build step
 ├── brand/                 # Logo files
-├── docs/                  # Product vision, merge plan, internationalization and the Indonesian glossary
+├── docs/                  # Product vision, merge plan, internationalization and glossaries (Indonesian, Japanese)
 └── README.md
 ```
 
@@ -565,7 +565,7 @@ Both have been agreed.
 
 ## Languages
 
-The app is ready for other languages. Everything a learner reads or hears is translatable: the interface (every label, view, screen-reader announcement and lesson check) comes from `locales/en.js`, and the lessons, Concepts and Help from `content/en.js`, which names buttons by their own labels. Every number uses the language's decimal separator (`0,707 + 0,000i` in German). It picks the language from the address (`?lang=`), the learner's choice or the browser, and switching language updates the page at once. It speaks English and Bahasa Indonesia (`?lang=id`, or the picker in the top bar); the Indonesian translation is awaiting review by a physics-literate Indonesian speaker. Open `index.html?lang=en-XA` to see the pseudo-locale, a test language that shows which text is translatable. How it works, how to add a language and what comes next: [docs/I18N.md](docs/I18N.md).
+The app is ready for other languages. Everything a learner reads or hears is translatable: the interface (every label, view, screen-reader announcement and lesson check) comes from `locales/en.js`, and the lessons, Concepts and Help from `content/en.js`, which names buttons by their own labels. Every number uses the language's decimal separator (`0,707 + 0,000i` in German). It picks the language from the address (`?lang=`), the learner's choice or the browser, and switching language updates the page at once. It speaks English, Bahasa Indonesia (`?lang=id`) and Japanese (`?lang=ja`), chosen from the browser or the picker in the top bar; the Indonesian and Japanese translations are awaiting review by physics-literate speakers. Open `index.html?lang=en-XA` to see the pseudo-locale, a test language that shows which text is translatable. How it works, how to add a language and what comes next: [docs/I18N.md](docs/I18N.md).
 
 ---
 
