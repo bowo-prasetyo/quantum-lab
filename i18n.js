@@ -162,6 +162,31 @@ export function t(key, params = {}, locale = active()) {
   return key;
 }
 
+/**
+ * Fills {placeholders} in a text from params, leaving unknown ones as they
+ * are. t() does this for messages; content.js for lesson and page text.
+ */
+export function fill(text, params = {}) {
+  return interpolate(text, params);
+}
+
+// ---------- Content (lessons, Concepts, Help) ----------
+
+/**
+ * A piece of the long-form content (content/<code>.js) by its path, e.g.
+ * ['lessons', 'bit-flip', 'title'], from the most specific language that
+ * has it, then English: a translation can leave anything out. Returns
+ * undefined if even English has nothing there.
+ */
+export function contentText(path, locale = active()) {
+  for (const code of fallbackChain(locale)) {
+    let value = LOCALES[code].content;
+    for (const key of path) value = value?.[key];
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
 // ---------- Formatting ----------
 
 // Formatters are slow to build and called on every redraw, so keep them

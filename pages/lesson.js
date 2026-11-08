@@ -4,6 +4,7 @@
 import { AppNav } from '../components/app-nav.js';
 import { Lab } from '../lab.js';
 import { LESSONS, PARTS, lessonById } from '../lessons.js';
+import { lessonText, partTitle } from '../content.js';
 import { evaluateChecks } from '../lesson-checks.js';
 import { loadPredictions, recordPrediction, firstChoice } from '../progress.js';
 import { setPref } from '../prefs.js';
@@ -54,11 +55,21 @@ export const Lesson = {
     part() {
       return PARTS.find(p => p.part === this.lesson.part);
     },
+    // The lesson's words in the current language (content.js)
+    text() {
+      return lessonText(this.lesson.id);
+    },
+    partTitle() {
+      return partTitle(this.lesson.part);
+    },
+    // { id, title } of the lessons before and after, or null
     previous() {
-      return LESSONS[this.index - 1] || null;
+      const lesson = LESSONS[this.index - 1];
+      return lesson ? { id: lesson.id, title: lessonText(lesson.id).title } : null;
     },
     next() {
-      return LESSONS[this.index + 1] || null;
+      const lesson = LESSONS[this.index + 1];
+      return lesson ? { id: lesson.id, title: lessonText(lesson.id).title } : null;
     },
     predicted() {
       return this.chosen !== null;
@@ -181,19 +192,19 @@ export const Lesson = {
           <div class="card">
             <p class="caption">
               <router-link to="/lessons">{{ $t('nav.lessons') }}</router-link>
-              · {{ $t('lessons.part', { part: part.part, title: part.title }) }} · {{ $t('lesson.position', { k: index + 1, total: lessonCount }) }}
+              · {{ $t('lessons.part', { part: part.part, title: partTitle }) }} · {{ $t('lesson.position', { k: index + 1, total: lessonCount }) }}
             </p>
-            <h1>{{ lesson.title }}</h1>
-            <i18n-t k="lesson.goal" tag="p" :params="{ goal: lesson.goal }" />
-            <i18n-t k="lesson.why" tag="p" :params="{ why: lesson.why }" />
+            <h1>{{ text.title }}</h1>
+            <i18n-t k="lesson.goal" tag="p" :params="{ goal: text.goal }" />
+            <i18n-t k="lesson.why" tag="p" :params="{ why: text.why }" />
           </div>
 
           <div class="card predict">
             <h2>{{ $t('lesson.predict') }}</h2>
-            <p>{{ lesson.predict.question }}</p>
+            <i18n-t :text="text.question" tag="p" />
             <div class="options">
               <button
-                v-for="(option, i) in lesson.predict.options"
+                v-for="(option, i) in text.options"
                 :key="i"
                 class="option"
                 :class="{
@@ -204,7 +215,7 @@ export const Lesson = {
                 :disabled="locked"
                 :aria-pressed="shownPick === i ? 'true' : null"
                 @click="choose(i)"
-              >{{ option }}<span v-if="locked && i === lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.rightAnswer') }}</span><span v-if="locked && shownPick === i && i !== lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.yourAnswer') }}</span></button>
+              ><i18n-t :text="option" /><span v-if="locked && i === lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.rightAnswer') }}</span><span v-if="locked && shownPick === i && i !== lesson.predict.answer" class="visually-hidden"> {{ $t('lesson.yourAnswer') }}</span></button>
             </div>
 
             <!-- Practice answer -->
@@ -246,7 +257,7 @@ export const Lesson = {
             <div class="card">
               <h2>{{ $t('lesson.tryIt') }}</h2>
               <ol>
-                <li v-for="(step, i) in lesson.steps" :key="i">{{ step }}</li>
+                <i18n-t v-for="(step, i) in text.steps" :key="i" :text="step" tag="li" />
               </ol>
               <button :disabled="busy" @click="setUp">{{ $t('lesson.setUp') }}</button>
               <button :disabled="busy || !lesson.ops.length" @click="showMe">{{ $t('lesson.showMe') }}</button>
@@ -263,7 +274,7 @@ export const Lesson = {
 
             <div class="card" v-if="showResult">
               <h2>{{ $t('lesson.whatHappened') }}</h2>
-              <p>{{ lesson.result }}</p>
+              <i18n-t :text="text.result" tag="p" />
             </div>
           </template>
         </lab>

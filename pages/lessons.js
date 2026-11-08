@@ -2,6 +2,7 @@
 
 import { AppNav } from '../components/app-nav.js';
 import { LESSONS, PARTS } from '../lessons.js';
+import { lessonText, partTitle } from '../content.js';
 import { loadPredictions, clearPredictions } from '../progress.js';
 import { setPref } from '../prefs.js';
 
@@ -22,9 +23,10 @@ export const Lessons = {
       let number = 0;
       return PARTS.map(part => ({
         ...part,
+        title: partTitle(part.part),
         lessons: LESSONS
           .filter(l => l.part === part.part)
-          .map(l => ({ ...l, number: ++number }))
+          .map(l => ({ id: l.id, ...lessonText(l.id), number: ++number }))
       }));
     },
     answered() {
@@ -66,7 +68,7 @@ export const Lessons = {
               class="badge"
               :class="predictions[lesson.id] ? 'right' : 'wrong'"
             >{{ $t(predictions[lesson.id] ? 'lessons.predictedRight' : 'lessons.predictedWrong') }}</span>
-            <div class="caption">{{ lesson.goal }}</div>
+            <i18n-t :text="lesson.goal" tag="div" class="caption" />
           </li>
         </ol>
       </div>
