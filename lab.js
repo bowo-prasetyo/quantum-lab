@@ -57,11 +57,22 @@ const VIEWS = [
   { key: 'cube', label: '3D' }
 ];
 
+// The remembered noise choice, or the default if none (or a bad one) is saved
+function savedNoise() {
+  const channel = getPref('noise-channel', 'dephasing');
+  const strength = getPref('noise-strength', 0.5);
+  return {
+    channel: Object.hasOwn(engine.NOISE_CHANNELS, channel) ? channel : 'dephasing',
+    strength: typeof strength === 'number' && strength >= 0 && strength <= 1 ? strength : 0.5
+  };
+}
+
 // Circuit editor step → worker message
 function stepToMessage(step) {
   if (step.gate === 'CNOT') return { type: 'cnot', control: step.control, target: step.target };
   if (step.gate === 'CZ') return { type: 'cz', control: step.control, target: step.target };
   if (step.gate === 'M') return { type: 'measureQubit', targetQubit: step.target };
+  if (step.gate === 'N') return { type: 'noise', channel: step.channel, targetQubit: step.target, strength: step.strength };
   return { type: 'gate', gate: step.gate, targetQubit: step.target };
 }
 
@@ -115,6 +126,9 @@ export const Lab = {
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
       announcement: '',    // last screen-reader announcement
+      // The Noise panel's choice, used by its buttons, the circuit editor's
+      // N steps and noisy runs
+      noise: savedNoise(),
       // Show amplitudes with the global phase removed (table, 3D view, interference)
       hideGlobalPhase: getPref('hide-global-phase', false),
       // Free lab only: show the density matrix, correlations, Pauli expectations, entanglement and 3D view
@@ -207,7 +221,10 @@ export const Lab = {
               :n="n"
               :disabled="running"
               :mixed="!!stateRho"
+              :channel="noise.channel"
+              :strength="noise.strength"
               @noise="applyNoise"
+              @settings="setNoise"
             />
 
             <circuit-editor
@@ -220,6 +237,7 @@ export const Lab = {
               :target="pair.target"
               @pair="pair = $event"
               :show-undo="!show('gates')"
+              :noise="show('noise') ? noise : null"
               :can-undo="historyLength > 0"
               @add="addStep"
               @remove="removeStep"
@@ -464,6 +482,13 @@ export const Lab = {
     show(panel) {
       if (this.panels) return this.panels.includes(panel);
       return this.showAdvanced || !ADVANCED.includes(panel);
+    },
+
+    /** Sets the kind and strength of noise ({ channel, strength }); remembered. */
+    setNoise({ channel, strength }) {
+      this.noise = { channel, strength };
+      setPref('noise-channel', channel);
+      setPref('noise-strength', strength);
     },
 
     toggleGlobalPhase() {

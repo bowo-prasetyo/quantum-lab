@@ -1432,3 +1432,12 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+/* Circuit editor: a ninth chip, N (noise), when noise is offered */
+.gate-row.palette-row.with-noise {
+  grid-template-columns: 2.25rem repeat(9, minmax(0, 1fr));
+}
+
+.noise-chip {
+  border: 1px dashed var(--measure);
+}

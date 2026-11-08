@@ -381,3 +381,45 @@ describe('Noise', () => {
       assert.match(await page.locator('.bloch-coords').innerText(), /z = 1\.00/);
     }));
 });
+
+describe('Noise steps in circuits', () => {
+  test('N adds the chosen noise to the circuit; runs, the timeline and reloads keep it', () =>
+    withLab('#/lab/2', async page => {
+      assert.equal(await page.locator('.noise-chip').count(), 0, 'no N without the Noise panel');
+      await button(page, 'Show advanced views').click();
+      const noise = card(page, 'Noise');
+      await noise.getByRole('radio', { name: 'Dephasing' }).check();
+      await noise.getByRole('slider').fill('100');
+      assert.equal(await page.locator('.noise-chip').count(), 2, 'one N per qubit');
+
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await page.getByRole('button', { name: 'Add CNOT, control Q0, target Q1' }).click();
+      await page.getByRole('button', { name: 'Add Dephase 100% noise on Q0' }).click();
+      assert.deepEqual(await page.locator('.circuit-step-label').allInnerTexts(), ['H q0', 'CNOT q0→q1', 'Dephase 100% q0']);
+
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1700);
+      assert.deepEqual(await card(page, 'Timeline').locator('.timeline-label').allInnerTexts(),
+        ['Start', 'H q0', 'CNOT q0→q1', 'Dephase 100% q0']);
+      assert.equal(await page.locator('.mixed-notice').count(), 1);
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /= 0\.500/);
+
+      // Back one frame: the pure Bell pair
+      await card(page, 'Timeline').getByRole('button', { name: '◀ Back' }).click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 0);
+
+      const unitary = card(page, 'Unitary Matrix');
+      await unitary.getByRole('radio', { name: 'Whole circuit' }).check();
+      assert.match(await unitary.locator('.unitary-what').innerText(), /noise \(N\), which is not unitary/);
+
+      // The step keeps its own strength when the panel changes, and survives a reload
+      await noise.getByRole('slider').fill('20');
+      assert.equal(await page.locator('.circuit-step-label').nth(2).innerText(), 'Dephase 100% q0');
+      await page.reload();
+      await page.locator('h1').waitFor();
+      await settle(page);
+      assert.deepEqual(await page.locator('.circuit-step-label').allInnerTexts(), ['H q0', 'CNOT q0→q1', 'Dephase 100% q0']);
+      assert.equal(await page.getByRole('button', { name: 'Add Dephase 20% noise on Q1' }).count(), 1, 'noise choice remembered');
+    }));
+});

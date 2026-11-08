@@ -14,10 +14,17 @@
 import { QubitPicker } from './qubit-picker.js';
 import { gateHints } from './gate-hints.js';
 
-/** A circuit step as text: 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure qubit 2). */
+// Noise steps' names, by channel (see NOISE_CHANNELS in engine.js)
+export const NOISE_STEP_NAMES = Object.freeze({ dephasing: 'Dephase', damping: 'Damp', depolarizing: 'Depolarize' });
+
+/**
+ * A circuit step as text: 'H q0', 'CNOT q0→q1', 'CZ q0,q1', 'M q2' (measure
+ * qubit 2), 'Dephase 10% q1' (noise: { gate: 'N', target, channel, strength }).
+ */
 export function stepLabel(step) {
   if (step.gate === 'CNOT') return `CNOT q${step.control}→q${step.target}`;
   if (step.gate === 'CZ') return `CZ q${step.control},q${step.target}`;
+  if (step.gate === 'N') return `${NOISE_STEP_NAMES[step.channel]} ${Math.round(step.strength * 100)}% q${step.target}`;
   return `${step.gate} q${step.target}`;
 }
 
@@ -39,7 +46,10 @@ export const CircuitEditor = {
     applied: { type: Number, default: null },
     // Show an Undo button here (when the lab has no gate panel to hold it)
     showUndo: { type: Boolean, default: false },
-    canUndo: { type: Boolean, default: false }
+    canUndo: { type: Boolean, default: false },
+    // The Noise panel's choice, { channel, strength }, which an N chip adds;
+    // null when noise isn't offered (then there are no N chips)
+    noise: { type: Object, default: null }
   },
   emits: ['add', 'remove', 'clear', 'run', 'step', 'undo', 'pair'],
 
@@ -74,6 +84,11 @@ export const CircuitEditor = {
     },
     pairLabel() {
       return `control Q${this.control}, target Q${this.target}`;
+    },
+    // e.g. "Dephase 10%"
+    noiseText() {
+      if (!this.noise) return '';
+      return `${NOISE_STEP_NAMES[this.noise.channel]} ${Math.round(this.noise.strength * 100)}%`;
     }
   },
 
@@ -97,6 +112,7 @@ export const CircuitEditor = {
         v-for="q in qubits"
         :key="q"
         class="gate-row palette-row"
+        :class="{ 'with-noise': noise }"
         role="group"
         :aria-label="'Add to qubit ' + q"
       >
@@ -119,6 +135,23 @@ export const CircuitEditor = {
           @keydown.enter.prevent="addGate({ gate: g, target: q })"
           @keydown.space.prevent="addGate({ gate: g, target: q })"
         >{{ g }}</div>
+        <div
+          v-if="noise"
+          class="gate noise-chip"
+          role="button"
+          tabindex="0"
+          :aria-label="'Add ' + noiseText + ' noise on Q' + q"
+          :aria-describedby="descId('N')"
+          :aria-disabled="running ? 'true' : null"
+          draggable="true"
+          @dragstart="draggingGate = { gate: 'N', target: q }"
+          @pointerenter="showHint('N')"
+          @focus="showHint('N')"
+          @pointerdown="onGatePointerDown($event, { gate: 'N', target: q })"
+          @click="onGateClick({ gate: 'N', target: q })"
+          @keydown.enter.prevent="addGate({ gate: 'N', target: q })"
+          @keydown.space.prevent="addGate({ gate: 'N', target: q })"
+        >N</div>
       </div>
 
       <div v-if="n >= 2" class="cnot-row palette-pair">
@@ -153,7 +186,8 @@ export const CircuitEditor = {
 
       <p class="caption">
         Tap or drag a gate to add it to the circuit: each row adds to its qubit
-        (M measures it)<template v-if="n >= 2">, and CNOT and CZ use the control
+        (M measures it<template v-if="noise">; N adds the noise chosen in the
+        Noise panel, now {{ noiseText }}</template>)<template v-if="n >= 2">, and CNOT and CZ use the control
         and target chosen above, the same pair as in the Gates panel</template>.
         Press × on a step to remove it.
       </p>
@@ -247,11 +281,12 @@ export const CircuitEditor = {
       return this.stepLabel(this.toStep(spec));
     },
 
-    // Palette chip { gate, target? } → circuit step
+    // Palette chip { gate, target? } → circuit step. N takes the Noise
+    // panel's choice at the moment it is added.
     toStep({ gate, target }) {
-      return PAIR_GATES.includes(gate)
-        ? { gate, control: this.control, target: this.target }
-        : { gate, target };
+      if (PAIR_GATES.includes(gate)) return { gate, control: this.control, target: this.target };
+      if (gate === 'N') return { gate, target, channel: this.noise.channel, strength: this.noise.strength };
+      return { gate, target };
     },
 
     addGate(spec) {

@@ -13,8 +13,13 @@ import { setPref } from '../prefs.js';
 const showMeDelay = steps => Math.min(600, Math.round(6000 / Math.max(steps, 1)));
 
 // Lesson operations → circuit editor steps
-const toStep = ([kind, a, b]) =>
-  kind === 'cnot' ? { gate: 'CNOT', control: a, target: b } : { gate: a, target: b };
+function toStep([kind, a, b, c]) {
+  if (kind === 'cnot') return { gate: 'CNOT', control: a, target: b };
+  if (kind === 'cz') return { gate: 'CZ', control: a, target: b };
+  if (kind === 'measureQubit') return { gate: 'M', target: a };
+  if (kind === 'noise') return { gate: 'N', channel: a, target: b, strength: c };
+  return { gate: a, target: b };
+}
 
 export const Lesson = {
   components: { AppNav, Lab },

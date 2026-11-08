@@ -65,3 +65,9 @@ describe('entryText', () => {
     assert.equal(entryText(-0.5, -0.5), '0.71∠−135°');
   });
 });
+
+describe('noise steps in circuits', () => {
+  test('noise has no unitary matrix', () => {
+    assert.equal(circuitStepApply({ gate: 'N', target: 0, channel: 'dephasing', strength: 0.1 }, 2), null);
+  });
+});

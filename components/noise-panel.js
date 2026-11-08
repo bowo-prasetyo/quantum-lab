@@ -3,6 +3,10 @@
 // qubit). The state becomes mixed: a density matrix rather than a list of
 // amplitudes (engine.applyNoise). Emits noise(channel, qubit | 'all',
 // strength from 0 to 1); the lab runs it.
+//
+// The choice of kind and strength belongs to the lab (props channel and
+// strength, changed with the 'settings' event), because the circuit
+// editor's N steps and noisy runs use it too.
 
 const CHANNELS = [
   {
@@ -27,9 +31,11 @@ export const NoisePanel = {
     n: { type: Number, required: true },
     disabled: { type: Boolean, default: false },
     // The state is already mixed
-    mixed: { type: Boolean, default: false }
+    mixed: { type: Boolean, default: false },
+    channel: { type: String, default: 'dephasing' },
+    strength: { type: Number, default: 0.5 }  // 0 to 1
   },
-  emits: ['noise'],
+  emits: ['noise', 'settings'],
 
   template: `
     <div class="card noise-panel">
@@ -37,12 +43,14 @@ export const NoisePanel = {
       <fieldset class="plain-fieldset" :disabled="disabled">
         <div class="noise-channels" role="radiogroup" aria-label="Kind of noise">
           <label v-for="c in CHANNELS" :key="c.key">
-            <input type="radio" name="noise-channel" :value="c.key" v-model="channel"> {{ c.name }}
+            <input type="radio" name="noise-channel" :value="c.key" :checked="c.key === channel"
+              @change="$emit('settings', { channel: c.key, strength })"> {{ c.name }}
           </label>
         </div>
         <label class="noise-strength">
           Strength
-          <input type="range" min="0" max="100" step="5" v-model.number="percent" :aria-valuetext="percent + '%'">
+          <input type="range" min="0" max="100" step="1" :value="percent" :aria-valuetext="percent + '%'"
+            @input="$emit('settings', { channel, strength: Number($event.target.value) / 100 })">
           <output>{{ percent }}%</output>
         </label>
         <div class="button-grid noise-buttons">
@@ -67,12 +75,15 @@ export const NoisePanel = {
   `,
 
   data() {
-    return { CHANNELS, channel: 'dephasing', percent: 50 };
+    return { CHANNELS };
   },
 
   computed: {
     qubits() {
       return [...Array(this.n).keys()];
+    },
+    percent() {
+      return Math.round(this.strength * 100);
     },
     description() {
       return CHANNELS.find(c => c.key === this.channel).text;
@@ -81,7 +92,7 @@ export const NoisePanel = {
 
   methods: {
     apply(qubit) {
-      this.$emit('noise', this.channel, qubit, this.percent / 100);
+      this.$emit('noise', this.channel, qubit, this.strength);
     }
   }
 };
