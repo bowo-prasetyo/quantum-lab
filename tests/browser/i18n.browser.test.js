@@ -37,13 +37,43 @@ const navLinks = page => page.locator('nav .nav-link').allTextContents();
 const picker = page => page.getByTestId('language-picker');
 
 describe('Language', () => {
-  test('English by default, with <html lang> set and no picker while English is the only language', () =>
+  test('English by default, with <html lang> set, and a picker offering the real languages', () =>
     withPage('#/lab/1', async page => {
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
       assert.deepEqual(await navLinks(page), ['1 qubit', '2 qubits', '3 qubits', 'Lessons', 'Concepts', 'Help']);
       assert.equal(await page.title(), 'Glass Qubit: a quantum lab in your browser');
-      assert.equal(await picker(page).count(), 0);
+      assert.equal(await picker(page).inputValue(), 'en');
+      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia'], 'the pseudo-locale is not offered');
     }));
+
+  test('a browser set to Indonesian opens the app in Indonesian, numbers and announcements included', () =>
+    withPage('#/lab/1', async page => {
+      assert.deepEqual(await htmlLang(page), ['id', 'ltr']);
+      assert.deepEqual(await navLinks(page), ['1 qubit', '2 qubit', '3 qubit', 'Pelajaran', 'Konsep', 'Bantuan']);
+      assert.equal(await page.title(), 'Glass Qubit: lab kuantum di peramban Anda');
+      assert.equal(await picker(page).inputValue(), 'id');
+      await page.locator('.gate-panel .gate-row').first().getByRole('button', { name: 'H', exact: true }).click();
+      await page.waitForTimeout(400);
+      const table = await page.locator('.amp-table').innerText();
+      assert.match(table, /0,707 \+ 0,000i/, 'decimal comma');
+      assert.match(table, /50,0%/);
+      assert.equal(await page.getByTestId('announcer').textContent(), 'H pada qubit 0. Sekarang: |0⟩ 50%, |1⟩ 50%.');
+      await picker(page).selectOption('en');
+      await page.waitForTimeout(300);
+      assert.match(await page.locator('.amp-table').innerText(), /0\.707 \+ 0\.000i/, 'back to English numbers');
+      assert.equal(await page.locator('.gate-panel h2').textContent(), 'Gates');
+    }, { locale: 'id-ID' }));
+
+  test('an Indonesian lesson names the Indonesian buttons, and checks in Indonesian', () =>
+    withPage('#/lessons/bit-flip', async page => {
+      assert.equal(await page.locator('h1').first().textContent(), 'Membalik bit');
+      assert.equal(await page.locator('.workbench-side ol li').nth(1).textContent(), 'Tekan Ukur semua.');
+      assert.equal(await page.getByRole('button', { name: 'Ukur semua', exact: true }).count(), 1, 'the step names a real button');
+      await page.getByRole('button', { name: 'Tunjukkan', exact: true }).click();
+      const result = page.locator('.check-result');
+      await result.waitFor();
+      assert.match(await result.innerText(), /Itulah hasil yang diharapkan[\s\S]*Probabilitas: \|1⟩ 100,0%/);
+    }, { locale: 'id-ID' }));
 
   test('a browser language the app does not have falls back to English', () =>
     withPage('#/lab/2', async page => {
@@ -68,7 +98,7 @@ describe('Language', () => {
     withPage('?lang=en-XA#/lessons', async page => {
       const select = picker(page);
       assert.equal(await select.inputValue(), 'en-XA');
-      assert.deepEqual(await select.locator('option').allTextContents(), ['English', 'Pseudo (en-XA)']);
+      assert.deepEqual(await select.locator('option').allTextContents(), ['English', 'Bahasa Indonesia', 'Pseudo (en-XA)']);
 
       await select.selectOption('en');
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
@@ -82,7 +112,7 @@ describe('Language', () => {
       await page.reload();
       await page.locator('h1').first().waitFor();
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
-      assert.equal(await picker(page).count(), 0, 'pseudo-locale no longer offered');
+      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia'], 'pseudo-locale no longer offered');
     }));
 
   test('a saved pseudo-locale is ignored; only ?lang= can choose it', () =>
