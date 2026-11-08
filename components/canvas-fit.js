@@ -57,7 +57,7 @@ export function themeColors() {
 /**
  * Component mixin: calls the component's draw() whenever one of its
  * canvases changes size (window resized, layout changed, tab shown), or
- * the colour theme changes (theme.js).
+ * the colour theme or the language changes (theme.js, locale.js).
  * The redraw waits for the next frame, so a canvas that changes its own
  * height while drawing does not trigger a ResizeObserver loop error.
  */
@@ -70,12 +70,14 @@ export const redrawOnResize = {
     for (const canvas of this.$el.querySelectorAll('canvas')) {
       this.resizeObserver.observe(canvas);
     }
-    this.onThemeChange = () => this.draw();
-    window.addEventListener('themechange', this.onThemeChange);
+    this.onRedraw = () => this.draw();
+    window.addEventListener('themechange', this.onRedraw);
+    window.addEventListener('localechange', this.onRedraw);
   },
 
   beforeUnmount() {
-    window.removeEventListener('themechange', this.onThemeChange);
+    window.removeEventListener('themechange', this.onRedraw);
+    window.removeEventListener('localechange', this.onRedraw);
     this.resizeObserver.disconnect();
     cancelAnimationFrame(this.resizeFrame);
   }

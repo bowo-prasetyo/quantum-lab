@@ -627,13 +627,13 @@ button.secondary {
   flex: 1;
 }
 
-.theme-picker {
+.nav-picker {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.theme-picker select {
+.nav-picker select {
   padding: 7px 8px;
   border-radius: 8px;
   border: 1px solid var(--border-strong);
