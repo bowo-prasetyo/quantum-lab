@@ -23,6 +23,10 @@ export default {
   'nav.language': 'Language',
   'nav.languageAria': 'Language',
 
+  // Help page footer
+  'help.version': 'Glass Qubit version {version}',
+  'help.changelog': 'What’s new in each version',
+
   // Shared pieces
   'list.separator': ', ',
   // Between two sentences shown one after the other ('' in Japanese)

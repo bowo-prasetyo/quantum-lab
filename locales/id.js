@@ -22,6 +22,10 @@ export default {
   'nav.language': 'Bahasa',
   'nav.languageAria': 'Bahasa',
 
+  // Help page footer
+  'help.version': 'Glass Qubit versi {version}',
+  'help.changelog': 'Yang baru di setiap versi',
+
   // Shared pieces
   'list.separator': ', ',
   'text.sentenceGap': ' ',

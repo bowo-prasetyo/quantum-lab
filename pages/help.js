@@ -4,9 +4,14 @@
 
 import { AppNav } from '../components/app-nav.js';
 import { helpText } from '../content.js';
+import { VERSION, CHANGELOG_URL } from '../version.js';
 
 export const Help = {
   components: { AppNav },
+
+  data() {
+    return { version: VERSION, changelogUrl: CHANGELOG_URL };
+  },
 
   computed: {
     // In the current language, with button and view names filled in
@@ -36,6 +41,11 @@ export const Help = {
           </ol>
         </template>
       </div>
+
+      <p class="caption app-version">
+        {{ $t('help.version', { version }) }} ·
+        <a :href="changelogUrl" target="_blank" rel="noopener">{{ $t('help.changelog') }}</a>
+      </p>
     </div>
   `
 };
