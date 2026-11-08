@@ -28,7 +28,7 @@ export const Help = {
         <p>
           The lab starts with the Quantum State table, the probabilities, shots,
           the Bloch spheres and interference. <strong>Show advanced views</strong>,
-          under them, adds the density matrix, correlations, Pauli expectations, entanglement and the 3D view. They
+          under them, adds the Noise panel, the density matrix, the unitary matrix, correlations, Pauli expectations, entanglement and the 3D view. They
           are already on if you have reached Part 3 of the lessons, and the lab
           remembers your choice. Lessons show whichever views they need.
         </p>
@@ -69,6 +69,16 @@ export const Help = {
           <li><strong>Step</strong> applies one step at a time, so you can watch each gate’s effect. Press it again for the next step; after the last step, it starts again.</li>
           <li>Run and Step start from |0…0⟩, so a circuit gives the same result every time. Untick <strong>Start from |0…0⟩</strong> to apply the circuit to the current state instead.</li>
           <li>While a circuit runs, the gate buttons wait until it finishes.</li>
+          <li>After a run or a step, the <strong>Timeline</strong> under the editor shows the state after each step. Pick a frame, drag the slider or use Back and Forward to put the lab back there; every view follows, and Step carries on from that point. Measurements keep the results they gave. Editing the circuit, or pressing any other button, starts a new timeline.</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h2>Noise (advanced)</h2>
+        <ul>
+          <li>Choose <strong>Dephasing</strong> (loses phase), <strong>Amplitude damping</strong> (loses energy, falling to |0⟩) or <strong>Depolarizing</strong> (random errors), set the strength, and apply it to one qubit or every qubit.</li>
+          <li>Noise makes the state <strong>mixed</strong>: a random mix that only a density matrix can describe. The density matrix (with its purity), Bloch spheres, probabilities, shots and Pauli expectations show it. The table shows probabilities but no amplitudes, and the Interference and Entanglement views pause, saying why.</li>
+          <li>Gates keep working on a mixed state. <strong>Measure all</strong> or <strong>Reset</strong> makes it pure again, and Undo steps back past noise like anything else.</li>
         </ul>
       </div>
 
@@ -89,7 +99,8 @@ export const Help = {
           <li>The <strong>Shots</strong>, <strong>Interference</strong> and <strong>Entanglement</strong> views give every number they draw as text beside the drawing. The <strong>Pauli Expectations</strong> view is a set of tables: each cell prints its signed value, and the colour (blue positive, orange negative) only repeats it.</li>
           <li>Point at or tap a corner of the <strong>3D view</strong> to read its probability and phase. With the keyboard, focus it and use the arrow keys to rotate it, and + and − to zoom.</li>
           <li>With a screen reader, every action is followed by a short summary of what it did and the possible outcomes, such as “H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%.” The charts have text descriptions, and the Quantum State table holds every number.</li>
-          <li>The lab adds no animation of its own, and a circuit run or Show me changes the views in steps half a second apart, so you can follow along.</li>
+          <li>The only animation is a Bloch vector turning as a single-qubit gate is applied, for under half a second. With your device set to reduce motion, it jumps instead; the turn’s axis and path are drawn either way, and a caption says the turn in words. A circuit run or Show me changes the views in steps half a second apart, so you can follow along.</li>
+          <li>The <strong>Unitary Matrix</strong> and <strong>Timeline</strong> are tables and buttons: each matrix entry and each frame has its value as text.</li>
         </ul>
       </div>
 

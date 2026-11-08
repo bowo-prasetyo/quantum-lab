@@ -320,3 +320,64 @@ describe('Timeline', () => {
       assert.equal(await page.locator('.timeline').count(), 0);
     }));
 });
+
+describe('Noise', () => {
+  test('dephasing a Bell pair mixes it; the views follow; Measure all makes it pure', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
+      await button(page, 'Create Bell Pair').click();
+      await settle(page);
+      const noise = card(page, 'Noise');
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /Purity Tr ρ² = 1\.000: a pure state/);
+
+      await noise.getByRole('radio', { name: 'Dephasing' }).check();
+      await noise.getByRole('slider').fill('100');
+      await noise.getByRole('button', { name: 'Noise on Q0' }).click();
+      await settle(page);
+
+      assert.match(await page.locator('.mixed-notice').innerText(), /The state is mixed/);
+      assert.match(await page.locator('.amp-table').innerText(), /\|00⟩\s+—\s+50\.0%\s+—/);
+      assert.equal(await page.getByRole('checkbox', { name: 'Hide global phase' }).count(), 0);
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /Purity Tr ρ² = 0\.500: a mixed state/);
+      assert.match(await card(page, 'Entanglement').innerText(), /These measures only work for a pure state/);
+      assert.match(await card(page, 'Interference').innerText(), /The state is mixed/);
+      assert.match(await card(page, 'Unitary Matrix').locator('.unitary-what').innerText(), /Noise is not unitary/);
+      // The coherence is gone: XX is 0, but ZZ still agrees
+      const grid = card(page, 'Pauli Expectations').locator('.pauli-pair tbody tr');
+      assert.equal(await grid.nth(0).locator('td').nth(0).innerText(), '0.00');
+      assert.equal(await grid.nth(2).locator('td').nth(2).innerText(), '+1.00');
+      assert.match(await page.locator('[data-testid="announcer"]').innerText(), /Dephasing noise, 100%, on qubit 0/);
+
+      // A gate on a mixed state keeps it mixed; Measure all makes it pure
+      await button(page, 'H').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1);
+      await button(page, 'Measure all').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 0);
+      assert.match(await card(page, 'Density Matrix').locator('.density-purity').innerText(), /a pure state/);
+
+      // Undo returns to the mixed state; it is saved and reloaded as mixed
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1);
+      await page.reload();
+      await page.locator('h1').waitFor();
+      await settle(page);
+      assert.equal(await page.locator('.mixed-notice').count(), 1, 'mixed state reloaded');
+    }));
+
+  test('amplitude damping at full strength resets a qubit to |0⟩', () =>
+    withLab('#/lab/1', async page => {
+      await button(page, 'Show advanced views').click();
+      await button(page, 'X').click();
+      await settle(page);
+      const noise = card(page, 'Noise');
+      await noise.getByRole('radio', { name: 'Amplitude damping' }).check();
+      await noise.getByRole('slider').fill('100');
+      await noise.getByRole('button', { name: 'Noise on Q0' }).click();
+      await settle(page);
+      assert.match(await page.locator('.amp-table').innerText(), /\|0⟩\s+—\s+100\.0%/);
+      assert.match(await page.locator('.bloch-coords').innerText(), /z = 1\.00/);
+    }));
+});

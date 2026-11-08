@@ -59,12 +59,20 @@ export const EntanglementPanel = {
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
-    n: { type: Number, required: true }
+    n: { type: Number, required: true },
+    // Noise has made the state mixed
+    mixed: { type: Boolean, default: false }
   },
 
   template: `
     <div class="card entanglement">
       <h2>Entanglement</h2>
+      <p v-if="mixed" class="entanglement-mixed">
+        The state is mixed (noise was applied). These measures only work for a pure
+        state: in a mixed one, a qubit’s entropy can come from noise as well as from
+        entanglement, so this view is paused until Measure all or Reset.
+      </p>
+      <template v-else>
       <p class="entanglement-verdict"><strong>{{ verdict }}</strong></p>
 
       <h3>Each qubit</h3>
@@ -100,6 +108,7 @@ export const EntanglementPanel = {
         Bell pair. Unlike the correlation graph, it shows 0 for
         |{{ '0'.repeat(n) }}⟩.
       </p>
+      </template>
     </div>
   `,
 

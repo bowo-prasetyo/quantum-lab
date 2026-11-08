@@ -20,6 +20,9 @@ export const AmplitudeTable = {
     // Whether re/im have had their global phase removed for display
     // (engine.withoutGlobalPhase), and the index made real and positive
     globalPhaseHidden: { type: Boolean, default: false },
+    // Noise has made the state mixed: re/im are only √p, so show no
+    // amplitudes or phases
+    mixed: { type: Boolean, default: false },
     reference: { type: Number, default: -1 }
   },
 
@@ -48,10 +51,10 @@ export const AmplitudeTable = {
         const phaseDeg = Math.atan2(im, re) * 180 / Math.PI;
         return {
           label: engine.basisLabel(i, this.n),
-          amplitude: `${fmt(re).replace('-', '−')} ${sign} ${imText}i`,
+          amplitude: this.mixed ? '—' : `${fmt(re).replace('-', '−')} ${sign} ${imText}i`,
           probability: (p * 100).toFixed(1) + '%',
           // Phase is meaningless for a zero amplitude
-          phase: p < 1e-12 ? '—' : `${fmt(phaseDeg, 0).replace('-', '−')}°`,
+          phase: p < 1e-12 || this.mixed ? '—' : `${fmt(phaseDeg, 0).replace('-', '−')}°`,
           zero: p < 1e-12
         };
       });
@@ -61,6 +64,10 @@ export const AmplitudeTable = {
   template: `
     <div class="card">
       <h2>Quantum State</h2>
+      <p v-if="mixed" class="notice mixed-notice">
+        The state is <strong>mixed</strong> (noise was applied): it has no list of
+        amplitudes, only probabilities. The density matrix shows the whole state.
+      </p>
       <div class="table-scroll">
         <table class="amp-table">
           <thead>
@@ -85,7 +92,7 @@ export const AmplitudeTable = {
         Qubit 0 is the left digit: |1{{ '0'.repeat(n - 1) }}⟩ means qubit 0 is 1
         and the {{ n === 2 ? 'other is' : 'others are' }} 0.
       </p>
-      <div class="global-phase">
+      <div v-if="!mixed" class="global-phase">
         <label>
           <input type="checkbox" :checked="globalPhaseHidden" @change="$emit('toggle-global-phase')">
           Hide global phase

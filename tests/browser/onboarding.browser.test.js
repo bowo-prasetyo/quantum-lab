@@ -88,7 +88,7 @@ describe('Advanced views', () => {
       }
       assert.match(
         await page.locator('.advanced-toggle').innerText(),
-        /The density matrix, the unitary matrix, correlations, Pauli expectations, entanglement and the 3D view/
+        /Noise, the density matrix, the unitary matrix, correlations, Pauli expectations, entanglement and the 3D view/
       );
 
       const toggle = page.getByRole('button', { name: 'Show advanced views' });

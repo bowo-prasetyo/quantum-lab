@@ -15,6 +15,7 @@ import { startBrowser, openPage as open } from './helpers.js';
 // Panel key → heading the lab shows for it
 const PANEL_HEADINGS = {
   gates: 'Gates',
+  noise: 'Noise',
   table: 'Quantum State',
   probabilities: 'Probabilities',
   shots: 'Shots',

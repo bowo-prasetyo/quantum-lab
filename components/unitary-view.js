@@ -98,6 +98,7 @@ export const UnitaryView = {
     source() {
       if (this.mode === 'last') {
         if (!this.step) return { message: 'Apply a gate to see its matrix.' };
+        if (this.step.message.type === 'noise') return { message: 'The last step was noise. Noise is not unitary: it can’t be undone, and it mixes states, so no single matrix describes it (it takes several, called Kraus operators).' };
         const traced = stepFromMessage(this.step.message, this.n);
         if (!traced) return { message: 'The last step was a measurement. It is not a gate, and no matrix describes it: its result is random and it can’t be undone.' };
         return { apply: traced.apply, name: traced.name };

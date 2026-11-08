@@ -19,10 +19,11 @@
 // Operations: ['reset'], ['gate', name, qubit], ['cnot', control, target],
 //             ['cz', control, target], ['measure'] (all qubits),
 //             ['measureQubit', qubit], ['bell'], ['ghz'],
+//             ['noise', channel, qubit, strength]: noise (see NOISE_CHANNELS in engine.js),
 //             ['if', qubit, operation]: only if that qubit's last measurement gave 1
 // Basis labels use qubit 0 as the left digit: |10⟩ means qubit 0 is 1.
 
-export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube', 'editor'];
+export const PANELS = ['gates', 'noise', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube', 'editor'];
 
 // n: the number of qubits every lesson in the part uses (null if it varies)
 export const PARTS = [
@@ -387,6 +388,34 @@ export const LESSONS = [
       { type: 'density', i: 0, j: 7, abs: 0.5 },
       { type: 'density', i: 7, j: 0, abs: 0.5 },
       { type: 'density', i: 0, j: 1, abs: 0 }
+    ]
+  },
+  {
+    id: 'decoherence',
+    part: 3,
+    n: 3,
+    title: 'Decoherence: how noise ends a superposition',
+    goal: 'See noise turn a GHZ superposition into a plain random mix, while the probabilities stay the same.',
+    why: 'Real qubits are never perfectly isolated. Noise destroying coherence, called decoherence, is the main obstacle to building quantum computers.',
+    panels: ['gates', 'table', 'probabilities', 'density', 'noise'],
+    setup: [['reset'], ['ghz']],
+    steps: [
+      'Set up has made the GHZ state (|000⟩ + |111⟩)/√2. Note the four squares of the density matrix: two on the diagonal, two in the corners.',
+      'In the Noise panel, choose Dephasing and set the strength to 100%.',
+      'Press Noise on Q0, then look at the density matrix and the probabilities again.'
+    ],
+    ops: [['noise', 'dephasing', 0, 1]],
+    predict: {
+      question: 'Full-strength dephasing hits qubit 0. What happens to the density matrix?',
+      options: ['Nothing changes', 'The two corner squares vanish; the diagonal stays', 'Only |000⟩ is left'],
+      answer: 1
+    },
+    result: 'The corner squares, the coherence between |000⟩ and |111⟩, vanish; the diagonal stays at 0.5 each. The probabilities haven’t changed, but the state is no longer a superposition: it is a random mix, as if a coin had already decided between |000⟩ and |111⟩. The purity under the matrix drops from 1 to 0.5. Noise on just one qubit was enough to destroy the coherence of all three, which is why large entangled states are so fragile.',
+    checks: [
+      { type: 'probs', values: { '|000⟩': 0.5, '|111⟩': 0.5 } },
+      { type: 'density', i: 0, j: 0, abs: 0.5 },
+      { type: 'density', i: 0, j: 7, abs: 0 },
+      { type: 'purity', value: 0.5 }
     ]
   },
   {

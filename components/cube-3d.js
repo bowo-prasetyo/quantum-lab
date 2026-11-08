@@ -113,7 +113,9 @@ export const Cube3D = {
 
   props: {
     re: { type: Float64Array, required: true },
-    im: { type: Float64Array, required: true }
+    im: { type: Float64Array, required: true },
+    // Noise has made the state mixed: re/im are only √p, so show no phase
+    mixed: { type: Boolean, default: false }
   },
 
   data() {
@@ -140,6 +142,10 @@ export const Cube3D = {
         @pointercancel="onPointerUp"
       ></canvas>
       <p v-if="webglSupported" class="readout">{{ readout || 'Point at or tap a corner to read it.' }}</p>
+      <p class="caption" v-if="webglSupported && mixed">
+        The state is mixed (noise was applied), so the corners are grey: a mixed
+        state has probabilities but no phases.
+      </p>
       <p class="caption" v-if="webglSupported">
         The 8 basis states sit at the corners of a cube: point size shows
         probability and colour shows phase.
@@ -174,13 +180,13 @@ export const Cube3D = {
       const im = this.im[this.picked];
       const p = re * re + im * im;
       const label = basisLabel(this.picked, 3);
-      return p < 1e-12
-        ? `${label}: probability 0%.`
-        : `${label}: probability ${percent(p)}, phase ${degrees(Math.atan2(im, re))}.`;
+      if (p < 1e-12) return `${label}: probability 0%.`;
+      if (this.mixed) return `${label}: probability ${percent(p)}.`;
+      return `${label}: probability ${percent(p)}, phase ${degrees(Math.atan2(im, re))}.`;
     }
   },
 
-  watch: { re() { this.render(); }, im() { this.render(); } },
+  watch: { re() { this.render(); }, im() { this.render(); }, mixed() { this.render(); } },
 
   methods: {
     // Sizes the canvas to its displayed width at the screen's pixel
@@ -269,7 +275,7 @@ export const Cube3D = {
         const im = this.im[i];
         vertices.push(...corner(i));
         sizes.push((5 + (re * re + im * im) * 60) * (this.pointScale || 1));
-        colors.push(...phaseToRgb(Math.atan2(im, re)));
+        colors.push(...(this.mixed ? [0.6, 0.6, 0.6] : phaseToRgb(Math.atan2(im, re))));
       }
 
       gl.useProgram(this.program);

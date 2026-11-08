@@ -1383,3 +1383,52 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+/* ---------- Noise ---------- */
+
+.noise-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-bottom: 8px;
+}
+
+.noise-channels label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.noise-strength {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.noise-strength input {
+  flex: 1;
+  accent-color: var(--accent);
+}
+
+.noise-strength output {
+  min-width: 3em;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mixed-notice,
+.entanglement-mixed {
+  padding: 10px 12px;
+  border-left: 4px solid var(--measure);
+  border-radius: 6px;
+  background: var(--accent-tint);
+}
+
+@media (pointer: coarse) {
+  .noise-channels label {
+    min-height: 44px;
+  }
+}

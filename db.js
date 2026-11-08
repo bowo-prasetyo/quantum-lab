@@ -4,7 +4,7 @@
 // original simulators, which run on the same origin (bowo-prasetyo.github.io)
 // under 'quantum-db', 'quantum-db-2' and 'quantum-db-3'.
 
-import { isValidState } from './engine.js';
+import { isValidState, isValidRho } from './engine.js';
 import { isValidStep, readOldLab } from './import-old.js';
 
 const DB_NAME = 'quantum-lab';
@@ -21,7 +21,12 @@ function openDB() {
   });
 }
 
-export async function saveLab(n, re, im, circuit) {
+/**
+ * Saves an n-qubit lab. `rho` is the density matrix { re, im, size } when
+ * noise has made the state mixed (re and im then hold amplitudes √p), or
+ * null.
+ */
+export async function saveLab(n, re, im, circuit, rho = null) {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
@@ -29,7 +34,8 @@ export async function saveLab(n, re, im, circuit) {
       id: `lab-${n}`,
       re: Array.from(re),
       im: Array.from(im),
-      circuit: JSON.parse(JSON.stringify(circuit))
+      circuit: JSON.parse(JSON.stringify(circuit)),
+      rho: rho ? { re: Array.from(rho.re), im: Array.from(rho.im), size: rho.size } : null
     });
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
@@ -37,8 +43,8 @@ export async function saveLab(n, re, im, circuit) {
 }
 
 /**
- * Returns { re, im, circuit } for an n-qubit lab, or null if nothing valid
- * is saved. Invalid circuit steps are dropped; an invalid state discards
+ * Returns { re, im, circuit, rho } for an n-qubit lab, or null if nothing
+ * valid is saved (rho is null unless the saved state is mixed). Invalid circuit steps are dropped; an invalid state discards
  * the whole record.
  *
  * If this size has no record at all, the matching original simulator's
@@ -54,7 +60,7 @@ export async function loadLab(n) {
   if (!old) return null;
 
   await saveLab(n, old.re, old.im, old.circuit);
-  return { re: old.re, im: old.im, circuit: old.circuit, importedFrom: old.source };
+  return { re: old.re, im: old.im, circuit: old.circuit, rho: null, importedFrom: old.source };
 }
 
 // The lab's own record: the parsed record, null if it exists but is
@@ -70,9 +76,17 @@ async function loadOwn(n) {
   if (!record) return undefined;
   if (!isValidState(record.re, record.im, n)) return null;
 
+  // A mixed state's density matrix; a corrupt one discards the record
+  let rho = null;
+  if (record.rho) {
+    rho = { re: Float64Array.from(record.rho.re), im: Float64Array.from(record.rho.im), size: record.rho.size };
+    if (!isValidRho(rho, n)) return null;
+  }
+
   return {
     re: Float64Array.from(record.re),
     im: Float64Array.from(record.im),
+    rho,
     circuit: Array.isArray(record.circuit)
       ? record.circuit.filter(step => isValidStep(step, n))
       : []

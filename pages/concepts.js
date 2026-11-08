@@ -30,6 +30,8 @@ const SECTIONS = [
       ['π/8 (T)', 'Gives |1⟩ a 45° phase. T applied twice is S. Important for universal quantum computing.'],
       ['CNOT', 'A two-qubit gate: flips the target qubit when the control qubit is 1. With H, it creates entanglement. In this lab any qubit can be the control or the target.'],
       ['Controlled-Z (CZ)', 'Flips the sign of the amplitudes where both qubits are 1. It treats both qubits the same, so it doesn’t matter which is the control. It equals H, CNOT, H on the target.'],
+      ['Gates as turns', 'Every single-qubit gate turns the Bloch sphere: X, Y and Z are half turns about their axes, H a half turn about the axis halfway between x and z, S a quarter turn and T an eighth of a turn about z. The Bloch spheres animate each gate as its turn.'],
+      ['Unitary matrix', 'The matrix of a gate on the whole register: column j is what the gate does to basis state |j⟩. Its columns have length 1 and are at right angles to each other (U†U = I), which is why probabilities still add up to 1 and why the gate can be undone. A measurement or noise has no such matrix.'],
       ['Reversibility', 'Every gate can be undone; information is only lost when you measure.']
     ]
   },
@@ -42,7 +44,9 @@ const SECTIONS = [
       ['Reduced state', 'The state of one qubit on its own, found by “tracing out” the others (a partial trace). The Bloch spheres show reduced states.'],
       ['Entanglement entropy', 'How entangled one qubit is with the rest: the von Neumann entropy of its reduced state, from 0 (not entangled) to 1 bit (maximally entangled, as in a Bell pair). For a whole register in a pure state, it is 0 exactly when the qubit can be split off.'],
       ['Mutual information', 'How much two qubits’ results tell about each other, in any basis: I = S(A) + S(B) − S(AB), from 0 to 2 bits. It counts classical and quantum links together, so it is a sign of correlation, not proof of entanglement between that pair.'],
-      ['Mixed state', 'A state that can’t be written as a single ket, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. In this lab the whole register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others.'],
+      ['Noise and decoherence', 'Real qubits are disturbed by their surroundings. Dephasing loses phase, amplitude damping loses energy (|1⟩ decays to |0⟩), and depolarizing noise makes random X, Y or Z errors. Each can be applied in the lab. Noise fades the off-diagonal (coherence) entries of the density matrix, turning a superposition into a random mix: decoherence. It is the main obstacle to building quantum computers.'],
+      ['Purity', 'Tr ρ², shown under the density matrix: 1 for a pure state, less once noise has mixed it, down to 1/2ⁿ for a completely random one.'],
+      ['Mixed state', 'A state that can’t be written as a single ket, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. Without noise, this lab’s register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others. After noise, the register itself is mixed, and a short Bloch vector can come from noise too.'],
       ['Correlation is not entanglement', 'Bits that always agree can be entangled (a Bell pair) or simply classical (|00⟩). The correlation graph shows agreement; the Bloch spheres show entanglement.']
     ]
   },
@@ -71,7 +75,9 @@ const SECTIONS = [
       ['Pauli expectations', 'The average result ⟨P⟩, from −1 to +1, of measuring each Pauli string: ⟨X⟩, ⟨Y⟩, ⟨Z⟩ for each qubit (its Bloch vector), a 3 × 3 grid such as ⟨X₀X₁⟩ for each pair, and, for three qubits, strings such as ⟨XXX⟩. If a pair’s grid is not the product of its single values, the pair is correlated. A Bell pair is correlated in every basis (XX = +1, YY = −1, ZZ = +1); a GHZ state’s three-way link shows only in ⟨XXX⟩. Measuring all of them is how experiments read out a state (state tomography).'],
       ['Entanglement view', 'Says which qubits are entangled with which. Entanglement entropy S, per qubit, runs from 0 (a state of its own) to 1 bit (maximally entangled). Mutual information I, per pair, runs from 0 (results unrelated in every basis) to 2 bits; it counts every kind of link, so it is 1 between any two qubits of a GHZ state.'],
       ['3D view', 'Three qubits only: the 8 basis states at the corners of a cube, sized by probability and coloured by phase.'],
-      ['Circuit', 'A sequence of gates applied in order. Build one in the circuit editor and run it.']
+      ['Circuit', 'A sequence of gates applied in order. Build one in the circuit editor and run it.'],
+      ['Timeline', 'After a circuit run or step, one frame per step, each drawn as its probabilities. Going to a frame puts every view back in that state.'],
+      ['Unitary Matrix view', 'The matrix of the last gate, or of the whole circuit in the editor, on all qubits. Each cell shows an entry, coloured by phase as in the density matrix.']
     ]
   }
 ];

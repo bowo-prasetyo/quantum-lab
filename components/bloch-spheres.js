@@ -114,6 +114,8 @@ export const BlochSpheres = {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
     n: { type: Number, required: true },
+    // The density matrix when noise has made the state mixed, else null
+    rho: { type: Object, default: null },
     // The lab's last step ({ message, re, im }, the state before it) and a
     // number that changes only when a new step is applied, so Undo and
     // jumps don't replay a turn
@@ -128,11 +130,13 @@ export const BlochSpheres = {
 
   computed: {
     vectors() {
-      return [...Array(this.n).keys()].map(q => engine.blochVector(this.re, this.im, q, this.n));
+      return [...Array(this.n).keys()].map(q => (this.rho
+        ? engine.rhoBlochVector(this.rho, q, this.n)
+        : engine.blochVector(this.re, this.im, q, this.n)));
     },
     // Changes once per update, however many of these change together
     stateKey() {
-      return [this.re, this.im, this.stepId];
+      return [this.re, this.im, this.rho, this.stepId];
     }
   },
 
@@ -150,7 +154,11 @@ export const BlochSpheres = {
         </figure>
       </div>
       <p v-if="turnText" class="caption bloch-turn">{{ turnText }}</p>
-      <p v-if="n >= 2" class="caption">
+      <p v-if="rho" class="caption">
+        The state is mixed, so a vector can be shorter than 1 because of noise
+        as well as entanglement.
+      </p>
+      <p v-else-if="n >= 2" class="caption">
         A vector shorter than 1 means that qubit is entangled with the others.
       </p>
     </div>
@@ -204,7 +212,9 @@ export const BlochSpheres = {
       const rotation = GATE_ROTATIONS[step.message.gate];
       if (!rotation) return null;
       const q = step.message.targetQubit;
-      const { x, y, z } = engine.blochVector(step.re, step.im, q, this.n);
+      const { x, y, z } = step.rho
+        ? engine.rhoBlochVector(step.rho, q, this.n)
+        : engine.blochVector(step.re, step.im, q, this.n);
       const [kx, ky, kz] = rotation.axis;
       if (Math.hypot(ky * z - kz * y, kz * x - kx * z, kx * y - ky * x) < 1e-6) return null;
       return { q, from: [x, y, z], rotation };

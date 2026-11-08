@@ -44,13 +44,14 @@ export function pauliString(n, letters) {
  * ⟨σa σb⟩ and ⟨σa⟩⟨σb⟩ (the connected correlation). 0 means the pair's
  * results are unrelated in every basis.
  */
-export function pairConnection(re, im, q1, q2, n) {
+export function pairConnection(re, im, q1, q2, n, rho = null) {
+  const expect = p => (rho ? engine.rhoPauliExpectation(rho, p, n) : engine.pauliExpectation(re, im, p, n));
   let largest = 0;
   for (const a of AXES) {
     for (const b of AXES) {
-      const both = engine.pauliExpectation(re, im, pauliString(n, { [q1]: a, [q2]: b }), n);
-      const one = engine.pauliExpectation(re, im, pauliString(n, { [q1]: a }), n);
-      const two = engine.pauliExpectation(re, im, pauliString(n, { [q2]: b }), n);
+      const both = expect(pauliString(n, { [q1]: a, [q2]: b }));
+      const one = expect(pauliString(n, { [q1]: a }));
+      const two = expect(pauliString(n, { [q2]: b }));
       largest = Math.max(largest, Math.abs(both - one * two));
     }
   }
@@ -61,6 +62,8 @@ export const PauliPanel = {
   props: {
     re: { type: Float64Array, required: true },
     im: { type: Float64Array, required: true },
+    // The density matrix when noise has made the state mixed, else null
+    rho: { type: Object, default: null },
     n: { type: Number, required: true }
   },
 
@@ -114,8 +117,10 @@ export const PauliPanel = {
         Rows: what the first qubit of the pair is measured in; columns: the
         second qubit. If neither qubit is entangled with anything, every
         cell is the product of their single values, such as ⟨X⟩·⟨X⟩. A grid that
-        differs is correlated, and in this lab that means both qubits are entangled,
-        though not necessarily with each other. A Bell pair is correlated in
+        differs is correlated<template v-if="rho">. The state is mixed, so a
+        correlation may be classical (noise can leave a random mix that still agrees)
+        rather than entanglement.</template><template v-else>, and in this lab that
+        means both qubits are entangled, though not necessarily with each other.</template> A Bell pair is correlated in
         every basis: XX = +1, YY = −1, ZZ = +1.
       </p>
 
@@ -137,12 +142,19 @@ export const PauliPanel = {
     return { AXES };
   },
 
+  methods: {
+    // ⟨P⟩ for a Pauli string, pure or mixed
+    expect(paulis, n) {
+      return this.rho ? engine.rhoPauliExpectation(this.rho, paulis, n) : engine.pauliExpectation(this.re, this.im, paulis, n);
+    }
+  },
+
   computed: {
     singles() {
       return [...Array(this.n).keys()].map(q => ({
         q,
         cells: AXES.map(axis => {
-          const v = engine.pauliExpectation(this.re, this.im, pauliString(this.n, { [q]: axis }), this.n);
+          const v = this.expect(pauliString(this.n, { [q]: axis }), this.n);
           return { axis, text: fmt(v), style: cellStyle(v) };
         })
       }));
@@ -155,11 +167,11 @@ export const PauliPanel = {
           const rows = AXES.map(a => ({
             a,
             cells: AXES.map(b => {
-              const v = engine.pauliExpectation(this.re, this.im, pauliString(this.n, { [q1]: a, [q2]: b }), this.n);
+              const v = this.expect(pauliString(this.n, { [q1]: a, [q2]: b }), this.n);
               return { label: `${a}${q1} ${b}${q2}`, text: fmt(v), style: cellStyle(v) };
             })
           }));
-          const correlated = pairConnection(this.re, this.im, q1, q2, this.n) >= SHOW_MIN;
+          const correlated = pairConnection(this.re, this.im, q1, q2, this.n, this.rho) >= SHOW_MIN;
           result.push({
             key: `${q1}-${q2}`,
             q1,
@@ -182,7 +194,7 @@ export const PauliPanel = {
         for (const b of AXES) {
           for (const c of AXES) {
             const label = a + b + c;
-            const v = engine.pauliExpectation(this.re, this.im, label, 3);
+            const v = this.expect(label, 3);
             if (Math.abs(v) >= SHOW_MIN) result.push({ label, text: fmt(v), style: cellStyle(v) });
           }
         }

@@ -108,7 +108,9 @@ export const InterferenceView = {
     step: { type: Object, default: null },
     // Draw the paths turned so the new state has no global phase, matching
     // the table when it hides global phase
-    hideGlobalPhase: { type: Boolean, default: false }
+    hideGlobalPhase: { type: Boolean, default: false },
+    // Noise has made the state mixed
+    mixed: { type: Boolean, default: false }
   },
 
   template: `
@@ -118,6 +120,11 @@ export const InterferenceView = {
       <p v-if="!step" class="caption">
         Apply a gate to see how it combines the amplitudes. Each new amplitude
         is a sum of paths from the old ones, and paths can add up or cancel.
+      </p>
+
+      <p v-else-if="noisy" class="caption">
+        The state is mixed (noise was applied), so it has no list of amplitudes
+        and no paths to draw. This view works again after Measure all or Reset.
       </p>
 
       <p v-else-if="!traced" class="caption">
@@ -173,12 +180,17 @@ export const InterferenceView = {
       return `${-h} ${-h} ${SVG_SIZE} ${SVG_SIZE}`;
     },
 
+    // The state is mixed now or was before the last step
+    noisy() {
+      return this.mixed || !!this.step?.rho || this.step?.message.type === 'noise';
+    },
+
     traced() {
       return this.step ? stepFromMessage(this.step.message, this.n) : null;
     },
 
     outputs() {
-      if (!this.traced) return [];
+      if (!this.traced || this.noisy) return [];
       let { re, im } = this.step;
       if (this.hideGlobalPhase) {
         // The step is linear, so turning the old state by the angle that
