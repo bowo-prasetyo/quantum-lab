@@ -25,6 +25,8 @@ export default {
 
   // Shared pieces
   'list.separator': ', ',
+  // Between two sentences shown one after the other ('' in Japanese)
+  'text.sentenceGap': ' ',
   'number.degrees': '{value}°',
   'measurement.none': '-',
   'measurement.qubit': 'qubit {qubit} gave {bit}',

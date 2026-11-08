@@ -306,7 +306,7 @@ export const Lab = {
           <div v-if="!panels" class="card advanced-toggle">
             <p>
               <i18n-t k="lab.advancedViews" :params="{ list: advancedNames }" />
-              <template v-if="!showAdvanced">{{ ' ' + $t('lab.advancedWhy') }}</template>
+              <template v-if="!showAdvanced">{{ $t('text.sentenceGap') + $t('lab.advancedWhy') }}</template>
             </p>
             <button
               class="secondary"

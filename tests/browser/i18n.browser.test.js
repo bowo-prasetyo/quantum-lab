@@ -43,7 +43,7 @@ describe('Language', () => {
       assert.deepEqual(await navLinks(page), ['1 qubit', '2 qubits', '3 qubits', 'Lessons', 'Concepts', 'Help']);
       assert.equal(await page.title(), 'Glass Qubit: a quantum lab in your browser');
       assert.equal(await picker(page).inputValue(), 'en');
-      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia'], 'the pseudo-locale is not offered');
+      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia', '日本語'], 'the pseudo-locale is not offered');
     }));
 
   test('a browser set to Indonesian opens the app in Indonesian, numbers and announcements included', () =>
@@ -75,6 +75,32 @@ describe('Language', () => {
       assert.match(await result.innerText(), /Itulah hasil yang diharapkan[\s\S]*Probabilitas: \|1⟩ 100,0%/);
     }, { locale: 'id-ID' }));
 
+  test('a browser set to Japanese opens the app in Japanese, numbers and announcements included', () =>
+    withPage('#/lab/1', async page => {
+      assert.deepEqual(await htmlLang(page), ['ja', 'ltr']);
+      assert.deepEqual(await navLinks(page), ['1量子ビット', '2量子ビット', '3量子ビット', 'レッスン', '概念', 'ヘルプ']);
+      assert.equal(await page.title(), 'Glass Qubit: ブラウザで動く量子実験室');
+      assert.equal(await picker(page).inputValue(), 'ja');
+      await page.locator('.gate-panel .gate-row').first().getByRole('button', { name: 'H', exact: true }).click();
+      await page.waitForTimeout(400);
+      const table = await page.locator('.amp-table').innerText();
+      assert.match(table, /0\.707 \+ 0\.000i/, 'Japanese uses a decimal point');
+      assert.match(table, /50\.0%/);
+      assert.equal(await page.getByTestId('announcer').textContent(), '量子ビット0にH。現在: |0⟩ 50%、|1⟩ 50%。');
+      assert.equal(await page.locator('.gate-panel h2').textContent(), 'ゲート');
+    }, { locale: 'ja-JP' }));
+
+  test('a Japanese lesson names the Japanese buttons, and checks in Japanese', () =>
+    withPage('#/lessons/bit-flip', async page => {
+      assert.equal(await page.locator('h1').first().textContent(), 'ビット反転');
+      assert.equal(await page.locator('.workbench-side ol li').nth(1).textContent(), 'すべて測定を押します。');
+      assert.equal(await page.getByRole('button', { name: 'すべて測定', exact: true }).count(), 1, 'the step names a real button');
+      await page.getByRole('button', { name: 'お手本', exact: true }).click();
+      const result = page.locator('.check-result');
+      await result.waitFor();
+      assert.match(await result.innerText(), /期待どおりの結果です[\s\S]*確率: \|1⟩ 100\.0%/);
+    }, { locale: 'ja-JP' }));
+
   test('a browser language the app does not have falls back to English', () =>
     withPage('#/lab/2', async page => {
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
@@ -98,7 +124,7 @@ describe('Language', () => {
     withPage('?lang=en-XA#/lessons', async page => {
       const select = picker(page);
       assert.equal(await select.inputValue(), 'en-XA');
-      assert.deepEqual(await select.locator('option').allTextContents(), ['English', 'Bahasa Indonesia', 'Pseudo (en-XA)']);
+      assert.deepEqual(await select.locator('option').allTextContents(), ['English', 'Bahasa Indonesia', '日本語', 'Pseudo (en-XA)']);
 
       await select.selectOption('en');
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
@@ -112,7 +138,7 @@ describe('Language', () => {
       await page.reload();
       await page.locator('h1').first().waitFor();
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
-      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia'], 'pseudo-locale no longer offered');
+      assert.deepEqual(await picker(page).locator('option').allTextContents(), ['English', 'Bahasa Indonesia', '日本語'], 'pseudo-locale no longer offered');
     }));
 
   test('a saved pseudo-locale is ignored; only ?lang= can choose it', () =>

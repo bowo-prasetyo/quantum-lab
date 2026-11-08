@@ -77,8 +77,7 @@ export const EntanglementPanel = {
         </li>
       </ul>
       <p class="caption">
-        {{ $t('entanglement.entropyCaption') }}
-        <template v-if="n === 3">{{ $t('entanglement.entropyCaption3') }}</template>
+        {{ $t('entanglement.entropyCaption') }}<template v-if="n === 3">{{ $t('text.sentenceGap') + $t('entanglement.entropyCaption3') }}</template>
       </p>
 
       <h3>{{ $t('entanglement.eachPair') }}</h3>
