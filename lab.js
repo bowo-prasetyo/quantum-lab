@@ -17,6 +17,7 @@ import { ShotsHistogram } from './components/shots-histogram.js';
 import { InterferenceView } from './components/interference-view.js';
 import { EntanglementPanel } from './components/entanglement-panel.js';
 import { PauliPanel } from './components/pauli-panel.js';
+import { UnitaryView } from './components/unitary-view.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
 import { getPref, setPref } from './prefs.js';
@@ -33,7 +34,7 @@ const WIDE_QUERY = '(min-width: 1000px)';
 // asks for them or reaches Part 3 of the lessons, where they are taught
 // (VISION: reveal advanced views as the learner progresses). Lessons show
 // whatever panels they list.
-const ADVANCED = ['density', 'correlation', 'pauli', 'entanglement', 'cube'];
+const ADVANCED = ['density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube'];
 
 // Whether the learner has answered a prediction in Part 3 or later
 const reachedAdvancedLessons = () =>
@@ -47,6 +48,7 @@ const VIEWS = [
   { key: 'bloch', label: 'Bloch spheres' },
   { key: 'interference', label: 'Interference' },
   { key: 'density', label: 'Density matrix' },
+  { key: 'unitary', label: 'Unitary' },
   { key: 'correlation', label: 'Correlations' },
   { key: 'pauli', label: 'Pauli' },
   { key: 'entanglement', label: 'Entanglement' },
@@ -65,7 +67,7 @@ export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
     DensityMatrix, CorrelationGraph, CircuitEditor, ShotsHistogram,
-    InterferenceView, EntanglementPanel, PauliPanel,
+    InterferenceView, EntanglementPanel, PauliPanel, UnitaryView,
     // Explicit tag: Vue would turn "Cube3D" into <cube3-d>
     'cube-3d': Cube3D
   },
@@ -251,6 +253,9 @@ export const Lab = {
           <section v-if="show('density')" v-bind="viewAttrs('density')">
             <density-matrix :re="stateRe" :im="stateIm" :n="n" />
           </section>
+          <section v-if="show('unitary')" v-bind="viewAttrs('unitary')">
+            <unitary-view :n="n" :step="lastStep" :circuit="circuit" />
+          </section>
           <section v-if="n >= 2 && show('correlation')" v-bind="viewAttrs('correlation')">
             <correlation-graph :re="stateRe" :im="stateIm" :n="n" />
           </section>
@@ -293,7 +298,7 @@ export const Lab = {
 
     // e.g. "the density matrix, correlations, entanglement and the 3D view"
     advancedNames() {
-      const names = ['the density matrix'];
+      const names = ['the density matrix', 'the unitary matrix'];
       if (this.n >= 2) names.push('correlations', 'Pauli expectations', 'entanglement');
       if (this.n === 3) names.push('the 3D view');
       const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];

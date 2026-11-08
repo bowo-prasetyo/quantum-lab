@@ -202,3 +202,34 @@ describe('Pauli Expectations view', () => {
       }
     }));
 });
+
+describe('Unitary Matrix view', () => {
+  test('shows the last gate, the whole circuit, and explains measurements', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
+      const view = card(page, 'Unitary Matrix');
+      assert.match(await view.locator('.unitary-what').innerText(), /Apply a gate/);
+
+      await page.locator('.gate-panel').getByRole('button', { name: 'CNOT', exact: true }).click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /CNOT, control qubit 0, target qubit 1, on all 2 qubits/);
+      const rows = view.locator('tbody tr');
+      assert.deepEqual(
+        await Promise.all([0, 1, 2, 3].map(i => rows.nth(i).locator('td').allInnerTexts())),
+        [['1', '', '', ''], ['', '1', '', ''], ['', '', '', '1'], ['', '', '1', '']]
+      );
+      assert.equal(await rows.nth(2).locator('td').nth(3).getAttribute('aria-label'), '|10⟩ from |11⟩: 1');
+
+      await button(page, 'Measure all').click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /measurement\. It is not a gate/);
+
+      // Whole circuit: empty, then H q0
+      await view.getByRole('radio', { name: 'Whole circuit' }).check();
+      assert.match(await view.locator('.unitary-what').innerText(), /circuit editor is empty/);
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await settle(page);
+      assert.match(await view.locator('.unitary-what').innerText(), /whole circuit: H q0\./);
+      assert.deepEqual(await rows.nth(2).locator('td').allInnerTexts(), ['0.71', '', '−0.71', '']);
+    }));
+});

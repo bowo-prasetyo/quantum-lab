@@ -20,6 +20,7 @@ const PANEL_HEADINGS = {
   shots: 'Shots',
   interference: 'Interference',
   density: 'Density Matrix',
+  unitary: 'Unitary Matrix',
   correlation: 'Correlation Graph',
   pauli: 'Pauli Expectations',
   entanglement: 'Entanglement',

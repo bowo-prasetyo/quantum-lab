@@ -1256,3 +1256,58 @@ button:disabled {
 .pauli-none {
   color: var(--text-soft);
 }
+
+/* ---------- Unitary matrix ---------- */
+
+.unitary-mode {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.unitary-mode label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  cursor: pointer;
+}
+
+.unitary-what {
+  color: var(--text-soft);
+}
+
+.unitary-scroll {
+  overflow-x: auto;
+}
+
+.unitary-table {
+  border-collapse: separate;
+  border-spacing: 2px;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.unitary-table th {
+  padding: 2px 4px;
+  color: var(--text-muted);
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.unitary-table td {
+  min-width: 3.2em;
+  height: 2.2em;
+  padding: 2px 4px;
+  border: 1px solid var(--border-faint);
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+@media (pointer: coarse) {
+  .unitary-mode label {
+    min-height: 44px;
+  }
+}

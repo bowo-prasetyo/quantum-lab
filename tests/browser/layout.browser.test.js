@@ -82,7 +82,7 @@ describe('Workbench layout', () => {
       const tabs = page.getByRole('tab');
       assert.deepEqual(
         await tabs.allInnerTexts(),
-        ['State', 'Probabilities', 'Shots', 'Bloch spheres', 'Interference', 'Density matrix', 'Correlations', 'Pauli', 'Entanglement', '3D']
+        ['State', 'Probabilities', 'Shots', 'Bloch spheres', 'Interference', 'Density matrix', 'Unitary', 'Correlations', 'Pauli', 'Entanglement', '3D']
       );
       assert.equal(await page.getByRole('tab', { selected: true }).innerText(), 'State');
       assert.equal(await heading(page, 'Quantum State').count(), 1);

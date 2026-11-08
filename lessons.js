@@ -22,7 +22,7 @@
 //             ['if', qubit, operation]: only if that qubit's last measurement gave 1
 // Basis labels use qubit 0 as the left digit: |10⟩ means qubit 0 is 1.
 
-export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'correlation', 'pauli', 'entanglement', 'cube', 'editor'];
+export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'unitary', 'correlation', 'pauli', 'entanglement', 'cube', 'editor'];
 
 // n: the number of qubits every lesson in the part uses (null if it varies)
 export const PARTS = [

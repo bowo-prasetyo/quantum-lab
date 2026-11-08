@@ -510,3 +510,48 @@ export function pauliExpectation(re, im, paulis, n) {
   for (let i = 0; i < re.length; i++) value += re[i] * p.re[i] + im[i] * p.im[i];
   return value;
 }
+
+/**
+ * The 2^n × 2^n matrix of a step: column j is what `apply` does to basis
+ * state j. `apply(re, im)` returns { re, im } (a gate, CNOT, CZ, or several
+ * of them in a row). Returns { re, im, size } row-major, entry (i, j) at
+ * index i * size + j, like densityMatrix.
+ */
+export function unitaryOf(apply, n) {
+  const size = 1 << n;
+  const re = new Float64Array(size * size);
+  const im = new Float64Array(size * size);
+  for (let j = 0; j < size; j++) {
+    const basisRe = new Float64Array(size);
+    basisRe[j] = 1;
+    const column = apply(basisRe, new Float64Array(size));
+    for (let i = 0; i < size; i++) {
+      re[i * size + j] = column.re[i];
+      im[i * size + j] = column.im[i];
+    }
+  }
+  return { re, im, size };
+}
+
+/**
+ * How far a matrix is from unitary: the largest entry of |U†U − I|.
+ * About 1e-16 for every gate in this lab.
+ */
+export function unitarityError({ re, im, size }) {
+  let worst = 0;
+  for (let a = 0; a < size; a++) {
+    for (let b = 0; b < size; b++) {
+      // (U†U)ab = Σi conj(Uia) Uib
+      let sr = 0;
+      let si = 0;
+      for (let i = 0; i < size; i++) {
+        const ar = re[i * size + a], ai = -im[i * size + a];
+        const br = re[i * size + b], bi = im[i * size + b];
+        sr += ar * br - ai * bi;
+        si += ar * bi + ai * br;
+      }
+      worst = Math.max(worst, Math.hypot(sr - (a === b ? 1 : 0), si));
+    }
+  }
+  return worst;
+}
