@@ -2,10 +2,10 @@
 // the gate is pressed, on wide and narrow screens, and the canvases are
 // drawn at the screen's real resolution.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser } from './helpers.js';
+import { startBrowser, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });

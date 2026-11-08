@@ -1,10 +1,10 @@
 // Browser tests for the Shots, Interference and Entanglement views: each
 // follows the lab's state, and says in words what it draws.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, openPage } from './helpers.js';
+import { startBrowser, openPage, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });

@@ -1,9 +1,9 @@
 // Browser tests for the CZ gate and single-qubit measurement in the lab.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, openPage } from './helpers.js';
+import { startBrowser, openPage, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });

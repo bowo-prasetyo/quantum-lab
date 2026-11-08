@@ -6,12 +6,12 @@
 // Needs:     npm install, then: npx playwright install chromium
 // The pages load Vue from the jsDelivr CDN, so this needs network access.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { LESSONS } from '../../lessons.js';
 import { lessonText } from '../../content.js';
-import { startBrowser, openPage as open } from './helpers.js';
+import { startBrowser, openPage as open, test } from './helpers.js';
 
 // Panel key → heading the lab shows for it
 const PANEL_HEADINGS = {

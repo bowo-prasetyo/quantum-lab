@@ -1,6 +1,7 @@
 // Shared set-up for the browser tests: a minimal static file server for the
-// repo and a Chromium browser.
+// repo, a Chromium browser, and test() with a time limit of its own.
 
+import { test as nodeTest } from 'node:test';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
@@ -16,6 +17,18 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png'
 };
+
+// How long one browser test may take before it fails as stuck. Each test
+// gets this limit itself: Node's --test-timeout (in package.json) limits each
+// whole test file instead, so it is set far higher, and a file can hold as
+// many tests (or lessons) as it needs.
+export const TEST_TIMEOUT_MS = 60_000;
+
+/** node:test's test(), with TEST_TIMEOUT_MS as the default limit for each test. */
+export function test(name, options, fn) {
+  if (typeof options === 'function') [options, fn] = [{}, options];
+  return nodeTest(name, { timeout: TEST_TIMEOUT_MS, ...options }, fn);
+}
 
 /** Starts the server and browser. Returns { base, browser, close }. */
 export async function startBrowser() {

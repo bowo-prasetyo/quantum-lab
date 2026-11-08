@@ -1,10 +1,10 @@
 // Browser tests for accessibility: screen-reader announcements, contrast,
 // and reading the density matrix and 3D view as text, by pointer and keyboard.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, openPage } from './helpers.js';
+import { startBrowser, openPage, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });

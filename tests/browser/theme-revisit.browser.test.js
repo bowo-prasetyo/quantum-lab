@@ -1,10 +1,10 @@
 // Browser tests for the light and dark themes, and for revisiting a lesson
 // (the first prediction is shown and kept; later answers are practice).
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser } from './helpers.js';
+import { startBrowser, test } from './helpers.js';
 import { LESSONS } from '../../lessons.js';
 
 let env;
