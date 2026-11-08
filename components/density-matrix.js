@@ -9,6 +9,9 @@ import * as engine from '../engine.js';
 import { phaseToCss } from '../colors.js';
 import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 import { percent, degrees } from '../describe.js';
+import { t, formatNumber } from '../i18n.js';
+
+const fmt3 = v => formatNumber(v, { digits: 3 });
 
 const LABEL_FONT = '12px Arial, sans-serif';
 
@@ -53,39 +56,34 @@ export const DensityMatrix = {
       const im = rho.im[k];
       const magnitude = Math.hypot(re, im);
       const label = q => engine.basisLabel(q, this.n);
-      const where = i === j ? `Row and column ${label(i)}` : `Row ${label(i)}, column ${label(j)}`;
-      if (magnitude < 1e-9) return `${where}: 0.`;
-      const value = `${where}: size ${magnitude.toFixed(3)}, phase ${degrees(Math.atan2(im, re))}`;
-      return i === j ? `${value} (the probability of ${label(i)}, ${percent(magnitude)}).` : `${value}.`;
+      const where = i === j ? t('density.whereDiagonal', { state: label(i) }) : t('density.where', { row: label(i), column: label(j) });
+      if (magnitude < 1e-9) return t('density.zero', { where, zero: formatNumber(0) });
+      const params = { where, size: fmt3(magnitude), phase: degrees(Math.atan2(im, re)), state: label(i), p: percent(magnitude) };
+      return t(i === j ? 'density.entryDiagonal' : 'density.entry', params);
     }
   },
 
   template: `
     <div class="card">
-      <h2>Density Matrix</h2>
+      <h2>{{ $t('density.title') }}</h2>
       <canvas
         ref="canvas"
         class="readable-canvas"
         tabindex="0"
         role="img"
-        aria-label="Density matrix. Use the arrow keys to read each entry. The diagonal holds the probabilities in the Quantum State table."
+        :aria-label="$t('density.aria')"
         @pointermove="onPointer"
         @pointerdown="onPointer"
         @focus="cursor = cursor || { i: 0, j: 0 }"
         @keydown="onKeydown"
       ></canvas>
-      <p class="readout" role="status">{{ readout || 'Point at, tap or use the arrow keys on a square to read it.' }}</p>
-      <p class="caption">
-        Row i, column j shows ρ<sub>ij</sub>.
-        A square's area shows its size |ρ<sub>ij</sub>| compared with the
-        largest entry ({{ densityMax.toFixed(3) }}), and its colour shows
-        the phase<span v-if="n === 3"> (same colours as the 3D view)</span>.
-        The diagonal holds the measurement probabilities.
-      </p>
+      <p class="readout" role="status">{{ readout || $t('density.readoutEmpty') }}</p>
+      <i18n-t :k="n === 3 ? 'density.caption3' : 'density.caption'" tag="p" class="caption" :params="{ max: fmt3(densityMax) }">
+        <template #rho>ρ<sub>ij</sub></template>
+        <template #abs>|ρ<sub>ij</sub>|</template>
+      </i18n-t>
       <p class="caption density-purity">
-        Purity Tr ρ² = {{ purity.toFixed(3) }}<template v-if="purity > 0.9995">: a pure state.</template><template v-else>: a mixed state. Noise has faded some
-        off-diagonal squares, so part of the state is now a random mix rather than a
-        superposition. A completely random state would have {{ (1 / (1 << n)).toFixed(3) }}.</template>
+        {{ $t(purity > 0.9995 ? 'density.purityPure' : 'density.purityMixed', { purity: fmt3(purity), random: fmt3(1 / (1 << n)) }) }}
       </p>
     </div>
   `,
@@ -94,6 +92,8 @@ export const DensityMatrix = {
   watch: { re() { this.draw(); }, im() { this.draw(); }, rho() { this.draw(); }, cursor() { this.draw(); } },
 
   methods: {
+    fmt3,
+
     // The entry under the pointer, if it is over the grid
     onPointer(e) {
       const layout = this.layout;
@@ -215,7 +215,7 @@ export const DensityMatrix = {
           const p = entries[k * size + k].magnitude;
           if (p < 0.0005) continue;
           ctx.fillStyle = '#fff';
-          ctx.fillText(p.toFixed(3), left + k * cell + cell / 2, top + k * cell + cell - 4);
+          ctx.fillText(fmt3(p), left + k * cell + cell / 2, top + k * cell + cell - 4);
         }
       }
 
@@ -260,7 +260,7 @@ export const DensityMatrix = {
       ctx.font = '11px Arial, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'bottom';
-      ctx.fillText('phase', barX + barW / 2 + 6, top - 6);
+      ctx.fillText(t('density.phaseLegend'), barX + barW / 2 + 6, top - 6);
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
       [['π', 0], ['π/2', 0.25], ['0', 0.5], ['−π/2', 0.75], ['−π', 1]]

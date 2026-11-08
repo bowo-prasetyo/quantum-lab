@@ -9,15 +9,16 @@
 import * as engine from '../engine.js';
 import { phaseToCss } from '../colors.js';
 import { percent } from '../describe.js';
+import { t, formatNumber } from '../i18n.js';
 
 const SVG_SIZE = 96;
 const SVG_RADIUS = 40; // longest chain of arrows, in SVG units
 const HEAD = 7;        // arrowhead length
 const STEP_ASIDE = 6;  // sideways shift of an arrow that doubles back
 
-// "0.707", "−0.500i", "0.500 − 0.500i"
+// "0.707", "−0.500i", "0.500 − 0.500i" (with the language's decimal separator)
 function complexText(re, im) {
-  const f = v => Math.abs(v).toFixed(3);
+  const f = v => formatNumber(Math.abs(v), { digits: 3 });
   const small = v => Math.abs(v) < 5e-4;
   if (small(im)) return `${re < 0 && !small(re) ? '−' : ''}${f(re)}`;
   if (small(re)) return `${im < 0 ? '−' : ''}${f(im)}i`;
@@ -67,13 +68,8 @@ export function layArrows(paths, scale) {
   });
 }
 
-const KIND_TEXT = {
-  single: 'one path, so nothing to interfere',
-  constructive: 'the paths add up (constructive interference)',
-  destructive: 'the paths partly cancel (destructive interference)',
-  cancel: 'the paths cancel completely (destructive interference)',
-  neutral: 'the paths are at right angles, so their interference adds nothing'
-};
+// What happened to an amplitude, by kind (see engine.amplitudePaths): the
+// message 'interference.<kind>'
 
 /**
  * The step a lab worker message describes, as a function (re, im) → state,
@@ -82,19 +78,19 @@ const KIND_TEXT = {
 export function stepFromMessage(message, n) {
   if (message.type === 'gate') {
     return {
-      name: `${message.gate} on qubit ${message.targetQubit}`,
+      name: t('announce.gate', { gate: message.gate, qubit: message.targetQubit }),
       apply: (re, im) => engine.applyGate(re, im, message.gate, message.targetQubit, n)
     };
   }
   if (message.type === 'cnot') {
     return {
-      name: `CNOT, control qubit ${message.control}, target qubit ${message.target}`,
+      name: t('announce.cnot', { control: message.control, target: message.target }),
       apply: (re, im) => engine.applyCNOT(re, im, message.control, message.target, n)
     };
   }
   if (message.type === 'cz') {
     return {
-      name: `CZ on qubits ${message.control} and ${message.target}`,
+      name: t('announce.cz', { control: message.control, target: message.target }),
       apply: (re, im) => engine.applyCZ(re, im, message.control, message.target, n)
     };
   }
@@ -115,29 +111,18 @@ export const InterferenceView = {
 
   template: `
     <div class="card interference">
-      <h2>Interference</h2>
+      <h2>{{ $t('interference.title') }}</h2>
 
-      <p v-if="!step" class="caption">
-        Apply a gate to see how it combines the amplitudes. Each new amplitude
-        is a sum of paths from the old ones, and paths can add up or cancel.
-      </p>
-
-      <p v-else-if="noisy" class="caption">
-        The state is mixed (noise was applied), so it has no list of amplitudes
-        and no paths to draw. This view works again after Measure all or Reset.
-      </p>
-
-      <p v-else-if="!traced" class="caption">
-        The last step was a measurement. It is not a gate: it picks one outcome
-        at random and removes the others, so there are no paths to combine.
-      </p>
+      <p v-if="!step" class="caption">{{ $t('interference.empty') }}</p>
+      <p v-else-if="noisy" class="caption">{{ $t('interference.mixed', { measureAll: $t('gates.measureAll'), reset: $t('gates.reset') }) }}</p>
+      <p v-else-if="!traced" class="caption">{{ $t('interference.measured') }}</p>
 
       <template v-else>
-        <p class="interference-step">Last step: <strong>{{ traced.name }}</strong></p>
+        <i18n-t k="interference.lastStep" tag="p" class="interference-step" :params="{ step: traced.name }" />
         <p class="caption">{{ summary }}</p>
 
         <details v-if="allSingle" class="interference-details">
-          <summary>Show where each amplitude came from</summary>
+          <summary>{{ $t('interference.showSources') }}</summary>
           <ul class="interference-rows">
             <li v-for="row in rows" :key="row.index" class="interference-row" :data-kind="row.kind">
               <span class="interference-label"><strong>{{ row.label }}</strong>: {{ row.equation }}</span>
@@ -222,16 +207,21 @@ export const InterferenceView = {
         const label = engine.basisLabel(out.index, this.n);
         // "0.500 from |0⟩ − 0.500 from |1⟩ = 0.000": a leading minus becomes the joining sign
         const terms = out.paths.map((p, k) => {
-          const text = `${complexText(p.re, p.im)} from ${engine.basisLabel(p.from, this.n)}`;
-          if (k === 0) return text;
-          return text.startsWith('−') ? `− ${text.slice(1)}` : `+ ${text}`;
+          let value = complexText(p.re, p.im);
+          let join = '+ ';
+          if (k > 0 && value.startsWith('−')) {
+            value = value.slice(1);
+            join = '− ';
+          }
+          const text = t('interference.term', { value, from: engine.basisLabel(p.from, this.n) });
+          return k === 0 ? text : join + text;
         });
         const equation = out.paths.length > 1
-          ? `${terms.join(' ')} = ${complexText(out.re, out.im)}`
-          : `${terms[0]}`;
+          ? t('interference.equation', { terms: terms.join(' '), sum: complexText(out.re, out.im) })
+          : terms[0];
         const probText = out.paths.length > 1 && out.kind !== 'neutral'
-          ? `Probability ${percent(out.probability)} (${percent(out.without)} if the paths did not interfere)`
-          : `Probability ${percent(out.probability)}`;
+          ? t('interference.probWithout', { p: percent(out.probability), without: percent(out.without) })
+          : t('interference.prob', { p: percent(out.probability) });
         return {
           index: out.index,
           kind: out.kind,
@@ -240,7 +230,7 @@ export const InterferenceView = {
           sumX: out.re * scale,
           sumY: -out.im * scale,
           label,
-          kindText: KIND_TEXT[out.kind],
+          kindText: t(`interference.${out.kind}`),
           equation,
           probText
         };
@@ -252,10 +242,7 @@ export const InterferenceView = {
     },
 
     summary() {
-      if (this.allSingle) {
-        return 'Every new amplitude comes from just one old one, so nothing interferes: this step only moves amplitudes or changes their phase. Gates that mix |0⟩ and |1⟩, such as H, make paths meet.';
-      }
-      return 'Each new amplitude is the sum of the arrows that reach it. Arrows pointing the same way add up; opposite arrows cancel. That is how phase, invisible in the probabilities, decides the outcome.';
+      return t(this.allSingle ? 'interference.summarySingle' : 'interference.summary');
     }
   }
 };

@@ -14,6 +14,10 @@
 import * as engine from '../engine.js';
 import { stepLabel } from './circuit-editor.js';
 import { describeState } from '../describe.js';
+import { t, formatNumber } from '../i18n.js';
+
+// A fidelity to 2 decimals, or — where there is none (after a measurement)
+const fidelityText = f => (typeof f === 'number' ? formatNumber(f, { digits: 2 }) : '—');
 
 const BAR_W = 8;
 const BAR_GAP = 2;
@@ -33,27 +37,27 @@ export const CircuitTimeline = {
 
   template: `
     <div class="card timeline">
-      <h2>Timeline</h2>
+      <h2>{{ $t('timeline.title') }}</h2>
       <div class="timeline-controls">
-        <button class="secondary" :disabled="running || current <= 0" @click="go(current - 1)">◀ Back</button>
+        <button class="secondary" :disabled="running || current <= 0" @click="go(current - 1)">◀ {{ $t('timeline.back') }}</button>
         <label class="timeline-slider">
-          <span class="visually-hidden">Frame</span>
+          <span class="visually-hidden">{{ $t('timeline.frame') }}</span>
           <input type="range" min="0" :max="last" :value="current" :disabled="running"
             :aria-valuetext="frameText(current)" @input="go(Number($event.target.value))">
         </label>
-        <button class="secondary" :disabled="running || current >= last" @click="go(current + 1)">Forward ▶</button>
+        <button class="secondary" :disabled="running || current >= last" @click="go(current + 1)">{{ $t('timeline.forward') }} ▶</button>
       </div>
       <p class="timeline-status">{{ frameText(current) }}</p>
 
       <figure v-if="showFidelity" class="fidelity">
-        <figcaption>Fidelity with the noiseless run</figcaption>
+        <figcaption>{{ $t('timeline.fidelityTitle') }}</figcaption>
         <svg class="fidelity-chart" :viewBox="'0 0 ' + FW + ' ' + FH" preserveAspectRatio="none"
           role="img" :aria-label="fidelitySummary">
           <line :x1="0" :y1="fy(1)" :x2="FW" :y2="fy(1)" class="fidelity-grid" />
           <line :x1="0" :y1="fy(0.5)" :x2="FW" :y2="fy(0.5)" class="fidelity-grid" />
           <polyline :points="fidelityPoints" class="fidelity-line" />
         </svg>
-        <div class="fidelity-axis" aria-hidden="true"><span>1</span><span>0.5</span></div>
+        <div class="fidelity-axis" aria-hidden="true"><span>{{ fmtAxis(1) }}</span><span>{{ fmtAxis(0.5) }}</span></div>
       </figure>
 
       <ol class="timeline-strip">
@@ -66,24 +70,12 @@ export const CircuitTimeline = {
                 :width="BAR_W" :height="Math.max(p * CHART_H, p > 0 ? 1 : 0)" />
             </svg>
             <span class="timeline-label">{{ f.label }}</span>
-            <span v-if="showFidelity" class="timeline-fidelity">F {{ f.fidelityText }}</span>
+            <span v-if="showFidelity" class="timeline-fidelity">{{ $t('timeline.fidelityShort', { value: f.fidelityText }) }}</span>
           </button>
         </li>
       </ol>
-      <p class="caption">
-        Each frame is the state after that step of the last run, drawn as its
-        probabilities. Pick one to put the lab back there: every view follows,
-        and Step carries on from it. Measurements keep the results they gave.
-        Editing the circuit or pressing another button starts a new timeline.
-      </p>
-      <p v-if="showFidelity" class="caption">
-        Fidelity F compares each frame with the state the same steps give
-        without any noise: 1 means the same, and it falls as noise builds up.
-        Even steps that cancel out (H then H) cost fidelity on noisy hardware,
-        which is why today’s quantum computers can only run short circuits.
-        After a measurement there is no single noiseless state to compare with,
-        so F shows —.
-      </p>
+      <p class="caption">{{ $t('timeline.explain') }}</p>
+      <p v-if="showFidelity" class="caption">{{ $t('timeline.fidelityExplain') }}</p>
     </div>
   `,
 
@@ -104,8 +96,8 @@ export const CircuitTimeline = {
     strip() {
       return this.frames.map((f, k) => ({
         probs: engine.probabilities(f.re, f.im),
-        label: k === 0 ? 'Start' : stepLabel(this.circuit[k - 1]),
-        fidelityText: typeof f.fidelity === 'number' ? f.fidelity.toFixed(2) : '—'
+        label: k === 0 ? t('timeline.start') : stepLabel(this.circuit[k - 1]),
+        fidelityText: fidelityText(f.fidelity)
       }));
     },
     // Only when noise has made a difference somewhere in the run
@@ -121,7 +113,9 @@ export const CircuitTimeline = {
         .join(' ');
     },
     fidelitySummary() {
-      return 'Fidelity by frame: ' + this.strip.map(f => `${f.label} ${f.fidelityText}`).join(', ');
+      return t('timeline.fidelityAria', {
+        list: this.strip.map(f => t('timeline.fidelityItem', { label: f.label, value: f.fidelityText })).join(t('list.separator'))
+      });
     }
   },
 
@@ -135,9 +129,14 @@ export const CircuitTimeline = {
     frameText(k) {
       const f = this.frames[k];
       if (!f) return '';
-      const where = k === 0 ? 'Start' : `Step ${k} of ${this.circuit.length}, after ${stepLabel(this.circuit[k - 1])}`;
-      const fid = this.showFidelity ? `, fidelity ${typeof f.fidelity === 'number' ? f.fidelity.toFixed(2) : '—'}` : '';
-      return `${where}: ${describeState(f.re, f.im, this.n)}${fid}`;
+      const where = k === 0 ? t('timeline.start') : t('timeline.frameStep', { k, total: this.circuit.length, step: stepLabel(this.circuit[k - 1]) });
+      const state = describeState(f.re, f.im, this.n);
+      return this.showFidelity
+        ? t('timeline.frameTextFidelity', { where, state, fidelity: fidelityText(f.fidelity) })
+        : t('timeline.frameText', { where, state });
+    },
+    fmtAxis(v) {
+      return formatNumber(v, { digits: v === 1 ? 0 : 1 });
     },
     go(k) {
       if (k >= 0 && k <= this.last && k !== this.current) this.$emit('go', k);

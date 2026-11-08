@@ -10,15 +10,13 @@
 import * as engine from '../engine.js';
 import { fitCanvas, redrawOnResize, themeColors } from './canvas-fit.js';
 import { GATE_ROTATIONS, rotate, arcPoints } from '../bloch-rotation.js';
+import { t, formatNumber } from '../i18n.js';
 
 const TURN_MS = 450;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-// Avoids printing "-0.00"
-const fmt = v => {
-  const s = v.toFixed(2);
-  return (Number(s) === 0 ? '0.00' : s).replace('-', '−');
-};
+// 2 decimals in the language's style, with a real minus sign; never "−0.00"
+const fmt = v => formatNumber(v, { digits: 2, minus: true });
 
 // `turn`: { axis, path } to draw the gate's axis and the vector's path
 function drawSphere(canvas, x, y, z, turn = null) {
@@ -124,8 +122,8 @@ export const BlochSpheres = {
   },
 
   data() {
-    // The last gate's turn, in words, for the caption
-    return { turnText: '' };
+    // The last gate's turn, { gate, qubit }, for the caption
+    return { turnInfo: null };
   },
 
   computed: {
@@ -134,6 +132,13 @@ export const BlochSpheres = {
         ? engine.rhoBlochVector(this.rho, q, this.n)
         : engine.blochVector(this.re, this.im, q, this.n)));
     },
+    // The last gate's turn, in words, in the current language
+    turnText() {
+      if (!this.turnInfo) return '';
+      const { gate, qubit } = this.turnInfo;
+      return t('bloch.turn', { gate, qubit, rotation: t(`rotation.${gate}`) });
+    },
+
     // Changes once per update, however many of these change together
     stateKey() {
       return [this.re, this.im, this.rho, this.stepId];
@@ -144,23 +149,18 @@ export const BlochSpheres = {
   // any size and screen readers can read them.
   template: `
     <div class="card">
-      <h2>{{ n === 1 ? 'Bloch Sphere' : 'Bloch Spheres' }}</h2>
+      <h2>{{ $t('bloch.title', { count: n }) }}</h2>
       <div class="bloch-row">
         <figure v-for="(v, q) in vectors" :key="q" class="bloch-cell">
-          <figcaption>Qubit {{ q }}</figcaption>
+          <figcaption>{{ $t('bloch.qubit', { qubit: q }) }}</figcaption>
           <canvas :ref="el => setCanvas(q, el)" role="img"
-            :aria-label="'Bloch sphere of qubit ' + q"></canvas>
-          <p class="bloch-coords">x = {{ fmt(v.x) }} · y = {{ fmt(v.y) }} · z = {{ fmt(v.z) }}</p>
+            :aria-label="$t('bloch.aria', { qubit: q })"></canvas>
+          <p class="bloch-coords">{{ $t('bloch.coords', { x: fmt(v.x), y: fmt(v.y), z: fmt(v.z) }) }}</p>
         </figure>
       </div>
       <p v-if="turnText" class="caption bloch-turn">{{ turnText }}</p>
-      <p v-if="rho" class="caption">
-        The state is mixed, so a vector can be shorter than 1 because of noise
-        as well as entanglement.
-      </p>
-      <p v-else-if="n >= 2" class="caption">
-        A vector shorter than 1 means that qubit is entangled with the others.
-      </p>
+      <p v-if="rho" class="caption">{{ $t('bloch.mixed') }}</p>
+      <p v-else-if="n >= 2" class="caption">{{ $t('bloch.entangled') }}</p>
     </div>
   `,
 
@@ -186,9 +186,7 @@ export const BlochSpheres = {
       const fresh = this.stepId !== this.seenStepId;
       this.seenStepId = this.stepId;
       this.turn = fresh ? this.turnFor(this.step) : null;
-      this.turnText = this.turn
-        ? `Last gate: ${this.step.message.gate} on qubit ${this.turn.q}, ${this.turn.rotation.text}. The dashed line is the axis; the dotted arc is the path the vector took.`
-        : '';
+      this.turnInfo = this.turn ? { gate: this.step.message.gate, qubit: this.turn.q } : null;
 
       if (!this.turn || reducedMotion()) {
         this.progress = 1;

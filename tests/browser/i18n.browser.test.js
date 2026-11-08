@@ -55,14 +55,13 @@ describe('Language', () => {
     withPage('?lang=en-XA#/lab/1', async page => {
       assert.deepEqual(await htmlLang(page), ['en-XA', 'ltr']);
       const links = await navLinks(page);
-      assert.match(links[0], /^\[1 ǫúƀíţ ~+\]$/, 'plural form for 1');
-      assert.match(links[1], /^\[2 ǫúƀíţš ~+\]$/, 'plural form for 2');
-      assert.match(links[3], /^\[Ļéššöñš ~+\]$/);
-      assert.match(await page.getByRole('link', { name: /Ĝļášš Ǫúƀíţ/ }).getAttribute('aria-label'), /^\[/);
-      assert.match(await page.title(), /^\[Ĝļášš Ǫúƀíţ/);
-      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /^\[Ļéáŕñ/);
-      // Text not yet made translatable stays in English
-      assert.match(await page.locator('h1').first().textContent(), /^Glass Qubit/);
+      assert.match(links[0], /^⟦1 ǫúƀíţ ~+⟧$/, 'plural form for 1');
+      assert.match(links[1], /^⟦2 ǫúƀíţš ~+⟧$/, 'plural form for 2');
+      assert.match(links[3], /^⟦Ļéššöñš ~+⟧$/);
+      assert.match(await page.getByRole('link', { name: /Ĝļášš Ǫúƀíţ/ }).getAttribute('aria-label'), /^⟦/);
+      assert.match(await page.title(), /^⟦Ĝļášš Ǫúƀíţ/);
+      assert.match(await page.locator('meta[name="description"]').getAttribute('content'), /^⟦Ļéáŕñ/);
+      assert.match(await page.locator('h1').first().textContent(), /^⟦Ĝļášš Ǫúƀíţ: 1 ǫúƀíţ/);
     }));
 
   test('the picker switches language at once, keeps the route, and is remembered', () =>
@@ -90,6 +89,38 @@ describe('Language', () => {
     withPage('#/lab/1', async page => {
       assert.deepEqual(await htmlLang(page), ['en', 'ltr']);
     }, { storage: { 'glass-qubit-locale': '"en-XA"' } }));
+
+  test('every view follows a change of language at once, numbers included', () =>
+    withPage('?lang=en-XA#/lab/2', async page => {
+      const rows = page.locator('.gate-panel .gate-row');
+      await rows.first().getByRole('button', { name: 'H', exact: true }).click();
+      await page.getByRole('button', { name: /Ṁéášúŕé ǫúƀíţ 0/ }).click();
+      await page.waitForTimeout(400);
+      // German number style in the pseudo-locale, and words from its messages
+      const table = page.locator('.amp-table');
+      assert.match(await table.innerText(), /0,000 \+ 0,000í|1,000 \+ 0,000í/);
+      assert.match(await table.innerText(), /100,0\u00a0%/);
+      assert.match(await page.getByTestId('announcer').textContent(), /^⟦⟦Ṁéášúŕéđ ǫúƀíţ 0: [01]/, 'announcement in the language');
+      assert.match(await page.locator('.card', { has: table }).innerText(), /ǫúƀíţ 0 ĝáṽé [01]/, 'single-qubit result put into words');
+
+      await picker(page).selectOption('en');
+      await page.waitForTimeout(300);
+      assert.match(await table.innerText(), /1\.000 \+ 0\.000i/, 'numbers switch to English style');
+      assert.match(await page.locator('.card', { has: table }).innerText(), /Measurement: qubit 0 gave [01]/);
+      assert.equal(await page.locator('.gate-panel h2').textContent(), 'Gates');
+      assert.match(await page.locator('.bloch-coords').first().textContent(), /^x = 0\.00 · y = 0\.00 · z = (1|−1)\.00$/);
+    }));
+
+  test('a lesson’s check results follow a change of language', () =>
+    withPage('?lang=en-XA#/lessons/bit-flip', async page => {
+      await page.getByRole('button', { name: /Šĥöŵ ɱé/ }).click();
+      const result = page.locator('.check-result');
+      await result.waitFor();
+      assert.match(await result.innerText(), /100,0\u00a0%/);
+      await picker(page).selectOption('en');
+      await page.waitForTimeout(300);
+      assert.match(await result.innerText(), /That’s the expected result[\s\S]*Probabilities: \|1⟩ 100\.0%/);
+    }));
 
   test('canvases still draw after a language change', () =>
     withPage('?lang=en-XA#/lab/1', async page => {

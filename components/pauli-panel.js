@@ -15,13 +15,14 @@
 // (state tomography).
 
 import * as engine from '../engine.js';
+import { t, formatNumber } from '../i18n.js';
 
 const AXES = ['X', 'Y', 'Z'];
 const SHOW_MIN = 0.005; // smaller values print as 0.00
 
 const fmt = v => {
-  if (Math.abs(v) < SHOW_MIN) return '0.00';
-  return `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`;
+  if (Math.abs(v) < SHOW_MIN) return formatNumber(0, { digits: 2 });
+  return `${v > 0 ? '+' : '−'}${formatNumber(Math.abs(v), { digits: 2 })}`;
 };
 
 // Background for a value: blue for positive, orange for negative, as
@@ -69,37 +70,33 @@ export const PauliPanel = {
 
   template: `
     <div class="card pauli">
-      <h2>Pauli Expectations</h2>
-      <p class="caption">
-        ⟨P⟩ is the average result of measuring P many times, from −1 to +1.
-        Measuring every one of these is how experiments read out a state.
-        Blue is positive, orange negative.
-      </p>
+      <h2>{{ $t('pauli.title') }}</h2>
+      <p class="caption">{{ $t('pauli.intro') }}</p>
 
-      <h3>Each qubit</h3>
+      <h3>{{ $t('entanglement.eachQubit') }}</h3>
       <div class="pauli-scroll">
         <table class="pauli-table pauli-singles">
           <thead>
-            <tr><th scope="col"><span class="visually-hidden">Qubit</span></th><th v-for="a in AXES" :key="a" scope="col">⟨{{ a }}⟩</th></tr>
+            <tr><th scope="col"><span class="visually-hidden">{{ $t('pauli.qubit') }}</span></th><th v-for="a in AXES" :key="a" scope="col">⟨{{ a }}⟩</th></tr>
           </thead>
           <tbody>
             <tr v-for="row in singles" :key="row.q">
-              <th scope="row">Qubit {{ row.q }}</th>
+              <th scope="row">{{ $t('bloch.qubit', { qubit: row.q }) }}</th>
               <td v-for="cell in row.cells" :key="cell.axis" :style="cell.style">{{ cell.text }}</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="caption">The same numbers as the qubit’s Bloch vector (x, y, z).</p>
+      <p class="caption">{{ $t('pauli.singlesCaption') }}</p>
 
-      <h3>Each pair</h3>
+      <h3>{{ $t('entanglement.eachPair') }}</h3>
       <div class="pauli-pairs">
         <figure v-for="pair in pairs" :key="pair.key" class="pauli-pair">
-          <figcaption>Qubits {{ pair.q1 }} and {{ pair.q2 }}</figcaption>
+          <figcaption>{{ $t('pauli.pair', { q1: pair.q1, q2: pair.q2 }) }}</figcaption>
           <table class="pauli-table">
             <thead>
               <tr>
-                <th scope="col"><span class="visually-hidden">Qubit {{ pair.q1 }} down, qubit {{ pair.q2 }} across</span></th>
+                <th scope="col"><span class="visually-hidden">{{ $t('pauli.corner', { q1: pair.q1, q2: pair.q2 }) }}</span></th>
                 <th v-for="b in AXES" :key="b" scope="col">{{ b }}<sub>{{ pair.q2 }}</sub></th>
               </tr>
             </thead>
@@ -113,27 +110,15 @@ export const PauliPanel = {
           <p class="pauli-verdict" :data-correlated="String(pair.correlated)">{{ pair.verdict }}</p>
         </figure>
       </div>
-      <p class="caption">
-        Rows: what the first qubit of the pair is measured in; columns: the
-        second qubit. If neither qubit is entangled with anything, every
-        cell is the product of their single values, such as ⟨X⟩·⟨X⟩. A grid that
-        differs is correlated<template v-if="rho">. The state is mixed, so a
-        correlation may be classical (noise can leave a random mix that still agrees)
-        rather than entanglement.</template><template v-else>, and in this lab that
-        means both qubits are entangled, though not necessarily with each other.</template> A Bell pair is correlated in
-        every basis: XX = +1, YY = −1, ZZ = +1.
-      </p>
+      <p class="caption">{{ $t(rho ? 'pauli.pairsCaptionMixed' : 'pauli.pairsCaption') }}</p>
 
       <template v-if="n === 3">
-        <h3>All three qubits</h3>
+        <h3>{{ $t('pauli.triplesTitle') }}</h3>
         <ul v-if="triples.length" class="pauli-triples">
           <li v-for="t in triples" :key="t.label" :style="t.style">⟨{{ t.label }}⟩ {{ t.text }}</li>
         </ul>
-        <p v-else class="pauli-none">Every three-qubit value is 0.</p>
-        <p class="caption">
-          Three-qubit strings that are not 0. A GHZ state hides here what no pair
-          grid shows: ⟨XXX⟩ = +1, while every pair has ⟨XX⟩ = 0.
-        </p>
+        <p v-else class="pauli-none">{{ $t('pauli.triplesNone') }}</p>
+        <p class="caption">{{ $t('pauli.triplesCaption') }}</p>
       </template>
     </div>
   `,
@@ -179,8 +164,8 @@ export const PauliPanel = {
             rows,
             correlated,
             verdict: correlated
-              ? 'Correlated: not just the product of the single values.'
-              : 'Not correlated: each cell is the product of the single values.'
+              ? t('pauli.correlated')
+              : t('pauli.notCorrelated')
           });
         }
       }

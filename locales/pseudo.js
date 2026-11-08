@@ -1,11 +1,13 @@
 // Pseudo-localization: a fake language made from English, for testing.
 //
 // Open the app with ?lang=en-XA (e.g. index.html?lang=en-XA#/lab/1) and
-// every translated message looks like "[Ļéššöñš ~~~]": still readable, but
+// every translated message looks like "⟦Ļéššöñš ~~~⟧": still readable, but
 // any English text left on screen has not been made translatable yet, the
 // brackets show where text is cut off, and the extra ~ (about a third
 // longer) shows layouts that break when a translation is longer than the
-// English. Placeholders such as {count} are kept as they are.
+// English. Placeholders such as {count}, and link targets such as (/help),
+// are kept as they are. Numbers follow German rules (see locales/index.js),
+// so any number still shown as 0.707 rather than 0,707 isn't formatted.
 
 const ACCENTED = {
   a: 'á', b: 'ƀ', c: 'ç', d: 'đ', e: 'é', f: 'ƒ', g: 'ĝ', h: 'ĥ', i: 'í', j: 'ĵ',
@@ -16,14 +18,17 @@ const ACCENTED = {
   U: 'Ú', V: 'Ṽ', W: 'Ŵ', X: 'Ẋ', Y: 'Ý', Z: 'Ž'
 };
 
-/** One message in pseudo-language, keeping {placeholders} intact. */
+// Parts of a message that must not change: {placeholders} and link targets
+const KEEP = /(\{\w+\}|\]\([^)\s]*\))/;
+
+/** One message in pseudo-language, keeping {placeholders} and link targets intact. */
 export function pseudoText(text) {
   const accented = text
-    .split(/(\{\w+\})/)
-    .map(part => (/^\{\w+\}$/.test(part) ? part : part.replace(/[A-Za-z]/g, ch => ACCENTED[ch])))
+    .split(KEEP)
+    .map((part, k) => (k % 2 ? part : part.replace(/[A-Za-z]/g, ch => ACCENTED[ch])))
     .join('');
   const padding = '~'.repeat(Math.max(1, Math.round(text.length * 0.35)));
-  return `[${accented} ${padding}]`;
+  return `⟦${accented} ${padding}⟧`;
 }
 
 /** A whole message table in pseudo-language (plural forms included). */

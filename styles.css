@@ -149,6 +149,9 @@ body {
   font-family: Arial, sans-serif;
   background: var(--bg);
   color: var(--text);
+  /* A word too long for its box (a long compound word in some languages)
+     wraps instead of overflowing; ordinary text is unaffected */
+  overflow-wrap: break-word;
 }
 
 .container {

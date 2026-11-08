@@ -13,6 +13,16 @@
 // (Intl.PluralRules: zero, one, two, few, many, other), falling back to
 // 'other'. Values are inserted as they are, so format numbers first with
 // formatNumber or formatPercent where the locale's digits matter.
+//
+// A message may also mark text **bold** or *emphasized*, or link it,
+// [like this](/lessons).
+// Plain t() returns that markup as it is; the <i18n-t> component
+// (locale.js) turns it into <strong> and <router-link>.
+//
+// Every call reads the current language through track(), which the Vue
+// plugin (locale.js) points at a reactive value: a template or computed
+// property that calls t() or a format function then re-renders by itself
+// when the language changes, even through plain modules such as describe.js.
 
 import { LOCALES, DEFAULT_LOCALE } from './locales/index.js';
 
@@ -22,6 +32,18 @@ const RTL = new Set(['ar', 'fa', 'he', 'ur', 'yi']);
 let current = DEFAULT_LOCALE;
 const listeners = new Set();
 const warned = new Set();
+let track = () => {};
+
+/** Lets a reactive system see each read of the language (see locale.js). */
+export function trackLocaleWith(fn) {
+  track = fn;
+}
+
+// The language in use, as a dependency of whoever is asking
+function active() {
+  track();
+  return current;
+}
 
 // ---------- Locales ----------
 
@@ -76,7 +98,7 @@ export function detectLocale({ search = '', saved = null, languages = [] } = {})
 }
 
 export function getLocale() {
-  return current;
+  return active();
 }
 
 /**
@@ -124,7 +146,7 @@ function interpolate(text, params) {
  * filled in. Falls back to less specific languages and then English; a key
  * missing everywhere comes back as the key itself, so it shows up on screen.
  */
-export function t(key, params = {}, locale = current) {
+export function t(key, params = {}, locale = active()) {
   for (const code of fallbackChain(locale)) {
     const message = LOCALES[code].messages[key];
     if (message === undefined) continue;
@@ -142,27 +164,58 @@ export function t(key, params = {}, locale = current) {
 
 // ---------- Formatting ----------
 
+// Formatters are slow to build and called on every redraw, so keep them
+const formatters = new Map();
+function formatter(Kind, locale, options) {
+  const key = `${Kind.name}|${locale}|${JSON.stringify(options)}`;
+  if (!formatters.has(key)) formatters.set(key, new Kind(intlLocale(locale), options));
+  return formatters.get(key);
+}
+
+// Maths uses a real minus sign (−), not the hyphen most locales print
+const mathMinus = text => text.replace(/-/g, '−');
+
+// Rounds as toFixed does, so a number reads the same in every language and
+// as it always has (Intl alone would round 1.005 to 1.01, toFixed to 1.00)
+const roundLikeToFixed = (value, digits) => Number(value.toFixed(digits));
+
 /**
  * A number with exactly `digits` decimals in the current language's style:
- * 0.7071 → "0.707" in English, "0,707" in German. Never "-0".
+ * 0.7071 → "0.707" in English, "0,707" in German. Never "-0". Groups
+ * thousands only from five digits up (12 345, but 1000), as is usual for
+ * numbers in science. `minus: true` uses a real minus sign (−0.5).
  */
-export function formatNumber(value, { digits = 0, locale = current } = {}) {
-  return new Intl.NumberFormat(intlLocale(locale), {
+export function formatNumber(value, { digits = 0, minus = false, locale = active() } = {}) {
+  const text = formatter(Intl.NumberFormat, locale, {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
-    signDisplay: 'negative'
-  }).format(value);
+    signDisplay: 'negative',
+    useGrouping: 'min2'
+  }).format(roundLikeToFixed(value, digits));
+  return minus ? mathMinus(text) : text;
 }
 
-/** A probability as a percentage with up to `digits` decimals: 0.125 → "12.5%". */
-export function formatPercent(fraction, { digits = 1, locale = current } = {}) {
-  return new Intl.NumberFormat(intlLocale(locale), {
+/**
+ * A fraction as a percentage with up to `digits` decimals (exactly `digits`
+ * with `fixed: true`): 0.125 → "12.5%" in English, "12,5 %" in German.
+ */
+export function formatPercent(fraction, { digits = 1, fixed = false, minus = false, locale = active() } = {}) {
+  const text = formatter(Intl.NumberFormat, locale, {
     style: 'percent',
-    maximumFractionDigits: digits
-  }).format(fraction);
+    minimumFractionDigits: fixed ? digits : 0,
+    maximumFractionDigits: digits,
+    signDisplay: 'negative',
+    useGrouping: 'min2'
+  }).format(roundLikeToFixed(fraction * 100, digits) / 100);
+  return minus ? mathMinus(text) : text;
 }
 
-/** A list joined in the current language's style: ["X", "H", "Z"] → "X, H, and Z". */
-export function formatList(items, { type = 'conjunction', locale = current } = {}) {
-  return new Intl.ListFormat(intlLocale(locale), { style: 'long', type }).format(items.map(String));
+/** A list joined in the current language's style: ["X", "H", "Z"] → "X, H and Z". */
+export function formatList(items, { type = 'conjunction', locale = active() } = {}) {
+  return formatter(Intl.ListFormat, locale, { style: 'long', type }).format(items.map(String));
+}
+
+/** The text with its first letter capitalized, by the language's rules. */
+export function capitalize(text, { locale = active() } = {}) {
+  return text.charAt(0).toLocaleUpperCase(intlLocale(locale)) + text.slice(1);
 }

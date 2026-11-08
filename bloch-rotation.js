@@ -9,12 +9,12 @@ const H_AXIS = [Math.SQRT1_2, 0, Math.SQRT1_2];
 
 /** Axis (unit vector) and angle (radians) of each gate's turn; I has none. */
 export const GATE_ROTATIONS = Object.freeze({
-  X: { axis: [1, 0, 0], angle: Math.PI, text: 'a half turn (180°) about the x-axis' },
-  Y: { axis: [0, 1, 0], angle: Math.PI, text: 'a half turn (180°) about the y-axis' },
-  Z: { axis: [0, 0, 1], angle: Math.PI, text: 'a half turn (180°) about the z-axis' },
-  H: { axis: H_AXIS, angle: Math.PI, text: 'a half turn (180°) about the axis halfway between x and z' },
-  S: { axis: [0, 0, 1], angle: Math.PI / 2, text: 'a quarter turn (90°) about the z-axis' },
-  T: { axis: [0, 0, 1], angle: Math.PI / 4, text: 'an eighth of a turn (45°) about the z-axis' }
+  X: { axis: [1, 0, 0], angle: Math.PI },
+  Y: { axis: [0, 1, 0], angle: Math.PI },
+  Z: { axis: [0, 0, 1], angle: Math.PI },
+  H: { axis: H_AXIS, angle: Math.PI },
+  S: { axis: [0, 0, 1], angle: Math.PI / 2 },
+  T: { axis: [0, 0, 1], angle: Math.PI / 4 }
 });
 
 /** v turned by `angle` about the unit vector `axis` (Rodrigues' formula). */
