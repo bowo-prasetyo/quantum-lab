@@ -39,7 +39,7 @@ const SECTIONS = [
       ['Bell pair', '(|00⟩ + |11⟩)/√2, made by H on qubit 0 then CNOT from qubit 0 to qubit 1. Each qubit alone is random, but the two always match.'],
       ['GHZ state', '(|000⟩ + |111⟩)/√2: all three qubits entangled, always agreeing. Made by H, then CNOT 0→1, then CNOT 1→2.'],
       ['Reduced state', 'The state of one qubit on its own, found by “tracing out” the others (a partial trace). The Bloch spheres show reduced states.'],
-      ['Mixed state', 'A state that is only partly known. In this lab the whole register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others.'],
+      ['Mixed state', 'A state that can’t be written as a single ket, so its Bloch vector is shorter than 1. It can describe a random mix of states, or one part of an entangled system. In this lab the whole register is always in a pure state, so a qubit that looks mixed on its own is entangled with the others.'],
       ['Correlation is not entanglement', 'Bits that always agree can be entangled (a Bell pair) or simply classical (|00⟩). The correlation graph shows agreement; the Bloch spheres show entanglement.']
     ]
   },
@@ -62,7 +62,7 @@ const SECTIONS = [
       ['Probability chart', 'One bar per basis state: the chance of measuring it.'],
       ['Bloch sphere', 'One per qubit. North pole |0⟩, south pole |1⟩, the equator is a 50/50 superposition, and the angle around is the phase. A vector of length 1 is a pure state; shorter means the qubit is entangled with the others.'],
       ['Density matrix', 'ρ = |ψ⟩⟨ψ|. The diagonal holds the probabilities; off-diagonal squares show coherence, the sign of a real superposition rather than a random mix. Square area shows size and colour shows phase.'],
-      ['Correlation graph', 'For each pair of qubits, |⟨ZᵢZⱼ⟩|: 1.00 when their measured bits always agree (or always disagree), 0.00 when unrelated. It is not a measure of entanglement.'],
+      ['Correlation graph', 'For each pair of qubits, |⟨ZᵢZⱼ⟩|: 1.00 when their measured bits always agree (or always disagree), 0.00 when they agree and disagree equally often. It is not a measure of entanglement: |00⟩ shows 1.00 with nothing entangled, and a Bell pair with an extra H on one qubit is fully entangled yet shows 0.00.'],
       ['3D view', 'Three qubits only: the 8 basis states at the corners of a cube, sized by probability and coloured by phase.'],
       ['Circuit', 'A sequence of gates applied in order. Build one in the circuit editor and run it.']
     ]

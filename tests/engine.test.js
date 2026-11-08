@@ -295,6 +295,14 @@ describe('measurement', () => {
     assert.deepEqual([...seen].sort(), ['|00⟩', '|11⟩']);
   });
 
+  test('never picks an outcome with probability 0, even at the ends of [0, 1)', () => {
+    const one = run(1, [['X', 0]]);
+    assert.equal(measure(one.re, one.im, 1, () => 0).label, '|1⟩');
+    assert.equal(measure(one.re, one.im, 1, () => 1 - 2 ** -53).label, '|1⟩');
+    const bell = run(2, [['H', 0], ['CNOT', 0, 1]]);
+    assert.equal(measure(bell.re, bell.im, 2, () => 1 - 2 ** -53).label, '|11⟩');
+  });
+
   test('basisLabel pads to the number of qubits', () => {
     assert.equal(basisLabel(0, 1), '|0⟩');
     assert.equal(basisLabel(2, 2), '|10⟩');

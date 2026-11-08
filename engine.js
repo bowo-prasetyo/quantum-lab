@@ -153,16 +153,20 @@ export function measure(re, im, n, random = Math.random) {
   const total = probs.reduce((sum, p) => sum + p, 0);
   const r = random();
 
+  // Strict < so that an outcome with probability 0 can never be picked
+  // (r can be exactly 0). If rounding leaves the running total a hair
+  // below 1 and r falls in that gap, keep the last outcome that is
+  // actually possible rather than falling back to index 0.
   let cumulative = 0;
-  let index = 0;
+  let index = -1;
 
   for (let i = 0; i < probs.length; i++) {
+    if (probs[i] === 0) continue;
+    index = i;
     cumulative += probs[i] / total;
-    if (r <= cumulative) {
-      index = i;
-      break;
-    }
+    if (r < cumulative) break;
   }
+  if (index < 0) index = 0;
 
   const collapsedRe = new Float64Array(re.length);
   collapsedRe[index] = 1;
@@ -294,8 +298,11 @@ export function blochVector(re, im, qubit, n) {
 
 /**
  * ⟨Zᵢ Zⱼ⟩: +1 when the two qubits' measured bits always agree, −1 when they
- * always disagree, 0 when they are unrelated. It measures correlation in
- * the 0/1 basis only; it is not a measure of entanglement.
+ * always disagree, 0 when they agree and disagree equally often. It is the
+ * raw agreement, not the statistical correlation: independent qubits give
+ * ⟨Zᵢ⟩⟨Zⱼ⟩ (so |00⟩ gives 1), and the connected correlation
+ * ⟨ZᵢZⱼ⟩ − ⟨Zᵢ⟩⟨Zⱼ⟩ is what vanishes for them. It looks only at the 0/1
+ * basis, so it is not a measure of entanglement either way.
  */
 export function zzCorrelation(re, im, q1, q2, n) {
   checkQubit(q1, n, 'q1');
