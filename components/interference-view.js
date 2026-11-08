@@ -105,7 +105,10 @@ export const InterferenceView = {
   props: {
     n: { type: Number, required: true },
     // The last step: { message, re, im } with the state before it, or null
-    step: { type: Object, default: null }
+    step: { type: Object, default: null },
+    // Draw the paths turned so the new state has no global phase, matching
+    // the table when it hides global phase
+    hideGlobalPhase: { type: Boolean, default: false }
   },
 
   template: `
@@ -176,7 +179,23 @@ export const InterferenceView = {
 
     outputs() {
       if (!this.traced) return [];
-      return engine.amplitudePaths(this.step.re, this.step.im, this.traced.apply, this.n)
+      let { re, im } = this.step;
+      if (this.hideGlobalPhase) {
+        // The step is linear, so turning the old state by the angle that
+        // makes the new state's first amplitude real turns every path, and
+        // every sum, by that angle too
+        const after = this.traced.apply(re, im);
+        const { reference } = engine.withoutGlobalPhase(after.re, after.im);
+        if (reference >= 0) {
+          const size = Math.hypot(after.re[reference], after.im[reference]);
+          const cr = after.re[reference] / size;
+          const ci = -after.im[reference] / size;
+          const { re: r0, im: i0 } = this.step;
+          re = r0.map((r, i) => r * cr - i0[i] * ci);
+          im = i0.map((v, i) => r0[i] * ci + v * cr);
+        }
+      }
+      return engine.amplitudePaths(re, im, this.traced.apply, this.n)
         .filter(out => out.kind !== 'none');
     },
 

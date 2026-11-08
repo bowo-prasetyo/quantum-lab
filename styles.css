@@ -1159,3 +1159,32 @@ button:disabled {
   padding: 4px 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* Hide global phase: a checkbox under the Quantum State table */
+.global-phase {
+  margin-top: 12px;
+}
+
+.global-phase label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.global-phase input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.global-phase .caption {
+  margin: 4px 0 0;
+}
+
+@media (pointer: coarse) {
+  .global-phase label {
+    min-height: 44px;
+  }
+}

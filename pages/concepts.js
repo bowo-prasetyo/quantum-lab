@@ -12,6 +12,7 @@ const SECTIONS = [
       ['Amplitude', 'Every basis state has a complex number called its amplitude. Its squared size, |amplitude|², is the probability of measuring that state. The probabilities always add up to 100%.'],
       ['Superposition', 'A state with more than one non-zero amplitude, such as H|0⟩ = (|0⟩ + |1⟩)/√2. It is a definite state, not ignorance about a hidden value: its phases can still interfere.'],
       ['Phase', 'The angle of an amplitude in the complex plane. Phase doesn’t change probabilities on its own, but when amplitudes are combined (for example by an H gate) it decides whether they add up or cancel.'],
+      ['Global phase', 'Multiplying every amplitude by the same unit complex number e^{iα} (turning every phase by the same angle) changes nothing any measurement can detect, so only differences in phase are physical. Hide global phase, under the Quantum State table, turns the state so its first non-zero amplitude is real and positive, which makes states that differ only by global phase look the same.'],
       ['Interference', 'Amplitudes from different paths adding up (constructive) or cancelling (destructive). H then H returns |0⟩ because the paths to |1⟩ cancel; H, Z, H gives |1⟩ because Z flips one sign.'],
       ['Measurement and collapse', 'Measuring picks one basis state at random, with the probabilities given by the amplitudes. The state then collapses to that result, so measuring again gives the same answer.'],
       ['Measuring one qubit', 'You can measure a single qubit (the M button). It gives 0 or 1, and only the amplitudes that disagree with the result are removed; the rest are rescaled. Other qubits keep their superposition, unless they were entangled with the measured one.']
@@ -60,7 +61,7 @@ const SECTIONS = [
   {
     title: 'The views in the lab',
     items: [
-      ['Amplitude table', 'Each basis state’s amplitude, probability and phase. Zero rows are greyed out.'],
+      ['Amplitude table', 'Each basis state’s amplitude, probability and phase. Zero rows are greyed out. Hide global phase, under it, shows phases relative to the first non-zero amplitude; the 3D view and the Interference view follow it.'],
       ['Probability chart', 'One bar per basis state: the chance of measuring it.'],
       ['Shots', 'Runs the current state many times (100 or 1000 shots), measuring every qubit each time, and counts the results, as a real quantum computer does. Each bar is a count; the line on it is the exact probability. The state in the lab doesn’t change.'],
       ['Interference view', 'How the last gate combined the amplitudes. Each new amplitude is a sum of paths from the old ones, drawn as arrows head to tail (colour shows phase). Arrows the same way add up (constructive), opposite ones cancel (destructive). It also gives the probability the outcome would have if the paths did not interfere.'],

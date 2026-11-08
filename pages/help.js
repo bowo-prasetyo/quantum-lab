@@ -99,7 +99,7 @@ export const Help = {
           <li>Each lab size saves its state and circuit in this browser and restores them when you come back.</li>
           <li>Lessons use their own lab and don’t change your saved state.</li>
           <li>In each lesson, your <strong>first prediction</strong> is the one that counts in your tally. When you come back to a lesson it is shown, and <strong>Try again (practice)</strong> lets you answer again without changing it.</li>
-          <li>Your lesson predictions, your theme, whether you have seen the welcome, and whether advanced views are on are also stored only in this browser.</li>
+          <li>Your lesson predictions, your theme, whether you have seen the welcome, whether advanced views are on, and whether global phase is hidden are also stored only in this browser.</li>
           <li>Nothing is sent to a server: there are no accounts and no tracking.</li>
         </ul>
       </div>

@@ -16,10 +16,20 @@ export const AmplitudeTable = {
     n: { type: Number, required: true },
     measurement: { type: String, default: '-' },
     // Classical bits from measurements: { qubit: 0 | 1 }
-    bits: { type: Object, default: () => ({}) }
+    bits: { type: Object, default: () => ({}) },
+    // Whether re/im have had their global phase removed for display
+    // (engine.withoutGlobalPhase), and the index made real and positive
+    globalPhaseHidden: { type: Boolean, default: false },
+    reference: { type: Number, default: -1 }
   },
 
+  emits: ['toggle-global-phase'],
+
   computed: {
+    referenceLabel() {
+      return engine.basisLabel(this.reference, this.n);
+    },
+
     // e.g. "q0 = 1 · q1 = – · q2 = 0" (– means not measured yet)
     bitsText() {
       if (!Object.keys(this.bits).length) return '';
@@ -75,6 +85,23 @@ export const AmplitudeTable = {
         Qubit 0 is the left digit: |1{{ '0'.repeat(n - 1) }}⟩ means qubit 0 is 1
         and the {{ n === 2 ? 'other is' : 'others are' }} 0.
       </p>
+      <div class="global-phase">
+        <label>
+          <input type="checkbox" :checked="globalPhaseHidden" @change="$emit('toggle-global-phase')">
+          Hide global phase
+        </label>
+        <p class="caption">
+          <template v-if="globalPhaseHidden && reference >= 0">
+            Phases are shown relative to {{ referenceLabel }}, the first non-zero amplitude,
+            which is made real and positive. Every amplitude is turned by the same angle,
+            so nothing you could measure changes.
+          </template>
+          <template v-else>
+            Turning every amplitude by the same angle (a global phase) changes nothing
+            you could measure: only differences in phase matter. Tick the box to remove it.
+          </template>
+        </p>
+      </div>
       <p>Measurement: {{ measurement }}</p>
       <p v-if="bitsText" class="bits">Classical bits: {{ bitsText }}</p>
     </div>

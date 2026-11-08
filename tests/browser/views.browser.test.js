@@ -114,3 +114,50 @@ describe('Entanglement view', () => {
         ['S = 1.00 (maximally entangled)', 'S = 1.00 (maximally entangled)', 'S = 0.00 (not entangled)']);
     }));
 });
+
+describe('Hide global phase', () => {
+  const ampRow = (page, label) => page.locator('.amp-table tr').filter({ hasText: label });
+
+  test('rotates the table and the interference view, says why, and is remembered', () =>
+    withLab('#/lab/1', async page => {
+      const box = page.getByRole('checkbox', { name: 'Hide global phase' });
+      assert.equal(await box.isChecked(), false);
+
+      // Y|0⟩ = i|1⟩: a pure global phase of 90°
+      await button(page, 'Y').click();
+      await settle(page);
+      assert.match(await ampRow(page, '|1⟩').innerText(), /0\.000 \+ 1\.000i\s+100\.0%\s+90°/);
+
+      await box.check();
+      await settle(page);
+      assert.match(await ampRow(page, '|1⟩').innerText(), /1\.000 \+ 0\.000i\s+100\.0%\s+0°/);
+      assert.match(await page.locator('.global-phase').innerText(), /relative to \|1⟩, the first non-zero amplitude/);
+
+      // H, S, H: the interference sums match the table's turned amplitudes
+      await button(page, 'Reset').click();
+      for (const g of ['H', 'S', 'H']) {
+        await button(page, g).click();
+        await settle(page);
+      }
+      assert.match(await ampRow(page, '|0⟩').innerText(), /0\.707 \+ 0\.000i/);
+      assert.match(await card(page, 'Interference').locator('.interference-row').first().innerText(), /= 0\.707$/m);
+
+      await page.reload();
+      await page.locator('h1').waitFor();
+      await settle(page);
+      assert.equal(await page.getByRole('checkbox', { name: 'Hide global phase' }).isChecked(), true, 'remembered');
+      await page.getByRole('checkbox', { name: 'Hide global phase' }).uncheck();
+      await settle(page);
+      assert.match(await ampRow(page, '|0⟩').innerText(), /0\.500 \+ 0\.500i/);
+    }));
+
+  test('Grover\'s marked amplitude reads 1 instead of −1', () =>
+    withLab('#/lessons/grover', async page => {
+      await page.getByRole('button', { name: 'Show me' }).click();
+      // Show me plays its ten steps half a second apart
+      await ampRow(page, '|11⟩').filter({ hasText: '−1.000 + 0.000i' }).waitFor({ timeout: 15000 });
+      await page.getByRole('checkbox', { name: 'Hide global phase' }).check();
+      await settle(page);
+      assert.match(await ampRow(page, '|11⟩').innerText(), /1\.000 \+ 0\.000i\s+100\.0%\s+0°/);
+    }));
+});
