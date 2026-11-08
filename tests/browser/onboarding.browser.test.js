@@ -83,18 +83,18 @@ describe('Advanced views', () => {
       for (const h of ['Quantum State', 'Probabilities', 'Shots', 'Bloch Spheres', 'Interference']) {
         assert.equal(await heading(page, h).count(), 1, h);
       }
-      for (const h of ['Density Matrix', 'Correlation Graph', 'Entanglement', '3D View']) {
+      for (const h of ['Density Matrix', 'Correlation Graph', 'Pauli Expectations', 'Entanglement', '3D View']) {
         assert.equal(await heading(page, h).count(), 0, `${h} hidden`);
       }
       assert.match(
         await page.locator('.advanced-toggle').innerText(),
-        /The density matrix, correlations, entanglement and the 3D view/
+        /The density matrix, correlations, Pauli expectations, entanglement and the 3D view/
       );
 
       const toggle = page.getByRole('button', { name: 'Show advanced views' });
       assert.equal(await toggle.getAttribute('aria-pressed'), 'false');
       await toggle.click();
-      for (const h of ['Density Matrix', 'Correlation Graph', 'Entanglement', '3D View']) {
+      for (const h of ['Density Matrix', 'Correlation Graph', 'Pauli Expectations', 'Entanglement', '3D View']) {
         assert.equal(await heading(page, h).count(), 1, `${h} shown`);
       }
       await page.reload();

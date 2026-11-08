@@ -488,3 +488,25 @@ export function withoutGlobalPhase(re, im) {
   outIm[reference] = 0; // exactly real, not 1e-17
   return { re: outRe, im: outIm, reference };
 }
+
+/**
+ * Expectation value ⟨ψ|P|ψ⟩ of a Pauli string, one letter per qubit in
+ * qubit order: pauliExpectation(re, im, 'XIZ', 3) is ⟨X₀ Z₂⟩. Letters are
+ * I, X, Y, Z. The result is real (P is Hermitian), from −1 to 1:
+ * +1 when the state is certain to give +1 for P (measuring each named
+ * qubit in that basis, the product of the ±1 results is always +1), −1
+ * when certain to give −1, 0 when both are equally likely.
+ */
+export function pauliExpectation(re, im, paulis, n) {
+  if (typeof paulis !== 'string' || paulis.length !== n || /[^IXYZ]/.test(paulis)) {
+    throw new RangeError(`Pauli string must be ${n} letters from I, X, Y, Z, got ${paulis}`);
+  }
+  let p = { re, im };
+  for (let q = 0; q < n; q++) {
+    if (paulis[q] !== 'I') p = applyGate(p.re, p.im, paulis[q], q, n);
+  }
+  // Re Σ conj(ψi) (Pψ)i
+  let value = 0;
+  for (let i = 0; i < re.length; i++) value += re[i] * p.re[i] + im[i] * p.im[i];
+  return value;
+}

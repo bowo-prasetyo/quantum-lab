@@ -22,7 +22,7 @@
 //             ['if', qubit, operation]: only if that qubit's last measurement gave 1
 // Basis labels use qubit 0 as the left digit: |10⟩ means qubit 0 is 1.
 
-export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'correlation', 'entanglement', 'cube', 'editor'];
+export const PANELS = ['gates', 'table', 'probabilities', 'shots', 'bloch', 'interference', 'density', 'correlation', 'pauli', 'entanglement', 'cube', 'editor'];
 
 // n: the number of qubits every lesson in the part uses (null if it varies)
 export const PARTS = [
@@ -322,7 +322,7 @@ export const LESSONS = [
     title: 'Correlation is not entanglement',
     goal: 'Learn what the correlation graph measures, and why it is not entanglement.',
     why: 'Matching results can come from entanglement or from plain classical agreement. Telling them apart is a key skill.',
-    panels: [...BASIC, 'correlation', 'entanglement'],
+    panels: [...BASIC, 'correlation', 'pauli', 'entanglement'],
     setup: [['reset']],
     steps: ['After Set up, the state is |00⟩. Look at the correlation graph and the Bloch spheres.', 'Then press Create Bell Pair and compare.'],
     ops: [],
@@ -331,7 +331,7 @@ export const LESSONS = [
       options: ['0.00: the bits agree as often as not', '1.00: the bits always agree', 'Nothing: there is no entanglement'],
       answer: 1
     },
-    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. It works the other way too: a Bell pair with an extra H on qubit 1 is still fully entangled, yet the graph shows 0.00. Use the Bloch spheres or the Entanglement view, not the correlation graph, to spot entanglement: the Entanglement view says “No entanglement” for |00⟩ and “maximally entangled” for both Bell pairs.',
+    result: 'Both qubits are always 0, so their measured bits always agree: the graph shows 1.00. Yet nothing is entangled, and both Bloch vectors are full length. A Bell pair also shows 1.00, but its Bloch vectors shrink to the centre. It works the other way too: a Bell pair with an extra H on qubit 1 is still fully entangled, yet the graph shows 0.00. Use the Bloch spheres or the Entanglement view, not the correlation graph, to spot entanglement: the Entanglement view says “No entanglement” for |00⟩ and “maximally entangled” for both Bell pairs. The Pauli Expectations view shows why the correlation graph is not enough: it reads only the ZZ cell, while a Bell pair is correlated in every basis (XX = +1, YY = −1, ZZ = +1).',
     checks: [
       { type: 'zz', q1: 0, q2: 1, value: 1 },
       { type: 'blochLength', qubit: 0, value: 1 },
@@ -347,7 +347,7 @@ export const LESSONS = [
     title: 'GHZ state',
     goal: 'Entangle all three qubits at once.',
     why: 'GHZ states show that entanglement can link more than two qubits. They are used in quantum error correction and sensing.',
-    panels: [...BASIC, 'correlation'],
+    panels: [...BASIC, 'correlation', 'pauli'],
     setup: [['reset']],
     steps: ['Press H on qubit 0.', 'Press CNOT with control Q0, target Q1.', 'Press CNOT with control Q1, target Q2.'],
     ops: [['gate', 'H', 0], ['cnot', 0, 1], ['cnot', 1, 2]],
@@ -356,7 +356,7 @@ export const LESSONS = [
       options: ['Only |000⟩ or |111⟩', 'All eight, equally', 'Only |000⟩'],
       answer: 0
     },
-    result: 'The state is (|000⟩ + |111⟩)/√2: all three qubits always agree. All three Bloch vectors shrink to the centre, because each qubit is entangled with the other two. The GHZ State button builds this in one step.',
+    result: 'The state is (|000⟩ + |111⟩)/√2: all three qubits always agree. All three Bloch vectors shrink to the centre, because each qubit is entangled with the other two. The GHZ State button builds this in one step. In the Pauli Expectations view, each pair shows only ZZ = +1, like plain classical agreement; the three-way link appears only in the three-qubit values, such as ⟨XXX⟩ = +1.',
     checks: [
       { type: 'probs', values: { '|000⟩': 0.5, '|111⟩': 0.5 } },
       { type: 'blochLength', qubit: 0, value: 0 },

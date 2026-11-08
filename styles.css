@@ -1188,3 +1188,71 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+/* ---------- Pauli expectations ---------- */
+
+.pauli-table {
+  border-collapse: separate;
+  border-spacing: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pauli-table th {
+  padding: 4px 6px;
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.pauli-table td {
+  min-width: 3.4em;
+  padding: 8px 6px;
+  border: 1px solid var(--border-faint);
+  border-radius: 6px;
+  text-align: center;
+  color: var(--text);
+}
+
+.pauli-scroll {
+  overflow-x: auto;
+}
+
+/* Pair grids side by side, each a 3 × 3 table */
+.pauli-pairs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.pauli-pair {
+  margin: 0;
+}
+
+.pauli-pair figcaption {
+  margin-bottom: 4px;
+}
+
+.pauli-verdict {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.pauli-triples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  list-style: none;
+  margin: 8px 0;
+  padding: 0;
+}
+
+.pauli-triples li {
+  padding: 6px 10px;
+  border: 1px solid var(--border-faint);
+  border-radius: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pauli-none {
+  color: var(--text-soft);
+}

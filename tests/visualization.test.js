@@ -7,8 +7,9 @@ import assert from 'node:assert/strict';
 import {
   zeroState, applyGate, applyCNOT, applyCZ,
   sampleCounts, amplitudePaths, entanglementEntropy, mutualInformation,
-  withoutGlobalPhase, probabilities, blochVector, densityMatrix
+  withoutGlobalPhase, probabilities, blochVector, densityMatrix, pauliExpectation, zzCorrelation
 } from '../engine.js';
+import { pauliString, pairConnection } from '../components/pauli-panel.js';
 import { entanglementVerdict } from '../components/entanglement-panel.js';
 import { stepFromMessage, layArrows } from '../components/interference-view.js';
 
@@ -264,5 +265,64 @@ describe('withoutGlobalPhase (Hide global phase)', () => {
     assert.deepEqual([...s.re], before);
     const zero = withoutGlobalPhase(new Float64Array(2), new Float64Array(2));
     assert.equal(zero.reference, -1);
+  });
+});
+
+describe('pauliExpectation (Pauli Expectations view)', () => {
+  const P = (s, str, n) => pauliExpectation(s.re, s.im, str, n);
+
+  test('single-qubit values are the Bloch vector', () => {
+    const s = run(3, [['H', 0], ['T', 0], ['CNOT', 0, 1], ['H', 2], ['S', 2], ['H', 1]]);
+    for (let q = 0; q < 3; q++) {
+      const b = blochVector(s.re, s.im, q, 3);
+      assert.ok(close(P(s, pauliString(3, { [q]: 'X' }), 3), b.x));
+      assert.ok(close(P(s, pauliString(3, { [q]: 'Y' }), 3), b.y));
+      assert.ok(close(P(s, pauliString(3, { [q]: 'Z' }), 3), b.z));
+    }
+  });
+
+  test('ZZ matches the correlation graph; III is 1', () => {
+    const s = run(3, [['H', 0], ['T', 0], ['CNOT', 0, 2], ['H', 1]]);
+    assert.ok(close(P(s, 'ZIZ', 3), zzCorrelation(s.re, s.im, 0, 2, 3)));
+    assert.ok(close(P(s, 'III', 3), 1));
+  });
+
+  test('Bell pair: XX = +1, YY = −1, ZZ = +1, everything else 0', () => {
+    const s = run(2, [['H', 0], ['CNOT', 0, 1]]);
+    const expected = { XX: 1, YY: -1, ZZ: 1 };
+    for (const a of 'XYZ') {
+      assert.ok(close(P(s, a + 'I', 2), 0) && close(P(s, 'I' + a, 2), 0));
+      for (const b of 'XYZ') assert.ok(close(P(s, a + b, 2), expected[a + b] ?? 0), a + b);
+    }
+  });
+
+  test('GHZ: pairs show only ZZ; the three-way link is in XXX and XYY', () => {
+    const s = run(3, [['H', 0], ['CNOT', 0, 1], ['CNOT', 1, 2]]);
+    assert.ok(close(P(s, 'XXI', 3), 0) && close(P(s, 'ZZI', 3), 1));
+    assert.ok(close(P(s, 'XXX', 3), 1));
+    for (const t of ['XYY', 'YXY', 'YYX']) assert.ok(close(P(s, t, 3), -1), t);
+    assert.ok(close(P(s, 'ZZZ', 3), 0));
+  });
+
+  test('a phase is visible in X and Y but not Z', () => {
+    const s = run(1, [['H', 0], ['S', 0]]);
+    assert.ok(close(P(s, 'X', 1), 0) && close(P(s, 'Y', 1), 1) && close(P(s, 'Z', 1), 0));
+  });
+
+  test('rejects malformed strings', () => {
+    const s = zeroState(2);
+    for (const bad of ['X', 'XXX', 'XA', 'xx', null]) {
+      assert.throws(() => pauliExpectation(s.re, s.im, bad, 2), RangeError, String(bad));
+    }
+  });
+
+  test('pairConnection: 0 for product states, positive whenever the pair is correlated', () => {
+    assert.ok(close(pairConnection(...Object.values(run(2, [['H', 0], ['T', 0], ['H', 1]])), 0, 1, 2), 0));
+    assert.ok(close(pairConnection(...Object.values(zeroState(2)), 0, 1, 2), 0), '|00⟩ agrees, but is not correlated');
+    const bellH = run(2, [['H', 0], ['CNOT', 0, 1], ['H', 1]]); // ⟨ZZ⟩ = 0, yet entangled
+    assert.ok(close(pairConnection(bellH.re, bellH.im, 0, 1, 2), 1));
+    const spare = run(3, [['H', 0], ['CNOT', 0, 1], ['H', 2]]);
+    assert.ok(close(pairConnection(spare.re, spare.im, 0, 1, 3), 1));
+    assert.ok(close(pairConnection(spare.re, spare.im, 0, 2, 3), 0));
   });
 });

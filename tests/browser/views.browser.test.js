@@ -161,3 +161,44 @@ describe('Hide global phase', () => {
       assert.match(await ampRow(page, '|11⟩').innerText(), /1\.000 \+ 0\.000i\s+100\.0%\s+0°/);
     }));
 });
+
+describe('Pauli Expectations view', () => {
+  test('a Bell pair is correlated in every basis; GHZ keeps its link in ⟨XXX⟩', () =>
+    withLab('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
+      const view = card(page, 'Pauli Expectations');
+      assert.match(await view.locator('.pauli-verdict').innerText(), /^Not correlated/);
+
+      await button(page, 'Create Bell Pair').click();
+      await settle(page);
+      const grid = view.locator('.pauli-pair table tbody tr');
+      assert.deepEqual(
+        await Promise.all([0, 1, 2].map(r => grid.nth(r).locator('td').allInnerTexts())),
+        [['+1.00', '0.00', '0.00'], ['0.00', '−1.00', '0.00'], ['0.00', '0.00', '+1.00']]
+      );
+      assert.equal(await grid.nth(1).locator('td').nth(1).getAttribute('aria-label'), 'Y0 Y1 −1.00');
+      assert.match(await view.locator('.pauli-verdict').innerText(), /^Correlated/);
+      assert.deepEqual(await view.locator('.pauli-singles td').allInnerTexts(), Array(6).fill('0.00'));
+    }));
+
+  test('three qubits: three pair grids, and the three-qubit strings of a GHZ state', () =>
+    withLab('#/lab/3', async page => {
+      await button(page, 'Show advanced views').click();
+      const view = card(page, 'Pauli Expectations');
+      assert.equal(await view.locator('.pauli-pair').count(), 3);
+      // |000⟩: Z on every qubit always multiplies to +1
+      assert.deepEqual(await view.locator('.pauli-triples li').allInnerTexts(), ['⟨ZZZ⟩ +1.00']);
+
+      await button(page, 'GHZ State').click();
+      await settle(page);
+      assert.deepEqual(await view.locator('.pauli-triples li').allInnerTexts(),
+        ['⟨XXX⟩ +1.00', '⟨XYY⟩ −1.00', '⟨YXY⟩ −1.00', '⟨YYX⟩ −1.00']);
+      // Every pair: only ZZ, and correlated
+      for (let k = 0; k < 3; k++) {
+        const pair = view.locator('.pauli-pair').nth(k);
+        assert.deepEqual(await pair.locator('td').allInnerTexts(),
+          ['0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '0.00', '+1.00']);
+        assert.match(await pair.locator('.pauli-verdict').innerText(), /^Correlated/);
+      }
+    }));
+});
