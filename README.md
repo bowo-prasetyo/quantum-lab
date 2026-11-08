@@ -56,9 +56,9 @@ What each size shows:
 | Amplitude table (amplitude, probability, phase) | ✓ | ✓ | ✓ |
 | Probability chart | 2 bars | 4 bars | 8 bars |
 | Bloch sphere per qubit | 1 | 2 | 3 |
-| Density matrix | 2×2 | 4×4 | 8×8 |
-| Correlation graph | — | 1 edge | 3 edges |
-| 3D basis-state cube | — | — | ✓ |
+| Density matrix (advanced view) | 2×2 | 4×4 | 8×8 |
+| Correlation graph (advanced view) | — | 1 edge | 3 edges |
+| 3D basis-state cube (advanced view) | — | — | ✓ |
 | Circuit editor (tap, drag or keyboard) | ✓ | ✓ | ✓ |
 
 ---
@@ -107,6 +107,7 @@ What each size shows:
 - 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration
+- A welcome on the first visit that offers the lessons or free play, and advanced views (density matrix, correlations, 3D view) that the free lab reveals with one switch, or by itself once the learner reaches Part 3 of the lessons
 
 ---
 

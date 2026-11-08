@@ -15,12 +15,25 @@ import { CorrelationGraph } from './components/correlation-graph.js';
 import { Cube3D } from './components/cube-3d.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
+import { getPref, setPref } from './prefs.js';
+import { loadPredictions } from './progress.js';
+import { lessonById } from './lessons.js';
 
 const STEP_DELAY_MS = 500; // pause between circuit steps so changes are visible
 const HISTORY_LIMIT = 100; // undo steps kept (this session only, not saved)
 
 // Two columns from this width up (keep in step with "Workbench" in styles.css)
 const WIDE_QUERY = '(min-width: 1000px)';
+
+// Views the free lab keeps behind "Show advanced views" until the learner
+// asks for them or reaches Part 3 of the lessons, where they are taught
+// (VISION: reveal advanced views as the learner progresses). Lessons show
+// whatever panels they list.
+const ADVANCED = ['density', 'correlation', 'cube'];
+
+// Whether the learner has answered a prediction in Part 3 or later
+const reachedAdvancedLessons = () =>
+  Object.keys(loadPredictions()).some(id => (lessonById(id)?.part ?? 0) >= 3);
 
 // The views, in display order, with their tab labels on narrow screens
 const VIEWS = [
@@ -77,6 +90,10 @@ export const Lab = {
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
       historyLength: 0,    // undo steps available (the history itself isn't reactive)
       announcement: '',    // last screen-reader announcement
+      // Free lab only: show the density matrix, correlations and 3D view
+      showAdvanced: getPref('advanced-views', null) ?? reachedAdvancedLessons(),
+      // First visit: offer the lessons (set once nothing saved is found)
+      welcome: false,
       activeView: 'table'  // the view tab shown on narrow screens
     };
   },
@@ -98,9 +115,27 @@ export const Lab = {
       <template v-if="!embedded">
         <app-nav />
 
-        <div class="card">
+        <div class="card" :class="{ welcome }">
           <h1>Glass Qubit: {{ n }} {{ n === 1 ? 'qubit' : 'qubits' }}</h1>
-          <p>
+
+          <!-- First visit: a choice between the lessons and free play -->
+          <template v-if="welcome">
+            <p class="welcome-lead">
+              <strong>Welcome!</strong> Learn how a quantum computer works by trying it:
+              press gates and watch every view change. Nothing to install, no account,
+              and everything stays in this browser.
+            </p>
+            <p>
+              New to quantum computing? Short lessons take you from one qubit to
+              entanglement, each starting with a prediction.
+            </p>
+            <div class="button-grid welcome-actions">
+              <router-link to="/lessons/bit-flip" class="button-link" @click="dismissWelcome">Start lesson 1</router-link>
+              <button class="secondary" @click="dismissWelcome">Explore the lab</button>
+            </div>
+          </template>
+
+          <p v-else>
             {{ 1 << n }} basis states, from |{{ '0'.repeat(n) }}⟩ to |{{ '1'.repeat(n) }}⟩.
             Apply gates and watch every view change.
             New here? Start with the <router-link to="/lessons">lessons</router-link>.
@@ -200,12 +235,34 @@ export const Lab = {
           <section v-if="n === 3 && show('cube')" v-bind="viewAttrs('cube')">
             <cube-3d :re="stateRe" :im="stateIm" />
           </section>
+
+          <!-- Free lab: the advanced views are one switch away -->
+          <div v-if="!panels" class="card advanced-toggle">
+            <p>
+              <strong>Advanced views:</strong> {{ advancedNames }}.
+              <template v-if="!showAdvanced">They build on ideas from Part 3 of the lessons.</template>
+            </p>
+            <button
+              class="secondary"
+              :aria-pressed="String(showAdvanced)"
+              @click="toggleAdvanced"
+            >{{ showAdvanced ? 'Hide advanced views' : 'Show advanced views' }}</button>
+          </div>
         </div>
       </div>
     </div>
   `,
 
   computed: {
+    // e.g. "the density matrix, correlations and the 3D view"
+    advancedNames() {
+      const names = ['the density matrix'];
+      if (this.n >= 2) names.push('correlations');
+      if (this.n === 3) names.push('the 3D view');
+      const text = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+      return text.charAt(0).toUpperCase() + text.slice(1);
+    },
+
     // The views this lab shows, in order, with their tab labels
     views() {
       return VIEWS
@@ -271,6 +328,9 @@ export const Lab = {
           this.circuit = saved.circuit;
           if (saved.importedFrom) this.importedFrom = saved.importedFrom;
         }
+        // Someone with a saved lab has been here before
+        if (!this.embedded && !saved && !getPref('welcomed', false)) this.welcome = true;
+        else if (saved) setPref('welcomed', true);
       } catch (err) {
         console.warn('Could not load saved state:', err);
       }
@@ -324,7 +384,18 @@ export const Lab = {
     },
 
     show(panel) {
-      return !this.panels || this.panels.includes(panel);
+      if (this.panels) return this.panels.includes(panel);
+      return this.showAdvanced || !ADVANCED.includes(panel);
+    },
+
+    toggleAdvanced() {
+      this.showAdvanced = !this.showAdvanced;
+      setPref('advanced-views', this.showAdvanced);
+    },
+
+    dismissWelcome() {
+      this.welcome = false;
+      setPref('welcomed', true);
     },
 
     // Attributes for a view's wrapper: a tab panel on narrow screens

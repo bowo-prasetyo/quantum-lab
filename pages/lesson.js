@@ -6,6 +6,7 @@ import { Lab } from '../lab.js';
 import { LESSONS, PARTS, lessonById } from '../lessons.js';
 import { evaluateChecks } from '../lesson-checks.js';
 import { loadPredictions, recordPrediction } from '../progress.js';
+import { setPref } from '../prefs.js';
 
 // Pause between steps in "Show me": 600 ms, shorter for long lessons so
 // the whole run takes about 6 seconds at most
@@ -61,6 +62,8 @@ export const Lesson = {
   },
 
   mounted() {
+    // Someone who has opened a lesson doesn't need the lab's welcome
+    setPref('welcomed', true);
     if (this.lesson) this.setUp();
   },
 
