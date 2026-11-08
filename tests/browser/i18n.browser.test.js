@@ -1,10 +1,10 @@
 // Browser tests for the language of the page (locale.js, i18n.js): the
 // start language, <html lang>, the language picker, and the pseudo-locale.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser } from './helpers.js';
+import { startBrowser, test } from './helpers.js';
 
 let env;
 before(async () => { env = await startBrowser(); });

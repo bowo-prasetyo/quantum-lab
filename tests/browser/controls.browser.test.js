@@ -1,10 +1,10 @@
 // Browser tests for the shared control → target picker and the gate
 // descriptions (hint line and screen-reader descriptions).
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser, openPage } from './helpers.js';
+import { startBrowser, openPage, test } from './helpers.js';
 import { GATE_INFO } from '../../components/gate-hints.js';
 
 let env;

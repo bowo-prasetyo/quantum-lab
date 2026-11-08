@@ -2,10 +2,10 @@
 // states. Seeds each old database exactly as the old app wrote it, then
 // opens the lab.
 
-import { test, before, after, describe } from 'node:test';
+import { before, after, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { startBrowser } from './helpers.js';
+import { startBrowser, test } from './helpers.js';
 
 const r = Math.SQRT1_2;
 let env;
