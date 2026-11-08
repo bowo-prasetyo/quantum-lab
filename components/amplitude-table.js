@@ -71,6 +71,10 @@ export const AmplitudeTable = {
           </tbody>
         </table>
       </div>
+      <p v-if="n >= 2" class="caption qubit-order">
+        Qubit 0 is the left digit: |1{{ '0'.repeat(n - 1) }}⟩ means qubit 0 is 1
+        and the {{ n === 2 ? 'other is' : 'others are' }} 0.
+      </p>
       <p>Measurement: {{ measurement }}</p>
       <p v-if="bitsText" class="bits">Classical bits: {{ bitsText }}</p>
     </div>

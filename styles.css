@@ -305,6 +305,81 @@ pre {
   }
 }
 
+/* ---------- Welcome and advanced views ---------- */
+
+.card.welcome {
+  border-left: 4px solid #2f6fed;
+}
+
+.welcome-lead {
+  font-size: 1.05em;
+}
+
+.welcome-actions {
+  max-width: 460px;
+}
+
+/* The link and the button side by side, in the same type */
+.welcome-actions > * {
+  margin: 0;
+  font-family: inherit;
+  font-size: 15px;
+}
+
+/* A link styled as the main button */
+.button-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #2f6fed;
+  color: #fff;
+  text-decoration: none;
+}
+
+.button-link:hover {
+  opacity: 0.9;
+}
+
+.button-link:focus-visible,
+button:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+/* A quieter button, for the second choice */
+button.secondary {
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #eee;
+}
+
+@media (pointer: coarse) {
+  .button-link,
+  button.secondary {
+    min-height: 44px;
+  }
+}
+
+.advanced-toggle {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.advanced-toggle p {
+  flex: 1 1 260px;
+  margin: 0;
+  color: #ccc;
+}
+
+.advanced-toggle button {
+  margin: 0;
+}
+
 /* Read by screen readers, not shown */
 .visually-hidden {
   position: absolute;

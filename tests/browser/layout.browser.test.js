@@ -47,6 +47,7 @@ describe('Workbench layout', () => {
       assert.ok(await inView(table), 'state table visible without scrolling');
 
       // Scroll down to the lower views: the gates follow
+      await page.getByRole('button', { name: 'Show advanced views' }).click();
       await heading(page, 'Correlation Graph').scrollIntoViewIfNeeded();
       assert.ok(await inView(page.getByRole('button', { name: 'Reset', exact: true })), 'gates still visible');
       assert.equal(await page.getByRole('tab').count(), 0, 'no view tabs on a wide screen');
@@ -77,6 +78,7 @@ describe('Workbench layout', () => {
   test('narrow screen: one view at a time in tabs, above the gates', async () => {
     const { page, errors } = await open(PHONE, '#/lab/3');
     try {
+      await page.getByRole('button', { name: 'Show advanced views' }).click();
       const tabs = page.getByRole('tab');
       assert.deepEqual(
         await tabs.allInnerTexts(),

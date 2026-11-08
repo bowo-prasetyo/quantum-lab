@@ -79,6 +79,7 @@ describe('Contrast', () => {
 describe('Reading the views as text', () => {
   test('density matrix: by keyboard and by pointer', () =>
     withPage('#/lab/2', async page => {
+      await button(page, 'Show advanced views').click();
       await button(page, 'Create Bell Pair').click();
       await settle(page);
       const canvas = page.locator('.readable-canvas');
@@ -108,6 +109,7 @@ describe('Reading the views as text', () => {
 
   test('3D view: point at a corner to read it; arrow keys rotate', () =>
     withPage('#/lab/3', async page => {
+      await button(page, 'Show advanced views').click();
       await button(page, 'S').click();    // nothing to see on |000⟩, but keeps the phase 0°
       await settle(page);
       const canvas = page.locator('.webgl-canvas');

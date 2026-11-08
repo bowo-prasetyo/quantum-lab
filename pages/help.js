@@ -25,6 +25,14 @@ export const Help = {
           Use <strong>1 qubit</strong>, <strong>2 qubits</strong> or <strong>3 qubits</strong>
           at the top. Each size keeps its own state and circuit.
         </p>
+        <p>
+          The lab starts with the views every lesson uses: the Quantum State table,
+          the probabilities and the Bloch spheres. <strong>Show advanced views</strong>,
+          under them, adds the density matrix, correlations and the 3D view. They
+          are already on if you have reached Part 3 of the lessons, and the lab
+          remembers your choice. Lessons show whichever views they need.
+        </p>
+        <p>In every label, qubit 0 is the left digit: |10⟩ means qubit 0 is 1 and qubit 1 is 0.</p>
       </div>
 
       <div class="card">
@@ -88,7 +96,7 @@ export const Help = {
         <ul>
           <li>Each lab size saves its state and circuit in this browser and restores them when you come back.</li>
           <li>Lessons use their own lab and don’t change your saved state.</li>
-          <li>Your lesson predictions are also stored only in this browser.</li>
+          <li>Your lesson predictions, whether you have seen the welcome, and whether advanced views are on are also stored only in this browser.</li>
           <li>Nothing is sent to a server: there are no accounts and no tracking.</li>
         </ul>
       </div>

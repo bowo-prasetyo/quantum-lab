@@ -3,12 +3,18 @@
 import { AppNav } from '../components/app-nav.js';
 import { LESSONS, PARTS } from '../lessons.js';
 import { loadPredictions, clearPredictions } from '../progress.js';
+import { setPref } from '../prefs.js';
 
 export const Lessons = {
   components: { AppNav },
 
   data() {
     return { predictions: loadPredictions() };
+  },
+
+  // Someone who has seen the lessons doesn't need the lab's welcome
+  mounted() {
+    setPref('welcomed', true);
   },
 
   computed: {
