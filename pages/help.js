@@ -78,6 +78,8 @@ export const Help = {
         <ul>
           <li>Choose <strong>Dephasing</strong> (loses phase), <strong>Amplitude damping</strong> (loses energy, falling to |0⟩) or <strong>Depolarizing</strong> (random errors), set the strength, and apply it to one qubit or every qubit.</li>
           <li>Noise makes the state <strong>mixed</strong>: a random mix that only a density matrix can describe. The density matrix (with its purity), Bloch spheres, probabilities, shots and Pauli expectations show it. The table shows probabilities but no amplitudes, and the Interference and Entanglement views pause, saying why.</li>
+          <li>With advanced views on, the circuit editor has an <strong>N</strong> chip in each qubit’s row. It adds the noise chosen in the Noise panel (kind and strength, such as “Dephase 10% q1”) as a step, so noise can be part of a circuit and of its timeline. Each N step keeps the strength it was added with.</li>
+          <li>Tick <strong>Noisy run</strong> in the circuit editor to run on simulated noisy hardware: Run and Step add the chosen noise to every qubit after each step. The Timeline then shows each frame’s <strong>fidelity</strong> with the same circuit run without noise, and a curve of it falling step by step. After a measurement, fidelity shows —, because there is no single noiseless state to compare with.</li>
           <li>Gates keep working on a mixed state. <strong>Measure all</strong> or <strong>Reset</strong> makes it pure again, and Undo steps back past noise like anything else.</li>
         </ul>
       </div>

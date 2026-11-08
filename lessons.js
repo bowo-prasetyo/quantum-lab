@@ -15,6 +15,8 @@
 //   result                    what happens, shown after predicting or checking
 //   checks                    machine-checkable expected result (see lesson-checks.js)
 //   returnsToStart            optional: true if the steps end in the Set up state on purpose
+//   noisyRun                  optional: { channel, strength }: the steps run as a noisy run,
+//                             with that noise on every qubit after each step
 //
 // Operations: ['reset'], ['gate', name, qubit], ['cnot', control, target],
 //             ['cz', control, target], ['measure'] (all qubits),
@@ -416,6 +418,36 @@ export const LESSONS = [
       { type: 'density', i: 0, j: 0, abs: 0.5 },
       { type: 'density', i: 0, j: 7, abs: 0 },
       { type: 'purity', value: 0.5 }
+    ]
+  },
+  {
+    id: 'noise-and-depth',
+    part: 3,
+    n: 3,
+    title: 'Noise builds up with every step',
+    goal: 'Run a circuit on simulated noisy hardware and watch its fidelity fall with every step, even steps that cancel out.',
+    why: 'Every gate on real hardware takes time, and the qubits decohere meanwhile. That limits how long a useful circuit can be, and it is why quantum error correction matters.',
+    panels: ['table', 'probabilities', 'density', 'noise', 'editor'],
+    setup: [['reset']],
+    noisyRun: { channel: 'dephasing', strength: 0.03 },
+    steps: [
+      'Set up has chosen Dephasing at 3% in the Noise panel and ticked Noisy run in the circuit editor: after every step, each qubit gets a little noise.',
+      'Build the GHZ circuit: H on Q0, CNOT Q0→Q1, CNOT Q1→Q2.',
+      'Then add H on Q2 four times. Without noise, each pair of H gates cancels, so the circuit still makes the GHZ state.',
+      'Press Run Circuit, then read the fidelity curve in the Timeline.'
+    ],
+    ops: [
+      ['gate', 'H', 0], ['cnot', 0, 1], ['cnot', 1, 2],
+      ['gate', 'H', 2], ['gate', 'H', 2], ['gate', 'H', 2], ['gate', 'H', 2]
+    ],
+    predict: {
+      question: 'The four extra H gates cancel out in pairs. With noise after every step, how does the final fidelity compare with the fidelity right after the three GHZ gates?',
+      options: ['The same: the extra gates cancel', 'Lower: every step adds noise', 'Higher: the extra gates undo some noise'],
+      answer: 1
+    },
+    result: 'Fidelity falls at every step: about 0.92 after the three GHZ gates, and about 0.78 after the four extra ones, even though they cancel and the noiseless circuit makes the same GHZ state. The noise doesn’t cancel: it builds up with the number of steps. On real hardware this limits a circuit’s depth, and it is why quantum error correction, which spends extra qubits to catch errors, is needed for long computations.',
+    checks: [
+      { type: 'fidelity', ideal: [['ghz']], min: 0.778, max: 0.789 }
     ]
   },
   {

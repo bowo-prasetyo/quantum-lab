@@ -10,7 +10,7 @@
 //   2 qubits  'quantum-db-2', store 'states', key 'qubit':  [{ re, im } × 4]
 //   3 qubits  'quantum-db-3', store 'states', key 'latest': { qubit, re: [8], im: [8], circuit }
 
-import { isValidState } from './engine.js';
+import { isValidState, NOISE_CHANNELS } from './engine.js';
 
 export const OLD_SOURCES = {
   1: { db: 'quantum-db', key: 'qubit', name: '1-qubit simulator' },
@@ -28,6 +28,11 @@ export function isValidStep(step, n) {
   if (step.gate === 'CNOT' || step.gate === 'CZ') {
     return n >= 2 && isQubit(step.control, n) && isQubit(step.target, n) &&
       step.control !== step.target;
+  }
+  // 'N' adds noise: { gate: 'N', target, channel, strength from 0 to 1 }
+  if (step.gate === 'N') {
+    return isQubit(step.target, n) && Object.hasOwn(NOISE_CHANNELS, step.channel) &&
+      typeof step.strength === 'number' && step.strength >= 0 && step.strength <= 1;
   }
   // 'M' measures one qubit
   return (GATE_NAMES.includes(step.gate) || step.gate === 'M') && isQubit(step.target, n);

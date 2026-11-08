@@ -13,8 +13,13 @@ import { setPref } from '../prefs.js';
 const showMeDelay = steps => Math.min(600, Math.round(6000 / Math.max(steps, 1)));
 
 // Lesson operations → circuit editor steps
-const toStep = ([kind, a, b]) =>
-  kind === 'cnot' ? { gate: 'CNOT', control: a, target: b } : { gate: a, target: b };
+function toStep([kind, a, b, c]) {
+  if (kind === 'cnot') return { gate: 'CNOT', control: a, target: b };
+  if (kind === 'cz') return { gate: 'CZ', control: a, target: b };
+  if (kind === 'measureQubit') return { gate: 'M', target: a };
+  if (kind === 'noise') return { gate: 'N', channel: a, target: b, strength: c };
+  return { gate: a, target: b };
+}
 
 export const Lesson = {
   components: { AppNav, Lab },
@@ -103,10 +108,19 @@ export const Lesson = {
       this.$nextTick(() => this.$el.querySelector('.option')?.focus());
     },
 
+    // A lesson that runs on noisy hardware chooses its noise and turns on
+    // noisy runs (without changing the free lab's remembered choice)
+    prepareNoise() {
+      const lab = this.$refs.lab;
+      if (this.lesson.noisyRun) lab.setNoise(this.lesson.noisyRun, { remember: false });
+      lab.setNoisyRun(!!this.lesson.noisyRun);
+    },
+
     async setUp() {
       this.checkResult = null;
       this.busy = true;
       try {
+        this.prepareNoise();
         await this.$refs.lab.runOps(this.lesson.setup, { clearCircuit: true });
       } finally {
         this.busy = false;
@@ -118,6 +132,7 @@ export const Lesson = {
       this.checkResult = null;
       this.busy = true;
       try {
+        this.prepareNoise();
         await this.$refs.lab.runOps(this.lesson.setup, { clearCircuit: true });
         if (this.usesEditor) {
           // Teach the editor: fill in the circuit, then run it

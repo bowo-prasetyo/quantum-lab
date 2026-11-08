@@ -32,7 +32,7 @@ describe('Gate descriptions', () => {
   test('describe every gate the lab offers, in one line each', () => {
     assert.deepEqual(
       Object.keys(GATE_INFO).sort(),
-      [...Object.keys(GATES), 'M', 'CNOT', 'CZ'].sort()
+      [...Object.keys(GATES), 'M', 'N', 'CNOT', 'CZ'].sort()
     );
     for (const [gate, text] of Object.entries(GATE_INFO)) {
       assert.ok(text.length > 10 && !text.includes('\n'), gate);

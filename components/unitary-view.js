@@ -27,9 +27,9 @@ export function entryText(re, im) {
   return `${num(mag)}∠${String(deg).replace('-', '−')}°`;
 }
 
-/** A circuit editor step as a function (re, im) → state; null for M. */
+/** A circuit editor step as a function (re, im) → state; null for M and noise (N). */
 export function circuitStepApply(step, n) {
-  if (step.gate === 'M') return null;
+  if (step.gate === 'M' || step.gate === 'N') return null;
   if (step.gate === 'CNOT') return (re, im) => engine.applyCNOT(re, im, step.control, step.target, n);
   if (step.gate === 'CZ') return (re, im) => engine.applyCZ(re, im, step.control, step.target, n);
   return (re, im) => engine.applyGate(re, im, step.gate, step.target, n);
@@ -106,7 +106,12 @@ export const UnitaryView = {
 
       if (!this.circuit.length) return { message: 'The circuit editor is empty. Add gates there to see the matrix of the whole circuit.' };
       const applies = this.circuit.map(step => circuitStepApply(step, this.n));
-      if (applies.includes(null)) return { message: 'The circuit contains a measurement (M), which is not a gate, so no single matrix describes the whole circuit.' };
+      if (applies.includes(null)) {
+        const what = this.circuit.some(s => s.gate === 'N')
+          ? (this.circuit.some(s => s.gate === 'M') ? 'a measurement (M) and noise (N), neither of which is a gate' : 'noise (N), which is not unitary')
+          : 'a measurement (M), which is not a gate';
+        return { message: `The circuit contains ${what}, so no single matrix describes the whole circuit.` };
+      }
       return {
         apply: (re, im) => applies.reduce((s, f) => f(s.re, s.im), { re, im }),
         name: this.circuit.map(stepLabel).join(', then ')

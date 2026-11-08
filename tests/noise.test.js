@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {
   zeroState, applyGate, applyCNOT, densityMatrix, blochVector, probabilities, pauliExpectation,
   applyToRho, applyNoise, rhoProbabilities, purity, rhoBlochVector, rhoPauliExpectation,
-  rhoMeasure, rhoMeasureQubit, probabilityAmplitudes, isValidRho, sampleCountsFromProbabilities
+  rhoMeasure, rhoMeasureQubit, probabilityAmplitudes, isValidRho, sampleCountsFromProbabilities, fidelity
 } from '../engine.js';
 
 const close = (a, b, tol = 1e-9) => Math.abs(a - b) <= tol;
@@ -136,5 +136,29 @@ describe('measuring a mixed state', () => {
     assert.ok(!isValidRho(bad, 2), 'trace');
     const notHermitian = { ...mixed, im: Float64Array.from(mixed.im, (v, k) => (k === 1 ? 0.3 : v)) };
     assert.ok(!isValidRho(notHermitian, 2), 'Hermitian');
+  });
+});
+
+describe('fidelity', () => {
+  const ghz = run(3, [['H', 0], ['CNOT', 0, 1], ['CNOT', 1, 2]]);
+
+  test('pure states: |⟨φ|ψ⟩|²', () => {
+    assert.ok(close(fidelity(ghz, ghz.re, ghz.im), 1));
+    const zero = zeroState(3);
+    assert.ok(close(fidelity(ghz, zero.re, zero.im), 0.5));
+    const phased = run(3, [['H', 0], ['CNOT', 0, 1], ['CNOT', 1, 2], ['S', 0]]); // (|000⟩ + i|111⟩)/√2
+    assert.ok(close(fidelity(ghz, phased.re, phased.im), 0.5));
+    const global = run(3, [['H', 0], ['CNOT', 0, 1], ['CNOT', 1, 2], ['Z', 0], ['X', 0], ['Z', 0], ['X', 0]]); // −GHZ
+    assert.ok(close(fidelity(ghz, global.re, global.im), 1), 'global phase doesn’t count');
+  });
+
+  test('mixed states: ⟨φ|ρ|φ⟩, and it agrees with the pure formula for a pure ρ', () => {
+    const rho = densityMatrix(ghz.re, ghz.im);
+    assert.ok(close(fidelity(ghz, ghz.re, ghz.im, rho), 1));
+    // Fully dephased GHZ: half coherence lost → F = ½(1 + 0) + … = 0.5
+    const dephased = applyNoise(rho, 'dephasing', 0, 1, 3);
+    assert.ok(close(fidelity(ghz, null, null, dephased), 0.5));
+    // λ dephasing: F = ½ + ½(1 − λ)
+    assert.ok(close(fidelity(ghz, null, null, applyNoise(rho, 'dephasing', 2, 0.3, 3)), 0.5 + 0.5 * 0.7));
   });
 });

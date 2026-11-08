@@ -15,6 +15,7 @@ export const GATE_INFO = Object.freeze({
   S: 'Phase S: gives |1⟩ a 90° phase. S twice is Z.',
   T: 'π/8 gate T: gives |1⟩ a 45° phase. T twice is S.',
   M: 'Measure: reads this qubit as 0 or 1 and collapses it to that result.',
+  N: 'Noise: adds the kind and strength of noise chosen in the Noise panel to this qubit.',
   CNOT: 'Controlled-NOT: flips the target qubit when the control qubit is 1.',
   CZ: 'Controlled-Z: flips the sign where both qubits are 1. Either qubit can be the control.'
 });

@@ -6,6 +6,10 @@
 // dragging the slider or pressing Back / Forward puts the lab back in that
 // state, with every view following; Step then carries on from there.
 // Measurements keep the results they gave in that run.
+//
+// When noise is involved, each frame also has its fidelity with the same
+// circuit run without noise (F = ⟨φ|ρ|φ⟩, from 1 down): a curve above the
+// frames shows it falling as noise builds up, step by step.
 
 import * as engine from '../engine.js';
 import { stepLabel } from './circuit-editor.js';
@@ -41,6 +45,17 @@ export const CircuitTimeline = {
       </div>
       <p class="timeline-status">{{ frameText(current) }}</p>
 
+      <figure v-if="showFidelity" class="fidelity">
+        <figcaption>Fidelity with the noiseless run</figcaption>
+        <svg class="fidelity-chart" :viewBox="'0 0 ' + FW + ' ' + FH" preserveAspectRatio="none"
+          role="img" :aria-label="fidelitySummary">
+          <line :x1="0" :y1="fy(1)" :x2="FW" :y2="fy(1)" class="fidelity-grid" />
+          <line :x1="0" :y1="fy(0.5)" :x2="FW" :y2="fy(0.5)" class="fidelity-grid" />
+          <polyline :points="fidelityPoints" class="fidelity-line" />
+        </svg>
+        <div class="fidelity-axis" aria-hidden="true"><span>1</span><span>0.5</span></div>
+      </figure>
+
       <ol class="timeline-strip">
         <li v-for="(f, k) in strip" :key="k">
           <button class="timeline-frame" :class="{ current: k === current }" :disabled="running"
@@ -51,6 +66,7 @@ export const CircuitTimeline = {
                 :width="BAR_W" :height="Math.max(p * CHART_H, p > 0 ? 1 : 0)" />
             </svg>
             <span class="timeline-label">{{ f.label }}</span>
+            <span v-if="showFidelity" class="timeline-fidelity">F {{ f.fidelityText }}</span>
           </button>
         </li>
       </ol>
@@ -60,11 +76,19 @@ export const CircuitTimeline = {
         and Step carries on from it. Measurements keep the results they gave.
         Editing the circuit or pressing another button starts a new timeline.
       </p>
+      <p v-if="showFidelity" class="caption">
+        Fidelity F compares each frame with the state the same steps give
+        without any noise: 1 means the same, and it falls as noise builds up.
+        Even steps that cancel out (H then H) cost fidelity on noisy hardware,
+        which is why today’s quantum computers can only run short circuits.
+        After a measurement there is no single noiseless state to compare with,
+        so F shows —.
+      </p>
     </div>
   `,
 
   data() {
-    return { CHART_H, BAR_W, BAR_GAP };
+    return { CHART_H, BAR_W, BAR_GAP, FW: 300, FH: 60 };
   },
 
   computed: {
@@ -80,18 +104,40 @@ export const CircuitTimeline = {
     strip() {
       return this.frames.map((f, k) => ({
         probs: engine.probabilities(f.re, f.im),
-        label: k === 0 ? 'Start' : stepLabel(this.circuit[k - 1])
+        label: k === 0 ? 'Start' : stepLabel(this.circuit[k - 1]),
+        fidelityText: typeof f.fidelity === 'number' ? f.fidelity.toFixed(2) : '—'
       }));
+    },
+    // Only when noise has made a difference somewhere in the run
+    showFidelity() {
+      return this.frames.some(f => typeof f.fidelity === 'number' && f.fidelity < 0.9995);
+    },
+    // The curve's points, broken where fidelity is undefined (after M)
+    fidelityPoints() {
+      const last = Math.max(1, this.last);
+      return this.frames
+        .map((f, k) => (typeof f.fidelity === 'number' ? `${((k / last) * this.FW).toFixed(1)},${this.fy(f.fidelity).toFixed(1)}` : null))
+        .filter(Boolean)
+        .join(' ');
+    },
+    fidelitySummary() {
+      return 'Fidelity by frame: ' + this.strip.map(f => `${f.label} ${f.fidelityText}`).join(', ');
     }
   },
 
   methods: {
+    // Height in the fidelity chart: F = 1 at the top, 0.4 at the bottom
+    fy(f) {
+      return 4 + (1 - Math.max(0.4, f)) / 0.6 * (this.FH - 8);
+    },
+
     // e.g. "Step 2 of 3, after CNOT q0→q1: |00⟩ 50%, |11⟩ 50%"
     frameText(k) {
       const f = this.frames[k];
       if (!f) return '';
       const where = k === 0 ? 'Start' : `Step ${k} of ${this.circuit.length}, after ${stepLabel(this.circuit[k - 1])}`;
-      return `${where}: ${describeState(f.re, f.im, this.n)}`;
+      const fid = this.showFidelity ? `, fidelity ${typeof f.fidelity === 'number' ? f.fidelity.toFixed(2) : '—'}` : '';
+      return `${where}: ${describeState(f.re, f.im, this.n)}${fid}`;
     },
     go(k) {
       if (k >= 0 && k <= this.last && k !== this.current) this.$emit('go', k);

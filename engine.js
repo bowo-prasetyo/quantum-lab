@@ -762,3 +762,34 @@ export function isValidRho(rho, n, tolerance = 1e-6) {
   }
   return Math.abs(trace - 1) <= tolerance;
 }
+
+/**
+ * Fidelity of a state with a pure target |φ⟩ (`ideal`, { re, im }):
+ * F = ⟨φ|ρ|φ⟩, or |⟨φ|ψ⟩|² when the state is pure (rho null). 1 means the
+ * state is the target; it falls towards 0 as they differ. Used to compare
+ * a noisy run with the same circuit run without noise.
+ */
+export function fidelity(ideal, re, im, rho = null) {
+  const size = ideal.re.length;
+  if (!rho) {
+    // ⟨φ|ψ⟩ = Σ conj(φi) ψi
+    let r = 0, i = 0;
+    for (let k = 0; k < size; k++) {
+      r += ideal.re[k] * re[k] + ideal.im[k] * im[k];
+      i += ideal.re[k] * im[k] - ideal.im[k] * re[k];
+    }
+    return r * r + i * i;
+  }
+  // Σ conj(φi) ρij φj, real for a Hermitian ρ
+  let total = 0;
+  for (let a = 0; a < size; a++) {
+    for (let b = 0; b < size; b++) {
+      const pr = rho.re[a * size + b], pi = rho.im[a * size + b];
+      // conj(φa) · ρab · φb, real part
+      const xr = ideal.re[a] * pr + ideal.im[a] * pi;   // conj(φa)·ρab
+      const xi = ideal.re[a] * pi - ideal.im[a] * pr;
+      total += xr * ideal.re[b] - xi * ideal.im[b];
+    }
+  }
+  return total;
+}

@@ -1432,3 +1432,73 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+/* Circuit editor: a ninth chip, N (noise), when noise is offered */
+.gate-row.palette-row.with-noise {
+  grid-template-columns: 2.25rem repeat(9, minmax(0, 1fr));
+}
+
+.noise-chip {
+  border: 1px dashed var(--measure);
+}
+
+/* Timeline: fidelity with the noiseless run */
+.fidelity {
+  position: relative;
+  margin: 0 0 10px;
+  padding-left: 28px;
+}
+
+.fidelity figcaption {
+  margin-bottom: 4px;
+  font-size: 14px;
+  color: var(--text-soft);
+}
+
+.fidelity-chart {
+  display: block;
+  width: 100%;
+  height: 60px;
+}
+
+.fidelity-grid {
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.fidelity-line {
+  fill: none;
+  stroke: var(--measure);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.fidelity-axis {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 60px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.fidelity-axis span {
+  position: absolute;
+  left: 0;
+}
+
+.fidelity-axis span:first-child {
+  top: -3px;
+}
+
+.fidelity-axis span:last-child {
+  top: 40px;
+}
+
+.timeline-fidelity {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
