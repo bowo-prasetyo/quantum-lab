@@ -2,17 +2,22 @@
 
 # Glass Qubit
 
-**A quantum lab in your browser.** An educational quantum computer lab that runs entirely inside the browser.
+**A quantum lab in your browser.** Explore quantum gates, superposition, phase, entanglement, noise and measurement by pressing buttons and watching every view change. Nothing to install, no account, and nothing leaves your browser.
 
 The name says what the lab is for: like looking through glass, you see every effect of a gate at once, on the probabilities, on each qubit's Bloch sphere and on the full state, with nothing hidden. It was called *Quantum Lab* until November 2026; the address and the repository name stay the same.
 
 One app covers **1, 2 and 3 qubits**, with the same simulator, visuals and vocabulary at every size, so what you learn about one qubit carries over to two and three.
 
-Users can explore quantum gates, superposition, phase, entanglement, density matrices, Bloch spheres, and measurement collapse through interactive visualizations.
-
-The lab is fully client-side and deployable on GitHub Pages.
-
 **Live:** https://bowo-prasetyo.github.io/quantum-lab/
+
+### Start here
+
+- **New to quantum computing?** Open the [lessons](https://bowo-prasetyo.github.io/quantum-lab/#/lessons). 25 short lessons take you from one qubit to entanglement, noise and three quantum algorithms. Each one asks you to predict the result before you try it.
+- **Want to play?** Open the [1-qubit lab](https://bowo-prasetyo.github.io/quantum-lab/#/lab/1), press **H** and watch the probabilities and the Bloch sphere change.
+- **Stuck on a control?** See [Help](https://bowo-prasetyo.github.io/quantum-lab/#/help). **Stuck on an idea?** See [Quantum Concepts](https://bowo-prasetyo.github.io/quantum-lab/#/concepts).
+- **Want to change the code?** Skip to [Technology Stack](#technology-stack), [Project Structure](#project-structure) and [Running Tests](#running-tests).
+
+The rest of this README describes what the lab does and how it is built.
 
 It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/quantum-1qubit), [2 qubits](https://github.com/bowo-prasetyo/quantum-2qubits) and [3 qubits](https://github.com/bowo-prasetyo/quantum-3qubits), following the [merge plan](docs/MERGE_PLAN.md).
 
@@ -26,7 +31,7 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 | 2. One lab for 1, 2 and 3 qubits | ✅ Done |
 | 3. One lesson path | ✅ Done |
 | 4. Publish, import old saved data, redirect the old sites | ✅ Done: published on GitHub Pages, old saved states imported, the three original sites redirect here |
-| 5. New content | ✅ Algorithm lessons (Deutsch–Jozsa, Grover’s search, teleportation), CZ gate, single-qubit measurement |
+| 5. New content | ✅ Algorithm lessons (Deutsch–Jozsa, Grover’s search, teleportation), CZ gate, single-qubit measurement, Shots, Interference, Pauli, Entanglement and Unitary views, noise, noisy runs and readout errors |
 
 ---
 
@@ -87,6 +92,9 @@ What each size shows:
 - Quantum measurement
 - Measurement collapse
 - State normalization
+- Noise (dephasing, amplitude damping, depolarizing) and the mixed states it creates
+- Noisy circuit runs, with fidelity against the noiseless run
+- Readout errors in the Shots view, and their mitigation
 
 ### Visualization
 
@@ -96,6 +104,10 @@ What each size shows:
 - Reduced density matrix computation
 - Bloch sphere visualization
 - Correlation graph of measured-bit agreement between qubit pairs
+- Shots: counts from 100 or 1000 simulated runs, beside the exact probabilities
+- Interference: the paths that combined into each amplitude at the last gate
+- Pauli expectations, and an Entanglement view (entropy per qubit, mutual information per pair)
+- Unitary matrix of the last gate or of the whole circuit
 - 3D WebGL basis-state visualization (rotate with the mouse, a finger or the arrow keys; point or tap to read a corner)
 
 ### Application Features
@@ -111,12 +123,12 @@ What each size shows:
 - Quantum circuit editor (tap or drag gates; works with mouse, touch and keyboard): run the whole circuit or step through it one gate at a time, from |0…0⟩ or the current state
 - Undo (button or Ctrl+Z) for gates, measurements, Reset and circuit edits
 - Accessible: every action is announced to screen readers with the outcomes it leaves ("H on qubit 0. Now: |0⟩ 50%, |1⟩ 50%."), charts have text descriptions, phase is never shown by colour alone, text meets WCAG AA contrast, and everything works from the keyboard
-- 22 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
+- 25 guided lessons with predictions and automatic result checks, ending with three quantum algorithms
 - Quantum concepts reference
 - Automatic state restoration
 - Light and dark themes (following the device by default, or chosen in the top bar), canvases included
 - Revisiting a lesson shows your first prediction, which is the one the tally counts; "Try again (practice)" answers again without changing it
-- A welcome on the first visit that offers the lessons or free play, and advanced views (density matrix, correlations, 3D view) that the free lab reveals with one switch, or by itself once the learner reaches Part 3 of the lessons
+- A welcome on the first visit that offers the lessons or free play, and advanced views (noise, density matrix, unitary matrix, correlations, Pauli expectations, entanglement, 3D view) that the free lab reveals with one switch, or by itself once the learner reaches Part 3 of the lessons
 
 ---
 
@@ -142,7 +154,7 @@ What each size shows:
 | CZ | Controlled-Z Gate | Flips the sign where both qubits are \|1⟩ (symmetric: either qubit can be the control) |
 
 The **CNOT** and **CZ** buttons use the control and target qubits chosen next to them; any pair can be chosen. The Gates panel and the circuit editor share one control → target picker and one choice. Pointing at, focusing or tapping any gate shows a one-line description of what it does (also given to screen readers); `tests/gate-info.test.js` checks each description against the simulator.
-In the Circuit Editor, a CNOT or CZ step uses the selected qubit as control and the chosen target.
+In the Circuit Editor, a CNOT or CZ step uses that same shared control and target.
 
 The **M** button on each qubit's row measures just that qubit. **Measure all** measures every qubit. Results appear as classical bits under the amplitude table.
 
@@ -150,7 +162,9 @@ The **M** button on each qubit's row measures just that qubit. **Measure all** m
 
 ## Quantum State Representation
 
-The simulator represents a 3-qubit quantum system as:
+An n-qubit register has 2ⁿ basis states: 2 for one qubit, 4 for two, 8 for three. In every label, qubit 0 is the **left** digit, so |10⟩ means qubit 0 is 1 and qubit 1 is 0.
+
+The state is a list of one complex amplitude per basis state. For three qubits:
 
 ```text
 |ψ⟩ =
@@ -160,91 +174,36 @@ The simulator represents a 3-qubit quantum system as:
 
 Where:
 
-- α through θ are complex probability amplitudes
-- The system may occupy all basis states simultaneously
-- The total probability always equals 1
-
-Normalization rule:
+- α through θ are complex amplitudes
+- the probability of measuring a basis state is the squared size of its amplitude, for example |α|² for |000⟩
+- the probabilities always add up to 1 (normalization):
 
 ```text
 |α|² + |β|² + |γ|² + |δ|² +
 |ε|² + |ζ|² + |η|² + |θ|² = 1
 ```
 
----
+After noise, the register can no longer be written as one list of amplitudes. It is then a **mixed state**, held as a density matrix (see [Density Matrix Support](#density-matrix-support)).
 
-## Basis States
-
-A 3-qubit system contains eight computational basis states:
-
-```text
-|000⟩
-|001⟩
-|010⟩
-|011⟩
-|100⟩
-|101⟩
-|110⟩
-|111⟩
-```
-
----
-
-## Probability Visualization
-
-The simulator displays measurement probabilities for all basis states.
-
-The probability chart shows:
-
-```text
-|000⟩
-|001⟩
-|010⟩
-|011⟩
-|100⟩
-|101⟩
-|110⟩
-|111⟩
-```
-
-Taller bars indicate higher measurement probability.
-
-This helps visualize:
-
-- Superposition
-- Quantum interference
-- Entanglement
-- Gate effects
-- Measurement collapse
+The probability chart has one bar per basis state (2, 4 or 8); taller bars mean a more likely result. It helps you see superposition, interference, entanglement, gate effects and measurement collapse.
 
 ---
 
 ## Bell States
 
-In the 2- and 3-qubit labs, the **Create Bell Pair** button builds the Bell state
-
-```text
-(|00⟩ + |11⟩) / √2         in the 2-qubit lab
-(|000⟩ + |110⟩) / √2       in the 3-qubit lab
-```
-
-It always starts from |0…0⟩ (it resets first), then applies:
+In the 2- and 3-qubit labs, the **Create Bell Pair** button always starts from |0…0⟩ (it resets first), then applies:
 
 1. Hadamard gate on qubit 0
 2. CNOT gate (control qubit 0, target qubit 1)
 
-The 3-qubit case is described below.
+This entangles qubits 0 and 1:
 
-Bell states demonstrate two-qubit entanglement.
+| Lab | State | Measurements always give |
+|---|---|---|
+| 2 qubits | (\|00⟩ + \|11⟩) / √2 | \|00⟩ or \|11⟩ |
+| 3 qubits | (\|000⟩ + \|110⟩) / √2 | \|000⟩ or \|110⟩ (qubit 2 stays 0) |
 
-Measurements always give one of:
-
-```text
-|000⟩
-|110⟩
-```
-
-while the other six basis states never appear.
+Each qubit on its own gives 0 or 1 at random, but qubits 0 and 1 always agree.
 
 ---
 
@@ -286,8 +245,8 @@ The density matrix provides:
 - Quantum coherence
 - Entanglement information
 
-The full 3-qubit state in this simulator is always pure, so its density matrix is ρ = |ψ⟩⟨ψ|.
-Mixed states appear only in the reduced single-qubit states described below.
+Without noise, the register is in a pure state, and its density matrix is ρ = |ψ⟩⟨ψ|.
+After noise (advanced views), the register itself becomes a mixed state: a random mix that only a density matrix can describe. The **purity** under the matrix, Tr ρ², is 1 for a pure state and drops as noise mixes it.
 
 ---
 
@@ -312,9 +271,10 @@ The Bloch vector indicates:
 
 Pure states lie on the sphere surface, while mixed states lie inside it.
 
-Because the full 3-qubit state is always pure here, a qubit whose Bloch vector is shorter than 1 is entangled with the other qubits.
-This makes the Bloch spheres the simulator's indicator of entanglement.
-For example, after **Create Bell Pair** the vectors of qubits 0 and 1 shrink to the centre, while qubit 2 stays at |0⟩.
+Without noise, the whole register is in a pure state, so a qubit whose Bloch vector is shorter than 1 is entangled with the other qubits.
+This makes the Bloch spheres an indicator of entanglement.
+For example, in the 3-qubit lab, after **Create Bell Pair** the vectors of qubits 0 and 1 shrink to the centre, while qubit 2 stays at |0⟩.
+After noise, a short vector can also come from the noise itself, so use the Entanglement view to tell the two apart.
 
 ---
 
@@ -322,22 +282,22 @@ For example, after **Create Bell Pair** the vectors of qubits 0 and 1 shrink to 
 
 The correlation graph shows, for each pair of qubits, how reliably their measured bits agree or disagree.
 
-Each edge shows |⟨ZᵢZⱼ⟩|, computed from the probabilities of the eight basis states:
+Each edge shows |⟨ZᵢZⱼ⟩|, computed from the probabilities of the basis states:
 
 - **1.00**: the two bits are always equal, or always opposite
 - **0.00**: knowing one bit tells you nothing about the other
 
 The graph measures correlation in the computational (0/1) basis only. **It is not a measure of entanglement.**
-For example, after **Reset** the state |000⟩ shows 1.00 on every edge, because every bit is always 0, yet nothing is entangled.
+For example, in the 3-qubit lab, after **Reset** the state |000⟩ shows 1.00 on every edge, because every bit is always 0, yet nothing is entangled.
 After **Create Bell Pair**, the Q0–Q1 edge stays at 1.00 while the edges to Q2 drop to 0.00.
 
-To see entanglement, use the Bloch spheres.
+To see entanglement, use the Entanglement view or the Bloch spheres.
 
 ---
 
 ## WebGL Visualization
 
-The WebGL view places the eight basis states at the corners of a 3D cube.
+In the 3-qubit lab, the 3D view (WebGL) places the eight basis states at the corners of a 3D cube.
 
 - Point size shows each state's probability
 - Colour shows the phase of its amplitude, using the same colours as the density matrix
@@ -360,6 +320,10 @@ The simulator demonstrates:
 - GHZ states
 - Density matrices
 - Reduced density matrices
+- Noise, decoherence and mixed states
+- Fidelity
+- Readout errors and their mitigation
+- Oracles, phase kickback, Deutsch–Jozsa, Grover’s search and teleportation
 - Bloch spheres
 - Controlled operations
 - Measurement collapse
@@ -421,29 +385,39 @@ quantum-lab/
 ├── index.html
 ├── .nojekyll              # Tells GitHub Pages to serve the files as they are
 ├── app.js                 # Creates the Vue app
-├── router.js              # Routes: #/lab/:n, #/concepts, #/manual
+├── router.js              # Routes: #/lab/:n, #/lessons, #/lessons/:id, #/concepts, #/help (#/manual → lessons)
 ├── lab.js                 # The lab page: state, operation queue, worker, saving
 ├── components/
-│   ├── app-nav.js         # Lab size selector and page links
-│   ├── gate-panel.js      # Gates, M per qubit, CNOT and CZ (any pair), presets, Measure all, Reset
-│   ├── amplitude-table.js
+│   ├── app-nav.js         # Lab size selector, page links and theme
+│   ├── gate-panel.js      # Gates, M per qubit, CNOT and CZ (any pair), presets, Measure all, Reset, Undo
+│   ├── gate-hints.js      # One-line description of each gate, shared by the Gates panel and the editor
+│   ├── qubit-picker.js    # Control → target picker for CNOT and CZ
+│   ├── amplitude-table.js # Quantum State table, with Hide global phase
 │   ├── probability-chart.js
+│   ├── shots-histogram.js # Shots, readout errors and their mitigation
+│   ├── interference-view.js
 │   ├── bloch-spheres.js
 │   ├── density-matrix.js
-│   ├── correlation-graph.js
-│   ├── cube-3d.js         # WebGL view (3 qubits)
 │   ├── unitary-view.js    # Matrix of the last gate or the whole circuit
+│   ├── correlation-graph.js
+│   ├── pauli-panel.js     # Pauli expectations
+│   ├── entanglement-panel.js
+│   ├── cube-3d.js         # WebGL view (3 qubits)
 │   ├── noise-panel.js     # Dephasing, amplitude damping, depolarizing
+│   ├── circuit-editor.js  # Tap, drag (mouse or touch) or keyboard
 │   ├── circuit-timeline.js # Frames of a circuit run, to step back through
-│   └── circuit-editor.js  # Tap, drag (mouse or touch) or keyboard
+│   └── canvas-fit.js      # Keeps 2D canvases sharp at any screen size
 ├── pages/
 │   ├── lessons.js         # Lesson list
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
-│   ├── concepts.js
-│   └── help.js
+│   ├── concepts.js        # Quantum Concepts reference
+│   └── help.js            # How to use the controls
 ├── lessons.js             # The 25 lessons, as data
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
+├── prefs.js               # Small per-browser preferences (welcome seen, advanced views)
+├── theme.js               # Light, dark or system theme
+├── describe.js            # Text descriptions of a state, read out to screen readers
 ├── engine.js              # Simulation maths: pure functions, pure and mixed states
 ├── bloch-rotation.js      # Each single-qubit gate as a turn of the Bloch sphere
 ├── worker.js              # Background worker: runs engine.js gates, noise and measurement
@@ -452,15 +426,13 @@ quantum-lab/
 ├── import-old.js          # One-time import from the original simulators
 ├── styles.css
 ├── tests/
-│   ├── engine.test.js     # Unit tests for engine.js
-│   ├── lessons.test.js    # Every lesson's result, checked with the engine
-│   ├── import.test.js     # Parsing the original simulators' saved data
+│   ├── *.test.js          # Unit tests (engine, lessons, gate descriptions, noise, readout, views…)
 │   └── browser/
 │       ├── helpers.js
-│       ├── lessons.browser.test.js  # Every lesson, checked in a real browser
-│       └── import.browser.test.js   # Importing old saved states
+│       └── *.browser.test.js  # Every lesson, controls, layout, accessibility, import… in a real browser
 ├── package.json           # Only configures the tests; the app has no build step
-├── docs/
+├── brand/                 # Logo files
+├── docs/                  # Product vision and merge plan
 └── README.md
 ```
 
@@ -477,9 +449,11 @@ npm test
 They cover:
 
 - the engine: gate matrices and identities, CNOT on every pair of qubits, Bell and GHZ states, normalization, measurement statistics, density matrices, reduced states, Bloch vectors and correlations
+- noise and mixed states, readout errors and their mitigation, and the maths behind the Shots, Interference, Entanglement and Unitary views
+- the one-line gate descriptions and the screen-reader state descriptions: each claim is checked against the simulator
 - every lesson: its data is complete, its prediction answer is valid, and running Set up then its steps gives the result it promises
 
-**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
+**Browser tests** open every lesson in Chromium, run Set up and Show me, and confirm the app reports the expected result. They also cover the controls, the circuit editor, the layout on wide and narrow screens, accessibility, themes and onboarding, and check each lesson's panels, numbering and links, predictions and the tally, and that lessons don't change the lab's saved state. Import tests seed the original simulators' databases exactly as those apps wrote them, then check that their states are brought over once, the old data is left untouched, and no old database is ever created. They need Playwright and network access (Vue loads from the CDN):
 
 ```bash
 npm install
@@ -522,8 +496,9 @@ Responsible for:
 
 Responsible for:
 
-- Single-qubit gate operations on the state vector
-- CNOT computation
+- Single-qubit gate operations on the state (pure or mixed)
+- CNOT and CZ
+- Noise
 - Measurement and collapse
 
 The worker is a module worker that imports `engine.js`.
@@ -551,7 +526,7 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ## Lessons
 
-One path of 25 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
+One path of 25 lessons takes a learner from a single qubit to three-qubit entanglement, noise, and on to real quantum algorithms. Each lesson:
 
 - opens a lab with the right number of qubits, showing only the panels it needs
 - asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
@@ -585,7 +560,7 @@ Both have been agreed.
 Possible future enhancements:
 
 - Quantum Fourier Transform
-- Grover's algorithm
+- Grover's search on more than four items
 - Shor's algorithm demonstrations
 - WebGPU acceleration
 - WASM math backend
