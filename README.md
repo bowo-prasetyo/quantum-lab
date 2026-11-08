@@ -25,6 +25,8 @@ It merges three earlier simulators, [1 qubit](https://github.com/bowo-prasetyo/q
 
 ## Status
 
+**Current version: 1.0.0**, the first release. See [CHANGELOG.md](CHANGELOG.md).
+
 | Merge plan phase | Status |
 |---|---|
 | 1. Shared engine and tests | ✅ Done |
@@ -383,6 +385,8 @@ To upgrade a library:
 ```text
 quantum-lab/
 ├── index.html
+├── version.js             # The released version, shown on the Help page
+├── CHANGELOG.md           # What changed in each version
 ├── .nojekyll              # Tells GitHub Pages to serve the files as they are
 ├── app.js                 # Creates the Vue app
 ├── i18n.js                # Translated messages and locale-aware numbers (see docs/I18N.md)
@@ -571,15 +575,24 @@ The app is ready for other languages. Everything a learner reads or hears is tra
 
 ## Future Improvements
 
-Possible future enhancements:
+Possible next steps, within the [product vision](docs/VISION.md) (up to 3 qubits, client-only):
 
-- Quantum Fourier Transform
-- Grover's search on more than four items
-- Shor's algorithm demonstrations
-- WebGPU acceleration
-- WASM math backend
-- Quantum error correction examples
-- Larger qubit systems
+- Test with learners whether the lab teaches what it promises (the vision's measure of success)
+- Review of the Indonesian and Japanese translations by physics-literate speakers
+- A Quantum Fourier Transform lesson
+- Grover's search on eight items (3 qubits)
+
+---
+
+## Releases
+
+Glass Qubit follows [semantic versioning](https://semver.org/); see [CHANGELOG.md](CHANGELOG.md) for what changed in each version. The current version is shown at the bottom of the Help page.
+
+To make a release:
+
+1. Set the new version in `version.js` and `package.json`, and add a section for it at the top of `CHANGELOG.md` (`npm test` checks that all three agree).
+2. Merge that change to `main` and wait for the tests to pass.
+3. Tag the merge commit `v<version>` and publish a GitHub Release from the tag, using the changelog section as the notes.
 
 ---
 

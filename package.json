@@ -1,5 +1,6 @@
 {
   "name": "quantum-lab",
+  "version": "1.0.0",
   "private": true,
   "description": "Glass Qubit: a 1-, 2- and 3-qubit quantum simulator. No build step: the app runs straight from these files. This file only configures the tests.",
   "type": "module",

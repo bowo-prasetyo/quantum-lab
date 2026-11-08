@@ -22,6 +22,10 @@ export default {
   'nav.language': '言語',
   'nav.languageAria': '言語',
 
+  // Help page footer
+  'help.version': 'Glass Qubit バージョン {version}',
+  'help.changelog': '各バージョンの新機能',
+
   // Shared pieces
   'list.separator': '、',
   'text.sentenceGap': '',

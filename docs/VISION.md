@@ -19,7 +19,7 @@ When choosing what to build or change, prefer the option that:
 ## Out of scope (for now)
 
 - More than 3 qubits
-- Noise, decoherence and error correction
+- Quantum error-correcting codes. Noise, decoherence and readout errors are in scope and taught in Part 3 of the lessons, because a learner needs them to understand why real quantum computers are hard to build; the codes that protect against them need more qubits than the lab has.
 - Accounts, cloud saving or analytics
 - Code-based circuit languages (such as OpenQASM)
 - GPU acceleration (WebGPU)
