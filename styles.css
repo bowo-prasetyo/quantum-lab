@@ -1311,3 +1311,75 @@ button:disabled {
     min-height: 44px;
   }
 }
+
+/* ---------- Timeline ---------- */
+
+.timeline-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timeline-controls button {
+  margin: 0;
+  flex: none;
+}
+
+.timeline-slider {
+  flex: 1;
+  display: flex;
+}
+
+.timeline-slider input {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.timeline-status {
+  margin: 8px 0;
+  color: var(--text-soft);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.timeline-strip {
+  display: flex;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  overflow-x: auto;
+}
+
+.timeline-frame {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 6px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.timeline-frame.current {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+  background: var(--accent-tint-strong);
+}
+
+.timeline-bar {
+  fill: var(--canvas-bar);
+}
+
+.timeline-label {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+@media (pointer: coarse) {
+  .timeline-controls button {
+    min-height: 44px;
+  }
+}

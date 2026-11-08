@@ -18,6 +18,7 @@ import { InterferenceView } from './components/interference-view.js';
 import { EntanglementPanel } from './components/entanglement-panel.js';
 import { PauliPanel } from './components/pauli-panel.js';
 import { UnitaryView } from './components/unitary-view.js';
+import { CircuitTimeline } from './components/circuit-timeline.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
 import { getPref, setPref } from './prefs.js';
@@ -67,7 +68,7 @@ export const Lab = {
   components: {
     AppNav, GatePanel, ProbabilityChart, BlochSpheres, AmplitudeTable,
     DensityMatrix, CorrelationGraph, CircuitEditor, ShotsHistogram,
-    InterferenceView, EntanglementPanel, PauliPanel, UnitaryView,
+    InterferenceView, EntanglementPanel, PauliPanel, UnitaryView, CircuitTimeline,
     // Explicit tag: Vue would turn "Cube3D" into <cube3-d>
     'cube-3d': Cube3D
   },
@@ -94,11 +95,15 @@ export const Lab = {
       // The last operation and the state before it, for the Interference
       // view: { message, re, im }, or null after a reset or a load
       lastStep: null,
+      stepSerial: 0,       // counts steps applied, so views can tell a new step from Undo
       running: false,
       importedFrom: null,  // name of the old simulator a state was brought over from
       narrow: !window.matchMedia(WIDE_QUERY).matches,
       // Circuit steps applied so far by Run or Step, or null if not stepping
       stepIndex: null,
+      // The states the last run went through: frame k is the state after
+      // k steps (see snapshot()). Emptied by any other action or an edit.
+      frames: [],
       // CNOT and CZ control → target, shared by the Gates panel and the
       // circuit editor so both show the same choice
       pair: { control: 0, target: this.n > 1 ? 1 : 0 },
@@ -209,6 +214,16 @@ export const Lab = {
               @step="stepCircuit"
               @undo="undo"
             />
+
+            <circuit-timeline
+              v-if="show('editor') && frames.length > 1"
+              :n="n"
+              :frames="frames"
+              :circuit="circuit"
+              :at="stepIndex"
+              :running="running"
+              @go="goToFrame"
+            />
           </div>
         </div>
 
@@ -245,7 +260,7 @@ export const Lab = {
             <shots-histogram :re="stateRe" :im="stateIm" :n="n" />
           </section>
           <section v-if="show('bloch')" v-bind="viewAttrs('bloch')">
-            <bloch-spheres :re="stateRe" :im="stateIm" :n="n" />
+            <bloch-spheres :re="stateRe" :im="stateIm" :n="n" :step="lastStep" :step-id="stepSerial" />
           </section>
           <section v-if="show('interference')" v-bind="viewAttrs('interference')">
             <interference-view :n="n" :step="lastStep" :hide-global-phase="hideGlobalPhase" />
@@ -414,6 +429,7 @@ export const Lab = {
       this.stateRe = reply.re;
       this.stateIm = reply.im;
       this.lastStep = before;
+      this.stepSerial++;
 
       if (reply.measured) {
         // Measuring every qubit gives every bit
@@ -509,7 +525,8 @@ export const Lab = {
         bits: { ...this.bits },
         lastStep: this.lastStep,
         circuit: this.circuit.map(step => ({ ...step })),
-        stepIndex: this.stepIndex
+        stepIndex: this.stepIndex,
+        frames: this.frames        // replaced, never changed in place
       });
       if (this.history.length > HISTORY_LIMIT) this.history.shift();
       this.historyLength = this.history.length;
@@ -533,6 +550,7 @@ export const Lab = {
         this.lastStep = last.lastStep;
         this.circuit.splice(0, this.circuit.length, ...last.circuit);
         this.stepIndex = last.stepIndex;
+        this.frames = last.frames;
         await this.save();
         this.announce('Undone');
       });
@@ -576,6 +594,7 @@ export const Lab = {
       return this.enqueue(async () => {
         this.remember();
         this.stepIndex = null;
+        this.frames = [];
         await task();
         this.announce(typeof what === 'function' ? what() : what);
       });
@@ -643,6 +662,7 @@ export const Lab = {
     addStep(step) {
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       this.circuit.push(step);
       this.save();
       this.announceCircuit(`Added ${stepLabel(step)}`);
@@ -651,6 +671,7 @@ export const Lab = {
     removeStep(index) {
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       const [removed] = this.circuit.splice(index, 1);
       this.save();
       this.announceCircuit(`Removed ${stepLabel(removed)}`);
@@ -660,6 +681,7 @@ export const Lab = {
       if (!this.circuit.length) return;
       this.remember();
       this.stepIndex = null;
+      this.frames = [];
       this.circuit.splice(0);
       this.save();
       this.announceCircuit('Circuit cleared');
@@ -678,11 +700,13 @@ export const Lab = {
         try {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
+          this.frames = [this.snapshot()];
           const steps = [...this.circuit];
           for (let i = 0; i < steps.length; i++) {
             if (i) await new Promise(r => setTimeout(r, STEP_DELAY_MS));
             await this.runOnWorker(stepToMessage(steps[i]));
             this.stepIndex = i + 1;
+            this.frames = [...this.frames, this.snapshot()];
           }
         } finally {
           this.running = false;
@@ -704,12 +728,52 @@ export const Lab = {
         if (this.stepIndex === null || this.stepIndex >= this.circuit.length) {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
+          this.frames = [this.snapshot()];
         }
         const step = this.circuit[this.stepIndex];
         await this.runOnWorker(stepToMessage(step));
         this.stepIndex++;
+        // Stepping on from an earlier frame replaces the frames after it
+        this.frames = [...this.frames.slice(0, this.stepIndex), this.snapshot()];
         await this.save();
         this.announce(`Step ${this.stepIndex} of ${this.circuit.length}: ${stepLabel(step)}`);
+      });
+    },
+
+    // ----- Timeline -----
+
+    /** The current state as a timeline frame. */
+    snapshot() {
+      return Object.freeze({
+        re: this.stateRe,
+        im: this.stateIm,
+        measurement: this.measurement,
+        bits: { ...this.bits },
+        lastStep: this.lastStep
+      });
+    },
+
+    /**
+     * Puts the lab back in frame k of the last run. Moving one frame
+     * forward replays that step's Bloch turn; other jumps don't.
+     * Can be undone.
+     */
+    goToFrame(k) {
+      return this.enqueue(async () => {
+        const frame = this.frames[k];
+        if (!frame || this.running) return;
+        const oneForward = this.stepIndex !== null && k === this.stepIndex + 1;
+        this.remember();
+        this.stateRe = frame.re;
+        this.stateIm = frame.im;
+        this.measurement = frame.measurement;
+        this.bits = { ...frame.bits };
+        this.lastStep = frame.lastStep;
+        if (oneForward) this.stepSerial++;
+        this.stepIndex = k;
+        await this.save();
+        this.announce(k === 0 ? 'Back to the start of the run'
+          : `Step ${k} of ${this.circuit.length}: ${stepLabel(this.circuit[k - 1])}`);
       });
     },
 
@@ -731,6 +795,7 @@ export const Lab = {
         if (ops[0]?.[0] === 'reset') this.forgetHistory();
         else this.remember();
         this.stepIndex = null;
+        this.frames = [];
         if (clearCircuit) this.circuit.splice(0);
         this.running = delay > 0;
         try {

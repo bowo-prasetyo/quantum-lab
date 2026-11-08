@@ -233,3 +233,90 @@ describe('Unitary Matrix view', () => {
       assert.deepEqual(await rows.nth(2).locator('td').allInnerTexts(), ['0.71', '', '−0.71', '']);
     }));
 });
+
+describe('Bloch sphere turns', () => {
+  test('a gate shows its axis and path, then settles; Undo draws no path', () =>
+    withLab('#/lab/1', async page => {
+      const canvas = page.locator('.bloch-row canvas').first();
+      await button(page, 'H').click();
+      await page.waitForFunction(() => document.querySelector('.bloch-row canvas').dataset.turn === 'turning',
+        null, { polling: 'raf', timeout: 2000 });
+      await page.waitForTimeout(700);
+      assert.equal(await canvas.getAttribute('data-turn'), 'done');
+      assert.match(await page.locator('.bloch-turn').innerText(),
+        /Last gate: H on qubit 0, a half turn \(180°\) about the axis halfway between x and z/);
+
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0);
+      assert.equal(await canvas.getAttribute('data-turn'), null);
+
+      // CNOT isn't a turn of one sphere
+      await page.goto(env.base + '#/lab/2');
+      await page.locator('h1').waitFor();
+      await settle(page);
+      await page.locator('.gate-panel').getByRole('button', { name: 'CNOT', exact: true }).click();
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0);
+    }));
+
+  test('with reduce motion, the vector jumps but the path is still drawn', async () => {
+    const context = await env.browser.newContext({ reducedMotion: 'reduce' });
+    const page = await context.newPage();
+    try {
+      await page.goto(env.base + '#/lab/1');
+      await page.locator('h1').waitFor();
+      await settle(page);
+      await button(page, 'S').click();   // |0⟩ is on the z-axis: S shows nothing
+      await settle(page);
+      assert.equal(await page.locator('.bloch-turn').count(), 0, 'no path when the turn moves nothing');
+      await button(page, 'H').click();
+      await page.waitForTimeout(50);
+      assert.equal(await page.locator('.bloch-row canvas').first().getAttribute('data-turn'), 'done');
+      assert.equal(await page.locator('.bloch-turn').count(), 1);
+    } finally {
+      await context.close();
+    }
+  });
+});
+
+describe('Timeline', () => {
+  test('records each step of a run, and going back puts every view there', () =>
+    withLab('#/lab/2', async page => {
+      assert.equal(await page.locator('.timeline').count(), 0, 'no timeline before a run');
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await page.getByRole('button', { name: 'Add CNOT, control Q0, target Q1' }).click();
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1200);
+
+      const timeline = card(page, 'Timeline');
+      assert.deepEqual(await timeline.locator('.timeline-label').allInnerTexts(), ['Start', 'H q0', 'CNOT q0→q1']);
+      assert.equal(await timeline.locator('[aria-current="step"]').getAttribute('aria-label'),
+        'Step 2 of 2, after CNOT q0→q1: |00⟩ 50%, |11⟩ 50%');
+
+      // Back one frame: the state after H only
+      await timeline.getByRole('button', { name: '◀ Back' }).click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Step 1 of 2, after H q0: \|00⟩ 50%, \|10⟩ 50%$/);
+      assert.match(await page.locator('.amp-table').innerText(), /\|10⟩\s+0\.707/);
+
+      // The slider jumps to the start
+      await timeline.getByRole('slider').fill('0');
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Start: \|00⟩ 100%$/);
+
+      // Step carries on from here, replacing the later frames
+      await page.getByRole('button', { name: 'Step', exact: true }).click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Step 1 of 2/);
+      assert.equal(await timeline.locator('.timeline-frame').count(), 2);
+
+      // Undo goes back to the frame before; another action ends the timeline
+      await button(page, 'Undo').click();
+      await settle(page);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /^Start/);
+      await button(page, 'X').click();
+      await settle(page);
+      assert.equal(await page.locator('.timeline').count(), 0);
+    }));
+});
