@@ -423,3 +423,40 @@ describe('Noise steps in circuits', () => {
       assert.equal(await page.getByRole('button', { name: 'Add Dephase 20% noise on Q1' }).count(), 1, 'noise choice remembered');
     }));
 });
+
+describe('Noisy runs', () => {
+  test('noise after every step: fidelity falls along the timeline; a measurement ends it', () =>
+    withLab('#/lab/3', async page => {
+      await button(page, 'Show advanced views').click();
+      const noise = card(page, 'Noise');
+      await noise.getByRole('radio', { name: 'Dephasing' }).check();
+      await noise.getByRole('slider').fill('3');
+      await page.getByRole('checkbox', { name: /Noisy run: Dephase 3% on every qubit/ }).check();
+
+      await page.getByRole('button', { name: 'Add H on Q0' }).click();
+      await page.getByRole('button', { name: 'Add CNOT, control Q0, target Q1' }).click();
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1300);
+
+      const timeline = card(page, 'Timeline');
+      assert.equal(await timeline.locator('.fidelity').count(), 1, 'fidelity chart shown');
+      const fids = await timeline.locator('.timeline-fidelity').allInnerTexts();
+      assert.equal(fids[0], 'F 1.00');
+      const values = fids.map(t => Number(t.slice(2)));
+      assert.ok(values[1] < 1 && values[2] < values[1], `falls: ${fids}`);
+      assert.match(await timeline.locator('.timeline-status').innerText(), /, fidelity 0\.\d\d$/);
+      assert.match(await page.locator('[data-testid="announcer"]').innerText(), /fidelity with the noiseless run 0\.\d\d/);
+
+      // A measurement ends the comparison
+      await page.getByRole('button', { name: 'Add M on Q0' }).click();
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1700);
+      assert.equal((await timeline.locator('.timeline-fidelity').allInnerTexts()).at(-1), 'F —');
+
+      // Without the box ticked, a run has no noise and no fidelity chart
+      await page.getByRole('checkbox', { name: /Noisy run/ }).uncheck();
+      await page.getByRole('button', { name: 'Run Circuit' }).click();
+      await page.waitForTimeout(1700);
+      assert.equal(await timeline.locator('.fidelity').count(), 0);
+    }));
+});

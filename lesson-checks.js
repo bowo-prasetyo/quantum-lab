@@ -66,6 +66,15 @@ export function evaluateCheck(check, { re, im, n, measured, rho = null }) {
       return { pass: close(value, check.abs), text: `Density matrix |ρ[${check.i}][${check.j}]| = ${show(check.abs)} (found ${show(value)})` };
     }
 
+    // Fidelity with the state the `ideal` operations give (run without
+    // noise from |0…0⟩): between min and max
+    case 'fidelity': {
+      const target = runOps(check.ideal, n);
+      const value = engine.fidelity(target, re, im, rho);
+      const pass = value >= check.min - TOLERANCE && value <= check.max + TOLERANCE;
+      return { pass, text: `Fidelity with the noiseless result: ${show(check.min)} to ${show(check.max)} (found ${show(value)})` };
+    }
+
     // Purity Tr ρ²: 1 for a pure state, less once noise has mixed it
     case 'purity': {
       const value = rho ? engine.purity(rho) : 1;
@@ -124,8 +133,12 @@ export function expandOp(op) {
  * ['measure'], ['measureQubit', q], ['bell'], ['ghz'],
  * ['noise', channel, q, strength] (makes the state mixed), and
  * ['if', q, op], which runs op only if the last measurement of qubit q gave 1.
+ *
+ * `noisyRun` ({ channel, strength }) runs the operations as the lab's
+ * noisy run does: that noise on every qubit after each circuit step
+ * (gate, CNOT, CZ, single-qubit measurement or noise).
  */
-export function runOps(ops, n, start = null, random = Math.random) {
+export function runOps(ops, n, start = null, random = Math.random, { noisyRun = null } = {}) {
   const fresh = () => ({ ...engine.zeroState(n), rho: null, measured: '-', bits: {} });
   let state = start ? { bits: {}, rho: null, ...start } : fresh();
 
@@ -169,7 +182,13 @@ export function runOps(ops, n, start = null, random = Math.random) {
     }
   };
 
-  ops.flatMap(expandOp).forEach(apply);
+  const CIRCUIT_STEPS = ['gate', 'cnot', 'cz', 'measureQubit', 'noise'];
+  for (const op of ops.flatMap(expandOp)) {
+    apply(op);
+    if (noisyRun && CIRCUIT_STEPS.includes(op[0])) {
+      for (let q = 0; q < n; q++) apply(['noise', noisyRun.channel, q, noisyRun.strength]);
+    }
+  }
 
   return { re: state.re, im: state.im, rho: state.rho, n, measured: state.measured, bits: state.bits };
 }

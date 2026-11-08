@@ -108,10 +108,19 @@ export const Lesson = {
       this.$nextTick(() => this.$el.querySelector('.option')?.focus());
     },
 
+    // A lesson that runs on noisy hardware chooses its noise and turns on
+    // noisy runs (without changing the free lab's remembered choice)
+    prepareNoise() {
+      const lab = this.$refs.lab;
+      if (this.lesson.noisyRun) lab.setNoise(this.lesson.noisyRun, { remember: false });
+      lab.setNoisyRun(!!this.lesson.noisyRun);
+    },
+
     async setUp() {
       this.checkResult = null;
       this.busy = true;
       try {
+        this.prepareNoise();
         await this.$refs.lab.runOps(this.lesson.setup, { clearCircuit: true });
       } finally {
         this.busy = false;
@@ -123,6 +132,7 @@ export const Lesson = {
       this.checkResult = null;
       this.busy = true;
       try {
+        this.prepareNoise();
         await this.$refs.lab.runOps(this.lesson.setup, { clearCircuit: true });
         if (this.usesEditor) {
           // Teach the editor: fill in the circuit, then run it

@@ -19,6 +19,7 @@ import { EntanglementPanel } from './components/entanglement-panel.js';
 import { PauliPanel } from './components/pauli-panel.js';
 import { UnitaryView } from './components/unitary-view.js';
 import { CircuitTimeline } from './components/circuit-timeline.js';
+import { circuitStepApply } from './components/unitary-view.js';
 import { NoisePanel } from './components/noise-panel.js';
 import { CircuitEditor, stepLabel } from './components/circuit-editor.js';
 import { describeState } from './describe.js';
@@ -129,6 +130,8 @@ export const Lab = {
       // The Noise panel's choice, used by its buttons, the circuit editor's
       // N steps and noisy runs
       noise: savedNoise(),
+      // Run and Step add that noise to every qubit after each step
+      noisyRun: false,
       // Show amplitudes with the global phase removed (table, 3D view, interference)
       hideGlobalPhase: getPref('hide-global-phase', false),
       // Free lab only: show the density matrix, correlations, Pauli expectations, entanglement and 3D view
@@ -238,6 +241,8 @@ export const Lab = {
               @pair="pair = $event"
               :show-undo="!show('gates')"
               :noise="show('noise') ? noise : null"
+              :noisy-run="noisyRun"
+              @noisy-run="noisyRun = $event"
               :can-undo="historyLength > 0"
               @add="addStep"
               @remove="removeStep"
@@ -442,7 +447,9 @@ export const Lab = {
     },
 
     // Sends the current state to the worker and stores the result.
-    async runOnWorker(message) {
+    // `record: false` keeps the last step as it was (for the noise a noisy
+    // run adds after each step, so the views still show that step).
+    async runOnWorker(message, { record = true } = {}) {
       const id = this.nextId++;
       // Frozen: Vue needn't watch inside it, and the arrays are never changed
       const before = Object.freeze({ message, re: this.stateRe, im: this.stateIm, rho: this.stateRho });
@@ -463,8 +470,10 @@ export const Lab = {
       this.stateRe = reply.re;
       this.stateIm = reply.im;
       this.stateRho = reply.rho ? Object.freeze(reply.rho) : null;
-      this.lastStep = before;
-      this.stepSerial++;
+      if (record) {
+        this.lastStep = before;
+        this.stepSerial++;
+      }
 
       if (reply.measured) {
         // Measuring every qubit gives every bit
@@ -484,11 +493,33 @@ export const Lab = {
       return this.showAdvanced || !ADVANCED.includes(panel);
     },
 
-    /** Sets the kind and strength of noise ({ channel, strength }); remembered. */
-    setNoise({ channel, strength }) {
+    /**
+     * Sets the kind and strength of noise ({ channel, strength }),
+     * remembered unless `remember` is false (lessons).
+     */
+    setNoise({ channel, strength }, { remember = true } = {}) {
       this.noise = { channel, strength };
+      if (!remember) return;
       setPref('noise-channel', channel);
       setPref('noise-strength', strength);
+    },
+
+    /** Turns noisy runs on or off (lessons). */
+    setNoisyRun(on) {
+      this.noisyRun = on;
+    },
+
+    // Whether Run and Step add noise after each step
+    isNoisyRun() {
+      return this.noisyRun && this.show('noise');
+    },
+
+    // The noise a noisy run adds after a step: the chosen noise on every
+    // qubit. Call only from inside a queued task.
+    async idleNoise() {
+      for (let q = 0; q < this.n; q++) {
+        await this.runOnWorker({ type: 'noise', channel: this.noise.channel, targetQubit: q, strength: this.noise.strength }, { record: false });
+      }
     },
 
     toggleGlobalPhase() {
@@ -756,19 +787,25 @@ export const Lab = {
         try {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
-          this.frames = [this.snapshot()];
+          let ideal = this.idealStart();
+          this.frames = [this.snapshot(ideal)];
           const steps = [...this.circuit];
+          const noisy = this.isNoisyRun();
           for (let i = 0; i < steps.length; i++) {
             if (i) await new Promise(r => setTimeout(r, STEP_DELAY_MS));
             await this.runOnWorker(stepToMessage(steps[i]));
+            if (noisy) await this.idleNoise();
+            ideal = this.nextIdeal(ideal, steps[i]);
             this.stepIndex = i + 1;
-            this.frames = [...this.frames, this.snapshot()];
+            this.frames = [...this.frames, this.snapshot(ideal)];
           }
         } finally {
           this.running = false;
         }
         await this.save();
-        this.announce(`Circuit finished: ${this.circuit.length} ${this.circuit.length === 1 ? 'step' : 'steps'} applied`);
+        const f = this.frames.at(-1)?.fidelity;
+        const fid = f !== null && f !== undefined && f < 0.9995 ? `, fidelity with the noiseless run ${f.toFixed(2)}` : '';
+        this.announce(`Circuit finished: ${this.circuit.length} ${this.circuit.length === 1 ? 'step' : 'steps'} applied${fid}`);
       });
     },
 
@@ -784,13 +821,15 @@ export const Lab = {
         if (this.stepIndex === null || this.stepIndex >= this.circuit.length) {
           if (fromZero) this.resetState();
           this.stepIndex = 0;
-          this.frames = [this.snapshot()];
+          this.frames = [this.snapshot(this.idealStart())];
         }
         const step = this.circuit[this.stepIndex];
+        const ideal = this.frames[this.stepIndex]?.ideal ?? null;
         await this.runOnWorker(stepToMessage(step));
+        if (this.isNoisyRun()) await this.idleNoise();
         this.stepIndex++;
         // Stepping on from an earlier frame replaces the frames after it
-        this.frames = [...this.frames.slice(0, this.stepIndex), this.snapshot()];
+        this.frames = [...this.frames.slice(0, this.stepIndex), this.snapshot(this.nextIdeal(ideal, step))];
         await this.save();
         this.announce(`Step ${this.stepIndex} of ${this.circuit.length}: ${stepLabel(step)}`);
       });
@@ -798,16 +837,37 @@ export const Lab = {
 
     // ----- Timeline -----
 
-    /** The current state as a timeline frame. */
-    snapshot() {
+    /**
+     * The current state as a timeline frame. `ideal` is the state the same
+     * steps give without noise ({ re, im }, or null once a measurement has
+     * made it ambiguous); the frame keeps it and its fidelity with the
+     * current state.
+     */
+    snapshot(ideal = null) {
       return Object.freeze({
         re: this.stateRe,
         im: this.stateIm,
         rho: this.stateRho,
         measurement: this.measurement,
         bits: { ...this.bits },
-        lastStep: this.lastStep
+        lastStep: this.lastStep,
+        ideal,
+        fidelity: ideal ? engine.fidelity(ideal, this.stateRe, this.stateIm, this.stateRho) : null
       });
+    },
+
+    // The noiseless run starts from the current state, if it is pure
+    idealStart() {
+      return this.stateRho ? null : { re: this.stateRe, im: this.stateIm };
+    },
+
+    // The noiseless state after one more step: gates apply, noise is left
+    // out, and a measurement ends the comparison (its result is random,
+    // so there is no single noiseless state to compare with)
+    nextIdeal(ideal, step) {
+      if (!ideal || step.gate === 'M') return null;
+      if (step.gate === 'N') return ideal;
+      return circuitStepApply(step, this.n)(ideal.re, ideal.im);
     },
 
     /**

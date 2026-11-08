@@ -61,6 +61,7 @@ What each size shows:
 | Density matrix, with its purity (advanced view) | 2×2 | 4×4 | 8×8 |
 | Unitary matrix of the last gate or the whole circuit (advanced view) | 2×2 | 4×4 | 8×8 |
 | Noise: dephasing, amplitude damping, depolarizing; mixed states (advanced) | ✓ | ✓ | ✓ |
+| Noise in circuits: N steps, and noisy runs with fidelity along the timeline (advanced) | ✓ | ✓ | ✓ |
 | Correlation graph (advanced view) | — | 1 edge | 3 edges |
 | Pauli expectations: ⟨X⟩⟨Y⟩⟨Z⟩ per qubit, 3 × 3 grid per pair, three-qubit strings (advanced view) | — | 1 grid | 3 grids + ⟨XXX⟩… |
 | Entanglement: entropy per qubit, mutual information per pair (advanced view) | — | ✓ | ✓ |
@@ -440,7 +441,7 @@ quantum-lab/
 │   ├── lesson.js          # One lesson: predict, try it, check, explanation
 │   ├── concepts.js
 │   └── help.js
-├── lessons.js             # The 23 lessons, as data
+├── lessons.js             # The 24 lessons, as data
 ├── lesson-checks.js       # Checks a state against a lesson's expected result
 ├── progress.js            # Prediction tally (browser only)
 ├── engine.js              # Simulation maths: pure functions, pure and mixed states
@@ -550,7 +551,7 @@ The lab uses its own database (`quantum-lab`), separate from the three original 
 
 ## Lessons
 
-One path of 23 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
+One path of 24 lessons takes a learner from a single qubit to three-qubit entanglement and on to real quantum algorithms. Each lesson:
 
 - opens a lab with the right number of qubits, showing only the panels it needs
 - asks the learner to **predict** the outcome first, and keeps a tally of predictions in the browser only
@@ -561,7 +562,7 @@ One path of 23 lessons takes a learner from a single qubit to three-qubit entang
 |---|---|
 | 1. One qubit | Bit flip · Superposition · Measurement collapse · Reversibility · Phase you can’t see · Phase you can see: interference · Complex phase: S, T and Y · Reading the Bloch sphere |
 | 2. Two qubits | Two independent qubits · Controlled NOT · Bell pair · Entanglement on the Bloch spheres · Measuring one qubit of a Bell pair · Correlation is not entanglement |
-| 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Decoherence: how noise ends a superposition · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
+| 3. Three qubits | GHZ state · Density matrix: probability vs coherence · Decoherence: how noise ends a superposition · Noise builds up with every step · Reduced states and mixedness · Phase on the 3D cube · Build your own circuit |
 | 4. Quantum algorithms | Deutsch–Jozsa: one question instead of three (3 qubits) · Grover’s search: finding the marked item (2 qubits) · Quantum teleportation (3 qubits) |
 
 Lessons are plain data in `lessons.js`. Each one lists its steps as operations and its expected result as machine-checkable checks (see `lesson-checks.js`), so the tests can confirm every lesson says what the app really does.

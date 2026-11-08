@@ -48,6 +48,10 @@ describe('lesson data', () => {
       assert.ok(lesson.checks.length > 0, 'checks');
       assert.deepEqual(lesson.setup[0], ['reset'], 'setup starts with reset');
       for (const panel of lesson.panels) assert.ok(PANELS.includes(panel), `panel ${panel}`);
+      if (lesson.noisyRun) {
+        // Noisy runs happen in the circuit editor, with the Noise panel to show the choice
+        assert.ok(lesson.panels.includes('editor') && lesson.panels.includes('noise'), 'noisyRun needs the editor and noise panels');
+      }
       assert.ok(lesson.predict.options.length >= 2, 'at least two options');
       assert.ok(Number.isInteger(lesson.predict.answer) &&
         lesson.predict.answer >= 0 && lesson.predict.answer < lesson.predict.options.length, 'answer index');
@@ -65,7 +69,7 @@ describe('every lesson gives the result it promises', () => {
       for (const seed of seeds) {
         const random = seeded(seed);
         const afterSetup = runOps(lesson.setup, lesson.n, null, random);
-        const final = runOps(lesson.ops, lesson.n, afterSetup, random);
+        const final = runOps(lesson.ops, lesson.n, afterSetup, random, { noisyRun: lesson.noisyRun });
         const { pass, results } = evaluateChecks(lesson.checks, final);
         assert.ok(pass, `seed ${seed}:\n` + results.filter(r => !r.pass).map(r => '  ' + r.text).join('\n'));
       }

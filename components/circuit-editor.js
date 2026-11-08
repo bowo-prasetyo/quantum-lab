@@ -49,9 +49,11 @@ export const CircuitEditor = {
     canUndo: { type: Boolean, default: false },
     // The Noise panel's choice, { channel, strength }, which an N chip adds;
     // null when noise isn't offered (then there are no N chips)
-    noise: { type: Object, default: null }
+    noise: { type: Object, default: null },
+    // Run and Step add that noise to every qubit after each step
+    noisyRun: { type: Boolean, default: false }
   },
-  emits: ['add', 'remove', 'clear', 'run', 'step', 'undo', 'pair'],
+  emits: ['add', 'remove', 'clear', 'run', 'step', 'undo', 'pair', 'noisy-run'],
 
   data() {
     return {
@@ -222,6 +224,11 @@ export const CircuitEditor = {
       <label class="check-label">
         <input type="checkbox" v-model="fromZero" :disabled="running" />
         Start from |{{ zeros }}⟩
+      </label>
+      <label v-if="noise" class="check-label">
+        <input type="checkbox" :checked="noisyRun" :disabled="running"
+          @change="$emit('noisy-run', $event.target.checked)" />
+        Noisy run: {{ noiseText }} on every qubit after each step, as on real hardware
       </label>
 
       <div class="button-grid circuit-actions">
