@@ -604,4 +604,5 @@ MIT License
 
 ## Assisted By
 
-[ChatGPT](https://chatgpt.com/)
+* [ChatGPT](https://chatgpt.com/)
+* [Claude Code](https://claude.ai/code)
